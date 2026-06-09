@@ -79,13 +79,6 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
-  useEffect(() => {
-    localStorage.setItem('activeTeam', JSON.stringify(activeTeam));
-    if (activeTeam) {
-      refreshData();
-    }
-  }, [activeTeam]);
-
   const selectTeam = (teamId: string) => {
     const team = teams.find(t => t.id === teamId) || null;
     setActiveTeam(team);
@@ -126,6 +119,13 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.error('Failed to refresh data from Turso', e);
     }
   }, [activeMatch, activeTeam]);
+
+  useEffect(() => {
+    localStorage.setItem('activeTeam', JSON.stringify(activeTeam));
+    if (activeTeam) {
+      refreshData();
+    }
+  }, [activeTeam, refreshData]);
 
   // Initial load from DB
   useEffect(() => {

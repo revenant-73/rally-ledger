@@ -11,7 +11,7 @@ const Roster: React.FC = () => {
   
   const [newTeam, setNewTeam] = useState({
     name: '',
-    level: 'Varsity',
+    level: 'High School',
     season: new Date().getFullYear().toString()
   });
 
@@ -34,7 +34,7 @@ const Roster: React.FC = () => {
     };
     addTeam(team);
     selectTeam(team.id);
-    setNewTeam({ name: '', level: 'Varsity', season: new Date().getFullYear().toString() });
+    setNewTeam({ name: '', level: 'High School', season: new Date().getFullYear().toString() });
     setShowAddTeamForm(false);
   };
 
@@ -139,9 +139,7 @@ const Roster: React.FC = () => {
                   onChange={(e) => setNewTeam({ ...newTeam, level: e.target.value })}
                   className="w-full bg-brand-bg border border-brand-gray/20 rounded-xl p-3 focus:outline-none focus:border-brand-teal"
                 >
-                  <option value="Varsity">Varsity</option>
-                  <option value="JV">JV</option>
-                  <option value="Freshman">Freshman</option>
+                  <option value="High School">High School</option>
                   <option value="Club">Club</option>
                 </select>
               </div>
