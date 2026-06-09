@@ -14,13 +14,11 @@ const NewMatch: React.FC = () => {
     opponentName: '',
     location: '',
     matchType: 'Tournament',
-    level: activeTeam?.level || 'Varsity'
+    level: activeTeam?.level || 'High School'
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const selectedTeam = teams.find(t => t.id === formData.teamId);
     
     const newMatch: Match = {
       id: uuidv4(),
@@ -114,9 +112,7 @@ const NewMatch: React.FC = () => {
               onChange={(e) => setFormData({ ...formData, level: e.target.value })}
               className="w-full bg-brand-bg border border-brand-gray/20 rounded-xl p-4 focus:outline-none focus:border-brand-teal transition-colors"
             >
-              <option value="Varsity" className="bg-brand-bg">Varsity</option>
-              <option value="JV" className="bg-brand-bg">JV</option>
-              <option value="Freshman" className="bg-brand-bg">Freshman</option>
+              <option value="High School" className="bg-brand-bg">High School</option>
               <option value="Club" className="bg-brand-bg">Club</option>
             </select>
           </div>
