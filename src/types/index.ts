@@ -93,6 +93,9 @@ export interface RallyEvent {
   outcomeType: OutcomeType;
   classification: Classification;
   playerId?: string;
+  serveResult?: 'Ace' | 'Error' | 'In-System' | 'Out-of-System';
+  receiveResult?: 'Error' | 'Overpass' | 'In-System' | 'Out-of-System';
+  receivePlayerId?: string;
   notes?: string;
   createdAt: string;
   metadata?: Record<string, unknown>;

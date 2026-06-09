@@ -1,22 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, RotateCcw, BarChart2, MessageSquare, MoreVertical, X, Trophy, AlertCircle, Zap } from 'lucide-react';
+import { ArrowLeft, RotateCcw, BarChart2, MessageSquare, MoreVertical, X, Trophy, AlertCircle, Zap, Plus, Minus } from 'lucide-react';
 import { useMatch } from '../hooks/useMatch';
 import type { OutcomeType, Classification, RallyEvent, Set } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 const LiveMatch: React.FC = () => {
   const navigate = useNavigate();
-  const { activeMatch, activeSet, rallies, addRally, undoLastRally, startSet, players, endSet, updateMatch } = useMatch();
+  const { activeMatch, activeSet, rallies, addRally, undoLastRally, startSet, players, endSet, updateMatch, updateSet } = useMatch();
   
   const [pointWinner, setPointWinner] = useState<'Us' | 'Opponent' | null>(null);
   const [outcome, setOutcome] = useState<OutcomeType | null>(null);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [serveResult, setServeResult] = useState<'Ace' | 'Error' | 'In-System' | 'Out-of-System' | null>(null);
+  const [receiveResult, setReceiveResult] = useState<'Error' | 'Overpass' | 'In-System' | 'Out-of-System' | null>(null);
+  const [receivePlayerId, setReceivePlayerId] = useState<string | null>(null);
+  const [showReceivePlayerSelection, setShowReceivePlayerSelection] = useState(false);
   const [showPlayerSelection, setShowPlayerSelection] = useState(false);
   const [showClassification, setShowClassification] = useState(false);
-  const [rotation, setRotation] = useState<number>(1);
   const [servingTeam, setServingTeam] = useState<'Us' | 'Opponent'>('Us');
-  const [showRotationPicker, setShowRotationPicker] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showTimeout, setShowTimeout] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
@@ -140,6 +142,46 @@ const LiveMatch: React.FC = () => {
     );
   }
 
+  const handleServeQualityClick = (quality: 'Ace' | 'Error' | 'In-System' | 'Out-of-System') => {
+    setServeResult(quality);
+    if (quality === 'Ace') {
+      setPointWinner('Us');
+      setOutcome('Ace');
+      if (players.length > 0) setShowPlayerSelection(true);
+      else setShowClassification(true);
+    } else if (quality === 'Error') {
+      setPointWinner('Opponent');
+      setOutcome('Serve Error');
+      if (players.length > 0) setShowPlayerSelection(true);
+      else setShowClassification(true);
+    } else {
+      // Regular serve, move to receive quality (for the other team)
+      // but since we only track our receive quality, if we serve, we move to point winner
+      setPointWinner(null); 
+    }
+  };
+
+  const handleReceiveQualityClick = (quality: 'Error' | 'Overpass' | 'In-System' | 'Out-of-System') => {
+    setReceiveResult(quality);
+    if (players.length > 0) {
+      setShowReceivePlayerSelection(true);
+    } else if (quality === 'Error') {
+      setPointWinner('Opponent');
+      setOutcome('Ace');
+      setShowClassification(true);
+    }
+  };
+
+  const handleReceivePlayerClick = (playerId: string | 'none') => {
+    setReceivePlayerId(playerId === 'none' ? null : playerId);
+    setShowReceivePlayerSelection(false);
+    if (receiveResult === 'Error') {
+      setPointWinner('Opponent');
+      setOutcome('Ace');
+      setShowClassification(true);
+    }
+  };
+
   const handlePointClick = (winner: 'Us' | 'Opponent') => {
     setPointWinner(winner);
   };
@@ -173,19 +215,19 @@ const LiveMatch: React.FC = () => {
       scoreAfterOpponent: pointWinner === 'Opponent' ? activeSet.opponentScore + 1 : activeSet.opponentScore,
       pointWinner,
       servingTeam,
-      rotationNumber: rotation,
       outcomeType: outcome,
       classification,
       playerId: selectedPlayerId || undefined,
+      serveResult: serveResult || undefined,
+      receiveResult: receiveResult || undefined,
+      receivePlayerId: receivePlayerId || undefined,
       createdAt: new Date().toISOString(),
     };
 
-    // Logic for rotation and next server
+    // Logic for next server
     if (pointWinner === 'Us') {
       if (servingTeam === 'Opponent') {
-        // Break serve -> Rotate
-        setRotation(prev => prev === 6 ? 1 : prev + 1);
-        setToast(`Point Us! Rotated to P${rotation === 6 ? 1 : rotation + 1}`);
+        setToast(`Point Us!`);
       }
       setServingTeam('Us');
     } else {
@@ -196,10 +238,24 @@ const LiveMatch: React.FC = () => {
     resetEntry();
   };
 
+  const handleManualScoreChange = async (team: 'Us' | 'Opponent', delta: number) => {
+    if (!activeSet) return;
+    const updates = team === 'Us' 
+      ? { ourScore: Math.max(0, activeSet.ourScore + delta) }
+      : { opponentScore: Math.max(0, activeSet.opponentScore + delta) };
+    
+    await updateSet(activeSet.id, updates);
+    setToast(`Score adjusted for ${team}`);
+  };
+
   const resetEntry = () => {
     setPointWinner(null);
     setOutcome(null);
     setSelectedPlayerId(null);
+    setServeResult(null);
+    setReceiveResult(null);
+    setReceivePlayerId(null);
+    setShowReceivePlayerSelection(false);
     setShowPlayerSelection(false);
     setShowClassification(false);
   };
@@ -208,10 +264,6 @@ const LiveMatch: React.FC = () => {
     if (rallies.length === 0) return;
     const lastRally = rallies[rallies.length - 1];
     
-    // Reverse rotation logic if needed
-    if (lastRally.pointWinner === 'Us' && lastRally.servingTeam === 'Opponent') {
-      setRotation(prev => prev === 1 ? 6 : prev - 1);
-    }
     setServingTeam(lastRally.servingTeam);
     
     setToast(`Undid: ${lastRally.outcomeType} by ${lastRally.pointWinner === 'Us' ? 'Us' : 'Them'}`);
@@ -392,71 +444,139 @@ const LiveMatch: React.FC = () => {
       )}
 
       {/* Score Display */}
-      <div className="flex-1 flex flex-col p-4 space-y-4">
-        <div className="grid grid-cols-2 gap-4 h-32">
-          <div className="bg-brand-gray/5 rounded-2xl flex flex-col items-center justify-center border border-brand-teal/20">
-            <span className="text-xs text-brand-text-secondary font-bold uppercase">Us</span>
-            <span className="text-5xl font-black text-brand-teal">{activeSet.ourScore}</span>
+      <div className="p-4 space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          {/* Us Score */}
+          <div className="flex flex-col gap-2">
+            <div className="bg-brand-gray/5 rounded-2xl flex flex-col items-center justify-center border border-brand-teal/20 h-28 relative">
+              <span className="text-xs text-brand-text-secondary font-bold uppercase">Us</span>
+              <span className="text-5xl font-black text-brand-teal">{activeSet.ourScore}</span>
+            </div>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => handleManualScoreChange('Us', -1)}
+                className="flex-1 bg-brand-gray/10 h-14 rounded-xl flex items-center justify-center text-brand-text-secondary active:bg-brand-red/20 active:text-brand-red transition-all"
+              >
+                <Minus size={24} />
+              </button>
+              <button 
+                onClick={() => handleManualScoreChange('Us', 1)}
+                className="flex-1 bg-brand-gray/10 h-14 rounded-xl flex items-center justify-center text-brand-text-secondary active:bg-brand-teal/20 active:text-brand-teal transition-all"
+              >
+                <Plus size={24} />
+              </button>
+            </div>
           </div>
-          <div className="bg-brand-gray/5 rounded-2xl flex flex-col items-center justify-center border border-brand-red/20">
-            <span className="text-xs text-brand-text-secondary font-bold uppercase">Them</span>
-            <span className="text-5xl font-black text-brand-red">{activeSet.opponentScore}</span>
+
+          {/* Them Score */}
+          <div className="flex flex-col gap-2">
+            <div className="bg-brand-gray/5 rounded-2xl flex flex-col items-center justify-center border border-brand-red/20 h-28 relative">
+              <span className="text-xs text-brand-text-secondary font-bold uppercase">Them</span>
+              <span className="text-5xl font-black text-brand-red">{activeSet.opponentScore}</span>
+            </div>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => handleManualScoreChange('Opponent', -1)}
+                className="flex-1 bg-brand-gray/10 h-14 rounded-xl flex items-center justify-center text-brand-text-secondary active:bg-brand-red/20 active:text-brand-red transition-all"
+              >
+                <Minus size={24} />
+              </button>
+              <button 
+                onClick={() => handleManualScoreChange('Opponent', 1)}
+                className="flex-1 bg-brand-gray/10 h-14 rounded-xl flex items-center justify-center text-brand-text-secondary active:bg-brand-teal/20 active:text-brand-teal transition-all"
+              >
+                <Plus size={24} />
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Rotation & Server Status */}
-        <div className="flex gap-2">
-          <button 
-            onClick={() => setShowRotationPicker(!showRotationPicker)}
-            className="flex-1 bg-brand-gray/10 border border-brand-gray/20 rounded-2xl p-4 flex flex-col items-center justify-center active:scale-[0.98] transition-all"
-          >
-            <span className="text-[10px] font-bold text-brand-text-secondary uppercase">Current Rotation</span>
-            <span className="text-2xl font-black text-brand-teal">P{rotation}</span>
-          </button>
+        {/* Server Status */}
+        <div className="flex gap-2 pt-2">
           <button 
             onClick={() => setServingTeam(servingTeam === 'Us' ? 'Opponent' : 'Us')}
-            className={`flex-1 border rounded-2xl p-4 flex flex-col items-center justify-center active:scale-[0.98] transition-all ${
+            className={`flex-1 border rounded-2xl p-5 flex flex-col items-center justify-center active:scale-[0.98] transition-all ${
               servingTeam === 'Us' ? 'bg-brand-teal/20 border-brand-teal text-brand-teal' : 'bg-brand-red/20 border-brand-red text-brand-red'
             }`}
           >
-            <span className="text-[10px] font-bold uppercase opacity-60">Serving</span>
-            <span className="text-xl font-black">{servingTeam === 'Us' ? 'WE ARE' : 'THEY ARE'}</span>
+            <span className="text-[10px] font-bold uppercase opacity-60">Currently Serving</span>
+            <span className="text-2xl font-black">{servingTeam === 'Us' ? 'WE ARE' : 'THEY ARE'}</span>
           </button>
         </div>
 
-        {/* Rotation Picker Modal-lite */}
-        {showRotationPicker && (
-          <div className="grid grid-cols-6 gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
-            {[1, 2, 3, 4, 5, 6].map((p) => (
-              <button
-                key={p}
-                onClick={() => { setRotation(p); setShowRotationPicker(false); }}
-                className={`py-3 rounded-xl font-black text-lg ${
-                  rotation === p ? 'bg-brand-teal text-brand-bg' : 'bg-brand-gray/10 text-brand-text-secondary'
-                }`}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
-        )}
-
         {/* Input Area */}
         <div className="flex-1 bg-brand-gray/5 rounded-3xl p-4 flex flex-col">
-          {!pointWinner ? (
-            <div className="flex-1 grid grid-cols-1 gap-4">
-              <button
-                onClick={() => handlePointClick('Us')}
-                className="bg-brand-teal text-brand-bg text-3xl font-black rounded-2xl active:scale-[0.98] transition-all"
-              >
-                WE WON POINT
-              </button>
-              <button
-                onClick={() => handlePointClick('Opponent')}
-                className="bg-brand-red text-brand-bg text-3xl font-black rounded-2xl active:scale-[0.98] transition-all"
-              >
-                THEY WON POINT
-              </button>
+          {(!serveResult && !receiveResult) ? (
+            <div className="flex-1 flex flex-col">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold">
+                  {servingTeam === 'Us' ? 'How was the serve?' : 'How was the receive?'}
+                </h3>
+                <button onClick={resetEntry} className="text-brand-text-secondary text-sm">Reset</button>
+              </div>
+              <div className="flex-1 grid grid-cols-1 gap-3">
+                {servingTeam === 'Us' ? (
+                  <>
+                    <button onClick={() => handleServeQualityClick('Ace')} className="bg-brand-green/20 border border-brand-green/50 py-4 rounded-xl font-black text-brand-green text-xl">ACE</button>
+                    <button onClick={() => handleServeQualityClick('In-System')} className="bg-brand-teal/10 border border-brand-teal/30 py-4 rounded-xl font-bold text-xl">InSys</button>
+                    <button onClick={() => handleServeQualityClick('Out-of-System')} className="bg-brand-amber/10 border border-brand-amber/30 py-4 rounded-xl font-bold text-xl">KO</button>
+                    <button onClick={() => handleServeQualityClick('Error')} className="bg-brand-red/20 border border-brand-red/50 py-4 rounded-xl font-black text-brand-red text-xl">ERR</button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => handleReceiveQualityClick('In-System')} className="bg-brand-teal/10 border border-brand-teal/30 py-4 rounded-xl font-bold text-xl">InSys</button>
+                    <button onClick={() => handleReceiveQualityClick('Out-of-System')} className="bg-brand-amber/10 border border-brand-amber/30 py-4 rounded-xl font-bold text-xl">KO</button>
+                    <button onClick={() => handleReceiveQualityClick('Overpass')} className="bg-brand-orange/10 border border-brand-orange/30 py-4 rounded-xl font-bold text-xl">OVER</button>
+                    <button onClick={() => handleReceiveQualityClick('Error')} className="bg-brand-red/20 border border-brand-red/50 py-4 rounded-xl font-black text-brand-red text-xl">ERR (ACE)</button>
+                  </>
+                )}
+              </div>
+            </div>
+          ) : showReceivePlayerSelection ? (
+            <div className="flex-1 flex flex-col">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold">Who received?</h3>
+                <div className="flex gap-4">
+                  <button onClick={() => handleReceivePlayerClick('none')} className="text-brand-teal text-sm font-bold">Skip</button>
+                  <button onClick={() => { setShowReceivePlayerSelection(false); setReceiveResult(null); }} className="text-brand-text-secondary text-sm">Back</button>
+                </div>
+              </div>
+              <div className="flex-1 grid grid-cols-4 gap-1.5 overflow-y-auto pb-4 content-start">
+                {players.sort((a, b) => Number(a.jerseyNumber) - Number(b.jerseyNumber)).map((player) => (
+                  <button
+                    key={player.id}
+                    onClick={() => handleReceivePlayerClick(player.id)}
+                    className="bg-brand-gray/10 border border-brand-gray/20 py-2 rounded-xl flex flex-col items-center justify-center active:scale-[0.95] transition-all"
+                  >
+                    <span className="text-base font-black text-brand-teal leading-none">{player.jerseyNumber}</span>
+                    <span className="text-[8px] font-bold uppercase mt-0.5 truncate w-full px-1 text-center">{player.firstName}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : !pointWinner ? (
+            <div className="flex-1 flex flex-col">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold">Who won the point?</h3>
+                <button onClick={() => {
+                  if (servingTeam === 'Us') setServeResult(null);
+                  else setShowReceivePlayerSelection(true);
+                }} className="text-brand-text-secondary text-sm">Back</button>
+              </div>
+              <div className="flex-1 grid grid-cols-1 gap-4">
+                <button
+                  onClick={() => handlePointClick('Us')}
+                  className="bg-brand-teal text-brand-bg text-3xl font-black rounded-2xl active:scale-[0.98] transition-all"
+                >
+                  WE WON POINT
+                </button>
+                <button
+                  onClick={() => handlePointClick('Opponent')}
+                  className="bg-brand-red text-brand-bg text-3xl font-black rounded-2xl active:scale-[0.98] transition-all"
+                >
+                  THEY WON POINT
+                </button>
+              </div>
             </div>
           ) : showPlayerSelection ? (
             <div className="flex-1 flex flex-col">
@@ -514,7 +634,7 @@ const LiveMatch: React.FC = () => {
             <div className="flex-1 flex flex-col">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold">How did it end?</h3>
-                <button onClick={resetEntry} className="text-brand-text-secondary text-sm">Cancel</button>
+                <button onClick={() => setPointWinner(null)} className="text-brand-text-secondary text-sm">Back</button>
               </div>
               <div className="flex-1 grid grid-cols-2 gap-2 overflow-y-auto">
                 {outcomes.map((type) => (

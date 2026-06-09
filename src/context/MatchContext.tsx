@@ -99,6 +99,23 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  const updateSet = async (setId: string, updates: Partial<Set>) => {
+    setIsSyncing(true);
+    try {
+      await db.update(setsTable)
+        .set({ ...updates, updatedAt: new Date().toISOString() })
+        .where(eq(setsTable.id, setId));
+      
+      if (activeSet && activeSet.id === setId) {
+        setActiveSet({ ...activeSet, ...updates });
+      }
+    } catch (e) {
+      console.error('Failed to update set in Turso', e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const updateMatch = async (matchId: string, updates: Partial<Match>) => {
     setIsSyncing(true);
     try {
@@ -348,6 +365,7 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       addTeam,
       selectTeam,
       endSet,
+      updateSet,
       updateMatch,
       refreshData
     }}>

@@ -6,6 +6,22 @@ import { matches as matchesTable, sets as setsTable, rallyEvents as rallyEventsT
 import { eq } from 'drizzle-orm';
 import type { Match, Set, RallyEvent, Player } from '../types';
 
+interface PlayerServeStat {
+  aces: number;
+  errors: number;
+  inSystem: number;
+  outOfSystem: number;
+  total: number;
+}
+
+interface PlayerReceiveStat {
+  errors: number;
+  overpass: number;
+  inSystem: number;
+  outOfSystem: number;
+  total: number;
+}
+
 const MatchDetail: React.FC = () => {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
@@ -93,6 +109,50 @@ const MatchDetail: React.FC = () => {
     const earnerPlayer = topEarner ? players.find(p => p.id === topEarner[0]) : null;
     const gifterPlayer = topGifter ? players.find(p => p.id === topGifter[0]) : null;
 
+    // Individual stats
+    const playerServeStats: Record<string, PlayerServeStat> = {};
+    const playerReceiveStats: Record<string, PlayerReceiveStat> = {};
+
+    rallies.forEach(r => {
+      if (r.serveResult && r.serverPlayerId) {
+        if (!playerServeStats[r.serverPlayerId]) {
+          playerServeStats[r.serverPlayerId] = { aces: 0, errors: 0, inSystem: 0, outOfSystem: 0, total: 0 };
+        }
+        playerServeStats[r.serverPlayerId].total++;
+        if (r.serveResult === 'Ace') playerServeStats[r.serverPlayerId].aces++;
+        if (r.serveResult === 'Error') playerServeStats[r.serverPlayerId].errors++;
+        if (r.serveResult === 'In-System') playerServeStats[r.serverPlayerId].inSystem++;
+        if (r.serveResult === 'Out-of-System') playerServeStats[r.serverPlayerId].outOfSystem++;
+      }
+      if (r.receiveResult && r.receivePlayerId) {
+        if (!playerReceiveStats[r.receivePlayerId]) {
+          playerReceiveStats[r.receivePlayerId] = { errors: 0, overpass: 0, inSystem: 0, outOfSystem: 0, total: 0 };
+        }
+        playerReceiveStats[r.receivePlayerId].total++;
+        if (r.receiveResult === 'Error') playerReceiveStats[r.receivePlayerId].errors++;
+        if (r.receiveResult === 'Overpass') playerReceiveStats[r.receivePlayerId].overpass++;
+        if (r.receiveResult === 'In-System') playerReceiveStats[r.receivePlayerId].inSystem++;
+        if (r.receiveResult === 'Out-of-System') playerReceiveStats[r.receivePlayerId].outOfSystem++;
+      }
+    });
+
+    // Serve & Receive Stats
+    const serveStats = {
+      aces: rallies.filter(r => r.serveResult === 'Ace').length,
+      errors: rallies.filter(r => r.serveResult === 'Error').length,
+      inSystem: rallies.filter(r => r.serveResult === 'In-System').length,
+      outOfSystem: rallies.filter(r => r.serveResult === 'Out-of-System').length,
+      total: rallies.filter(r => r.serveResult).length
+    };
+
+    const receiveStats = {
+      errors: rallies.filter(r => r.receiveResult === 'Error').length,
+      overpass: rallies.filter(r => r.receiveResult === 'Overpass').length,
+      inSystem: rallies.filter(r => r.receiveResult === 'In-System').length,
+      outOfSystem: rallies.filter(r => r.receiveResult === 'Out-of-System').length,
+      total: rallies.filter(r => r.receiveResult).length
+    };
+
     return {
       ourEarned,
       ourGifted,
@@ -101,7 +161,11 @@ const MatchDetail: React.FC = () => {
       biggestLeak,
       biggestWeapon,
       earner: earnerPlayer ? { name: earnerPlayer.lastName, count: topEarner[1], jersey: earnerPlayer.jerseyNumber } : null,
-      gifter: gifterPlayer ? { name: gifterPlayer.lastName, count: topGifter[1], jersey: gifterPlayer.jerseyNumber } : null
+      gifter: gifterPlayer ? { name: gifterPlayer.lastName, count: topGifter[1], jersey: gifterPlayer.jerseyNumber } : null,
+      serveStats,
+      receiveStats,
+      playerServeStats,
+      playerReceiveStats
     };
   }, [rallies, players]);
 
@@ -221,6 +285,105 @@ const MatchDetail: React.FC = () => {
                   <span className="text-3xl font-black text-brand-gray">-{metrics.oppGifted}</span>
                 </div>
                 <p className="text-[10px] mt-2 text-brand-text-secondary uppercase">Earned / Gifted</p>
+              </div>
+            </div>
+
+            {/* Serve & Receive Performance */}
+            <div className="space-y-4">
+              <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-6">
+                <h3 className="text-sm font-bold text-brand-text-secondary uppercase mb-4 tracking-widest flex items-center gap-2">
+                  <Zap size={16} className="text-brand-teal" />
+                  Serve Performance
+                </h3>
+                <div className="grid grid-cols-4 gap-2 mb-6">
+                  <div className="text-center">
+                    <p className="text-xl font-black text-brand-green">{metrics.serveStats.aces}</p>
+                    <p className="text-[8px] font-bold text-brand-text-secondary uppercase">ACE</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xl font-black text-brand-red">{metrics.serveStats.errors}</p>
+                    <p className="text-[8px] font-bold text-brand-text-secondary uppercase">ERR</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xl font-black text-brand-teal">{metrics.serveStats.inSystem}</p>
+                    <p className="text-[8px] font-bold text-brand-text-secondary uppercase">InSys</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xl font-black text-brand-amber">{metrics.serveStats.outOfSystem}</p>
+                    <p className="text-[8px] font-bold text-brand-text-secondary uppercase">KO</p>
+                  </div>
+                </div>
+                
+                {Object.keys(metrics.playerServeStats).length > 0 && (
+                  <div className="space-y-2 pt-4 border-t border-brand-gray/10">
+                    <p className="text-[10px] font-black text-brand-text-secondary uppercase mb-2">Top Servers (Efficiency)</p>
+                    {Object.entries(metrics.playerServeStats)
+                      .sort((a, b) => (b[1].aces + b[1].outOfSystem) - (a[1].aces + a[1].outOfSystem))
+                      .slice(0, 3)
+                      .map(([playerId, stats]: [string, PlayerServeStat]) => {
+                        const player = players.find(p => p.id === playerId);
+                        if (!player) return null;
+                        return (
+                          <div key={playerId} className="flex items-center justify-between text-xs">
+                            <span className="font-bold">#{player.jerseyNumber} {player.lastName}</span>
+                            <div className="flex gap-3">
+                              <span className="text-brand-green font-black">{stats.aces} ACE</span>
+                              <span className="text-brand-amber font-black">{stats.outOfSystem} KO</span>
+                              <span className="text-brand-red font-black">{stats.errors} ERR</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-6">
+                <h3 className="text-sm font-bold text-brand-text-secondary uppercase mb-4 tracking-widest flex items-center gap-2">
+                  <AlertTriangle size={16} className="text-brand-amber" />
+                  Receive Performance
+                </h3>
+                <div className="grid grid-cols-4 gap-2 mb-6">
+                  <div className="text-center">
+                    <p className="text-xl font-black text-brand-teal">{metrics.receiveStats.inSystem}</p>
+                    <p className="text-[8px] font-bold text-brand-text-secondary uppercase">InSys</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xl font-black text-brand-amber">{metrics.receiveStats.outOfSystem}</p>
+                    <p className="text-[8px] font-bold text-brand-text-secondary uppercase">KO</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xl font-black text-brand-orange">{metrics.receiveStats.overpass}</p>
+                    <p className="text-[8px] font-bold text-brand-text-secondary uppercase">Over</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xl font-black text-brand-red">{metrics.receiveStats.errors}</p>
+                    <p className="text-[8px] font-bold text-brand-text-secondary uppercase">ERR</p>
+                  </div>
+                </div>
+
+                {Object.keys(metrics.playerReceiveStats).length > 0 && (
+                  <div className="space-y-2 pt-4 border-t border-brand-gray/10">
+                    <p className="text-[10px] font-black text-brand-text-secondary uppercase mb-2">Top Receivers (InSys)</p>
+                    {Object.entries(metrics.playerReceiveStats)
+                      .sort((a, b) => b[1].inSystem - a[1].inSystem)
+                      .slice(0, 3)
+                      .map(([playerId, stats]: [string, PlayerReceiveStat]) => {
+                        const player = players.find(p => p.id === playerId);
+                        if (!player) return null;
+                        return (
+                          <div key={playerId} className="flex items-center justify-between text-xs">
+                            <span className="font-bold">#{player.jerseyNumber} {player.lastName}</span>
+                            <div className="flex gap-3">
+                              <span className="text-brand-teal font-black">{stats.inSystem} InSys</span>
+                              <span className="text-brand-amber font-black">{stats.outOfSystem} KO</span>
+                              <span className="text-brand-red font-black">{stats.errors} ERR</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
               </div>
             </div>
 
