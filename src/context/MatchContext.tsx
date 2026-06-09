@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { Match, Set, RallyEvent, Team, Player } from '../types';
 import { db } from '../db/client';
-import { players as playersTable, matches as matchesTable, sets as setsTable, rallyEvents as rallyEventsTable } from '../db/schema';
+import { players as playersTable, matches as matchesTable, sets as setsTable, rallyEvents as rallyEventsTable, teams as teamsTable } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
 interface MatchContextType {
   activeMatch: Match | null;
   activeSet: Set | null;
+  activeTeam: Team | null;
   rallies: RallyEvent[];
   teams: Team[];
   players: Player[];
@@ -16,6 +17,8 @@ interface MatchContextType {
   undoLastRally: () => Promise<void>;
   addPlayer: (player: Player) => Promise<void>;
   removePlayer: (playerId: string) => Promise<void>;
+  addTeam: (team: Team) => Promise<void>;
+  selectTeam: (teamId: string) => void;
   refreshData: () => Promise<void>;
 }
 
@@ -34,6 +37,15 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [activeSet, setActiveSet] = useState<Set | null>(() => {
     try {
       const saved = localStorage.getItem('activeSet');
+      return saved && saved !== "undefined" ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [activeTeam, setActiveTeam] = useState<Team | null>(() => {
+    try {
+      const saved = localStorage.getItem('activeTeam');
       return saved && saved !== "undefined" ? JSON.parse(saved) : null;
     } catch {
       return null;
@@ -67,14 +79,41 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
+  useEffect(() => {
+    localStorage.setItem('activeTeam', JSON.stringify(activeTeam));
+    if (activeTeam) {
+      refreshData();
+    }
+  }, [activeTeam]);
+
+  const selectTeam = (teamId: string) => {
+    const team = teams.find(t => t.id === teamId) || null;
+    setActiveTeam(team);
+  };
+
+  const addTeam = async (team: Team) => {
+    setTeams(prev => [...prev, team]);
+    try {
+      await db.insert(teamsTable).values(team);
+    } catch (e) {
+      console.error('Failed to sync team to Turso', e);
+    }
+  };
+
   const refreshData = useCallback(async () => {
     console.log('Refreshing data from Turso...');
     try {
       const dbPlayers = await db.select().from(playersTable);
-      setPlayers(dbPlayers as Player[]);
+      const dbTeams = await db.select().from(teamsTable);
       
-      await db.select().from(matchesTable);
-      setTeams([]); 
+      setTeams(dbTeams as Team[]);
+      
+      if (activeTeam) {
+        const teamPlayers = dbPlayers.filter(p => p.teamId === activeTeam.id);
+        setPlayers(teamPlayers as Player[]);
+      } else {
+        setPlayers(dbPlayers as Player[]);
+      }
       
       if (activeMatch) {
         const currentRallies = await db.select()
@@ -86,7 +125,7 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch (e) {
       console.error('Failed to refresh data from Turso', e);
     }
-  }, [activeMatch]);
+  }, [activeMatch, activeTeam]);
 
   // Initial load from DB
   useEffect(() => {
@@ -202,6 +241,7 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     <MatchContext.Provider value={{ 
       activeMatch, 
       activeSet, 
+      activeTeam,
       rallies, 
       teams, 
       players,
@@ -211,6 +251,8 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       undoLastRally,
       addPlayer,
       removePlayer,
+      addTeam,
+      selectTeam,
       refreshData
     }}>
       {children}

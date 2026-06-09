@@ -1,12 +1,20 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, UserPlus, X } from 'lucide-react';
+import { Plus, Trash2, UserPlus, X, Users, Save } from 'lucide-react';
 import { useMatch } from '../context/MatchContext';
-import type { Player, PlayerPosition } from '../types';
+import type { Player, PlayerPosition, Team } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 const Roster: React.FC = () => {
-  const { players, addPlayer, removePlayer } = useMatch();
-  const [showAddForm, setShowAddForm] = useState(false);
+  const { players, addPlayer, removePlayer, teams, activeTeam, addTeam, selectTeam } = useMatch();
+  const [showAddPlayerForm, setShowAddPlayerForm] = useState(false);
+  const [showAddTeamForm, setShowAddTeamForm] = useState(false);
+  
+  const [newTeam, setNewTeam] = useState({
+    name: '',
+    level: 'Varsity',
+    season: new Date().getFullYear().toString()
+  });
+
   const [newPlayer, setNewPlayer] = useState({
     firstName: '',
     lastName: '',
@@ -14,11 +22,29 @@ const Roster: React.FC = () => {
     position: 'OH' as PlayerPosition
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleAddTeam = (e: React.FormEvent) => {
     e.preventDefault();
+    const team: Team = {
+      id: uuidv4(),
+      name: newTeam.name,
+      level: newTeam.level,
+      season: newTeam.season,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    addTeam(team);
+    selectTeam(team.id);
+    setNewTeam({ name: '', level: 'Varsity', season: new Date().getFullYear().toString() });
+    setShowAddTeamForm(false);
+  };
+
+  const handleAddPlayer = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeTeam) return;
+
     const player: Player = {
       id: uuidv4(),
-      teamId: 'team-1',
+      teamId: activeTeam.id,
       firstName: newPlayer.firstName,
       lastName: newPlayer.lastName,
       jerseyNumber: newPlayer.jerseyNumber,
@@ -29,7 +55,7 @@ const Roster: React.FC = () => {
     };
     addPlayer(player);
     setNewPlayer({ firstName: '', lastName: '', jerseyNumber: '', position: 'OH' });
-    setShowAddForm(false);
+    setShowAddPlayerForm(false);
   };
 
   const positions: PlayerPosition[] = ['OH', 'OPP', 'MB', 'S', 'L', 'DS', 'Other'];
@@ -38,27 +64,124 @@ const Roster: React.FC = () => {
     <div className="p-6 max-w-lg mx-auto">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold">Roster</h1>
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="bg-brand-teal text-brand-bg p-2 rounded-full hover:bg-brand-teal/90 transition-all"
-        >
-          <Plus size={24} />
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowAddTeamForm(true)}
+            className="bg-brand-gray/10 text-brand-text p-2 rounded-full hover:bg-brand-gray/20 transition-all"
+            title="Create New Team"
+          >
+            <Users size={24} />
+          </button>
+          <button
+            onClick={() => setShowAddPlayerForm(true)}
+            className="bg-brand-teal text-brand-bg p-2 rounded-full hover:bg-brand-teal/90 transition-all"
+            title="Add Player"
+            disabled={!activeTeam}
+          >
+            <Plus size={24} />
+          </button>
+        </div>
       </div>
 
-      {showAddForm && (
+      {/* Roster / Team Selection Dropdown */}
+      <div className="mb-8">
+        <label className="text-xs font-bold text-brand-text-secondary uppercase block mb-2">Selected Roster</label>
+        <select
+          value={activeTeam?.id || ''}
+          onChange={(e) => selectTeam(e.target.value)}
+          className="w-full bg-brand-gray/10 border border-brand-gray/20 rounded-xl p-4 focus:outline-none focus:border-brand-teal transition-colors text-lg font-bold"
+        >
+          <option value="">Select a roster...</option>
+          {teams.map(team => (
+            <option key={team.id} value={team.id} className="bg-brand-bg">
+              {team.name} ({team.level})
+            </option>
+          ))}
+        </select>
+        {!activeTeam && teams.length > 0 && (
+          <p className="text-xs text-brand-red mt-2">Please select a roster to manage players.</p>
+        )}
+        {teams.length === 0 && (
+          <p className="text-xs text-brand-text-secondary mt-2">No rosters saved yet. Create one to get started.</p>
+        )}
+      </div>
+
+      {/* Add Team Form */}
+      {showAddTeamForm && (
         <div className="mb-8 bg-brand-gray/5 border border-brand-gray/20 rounded-2xl p-6 relative">
           <button 
-            onClick={() => setShowAddForm(false)}
+            onClick={() => setShowAddTeamForm(false)}
+            className="absolute top-4 right-4 text-brand-text-secondary hover:text-brand-text"
+          >
+            <X size={20} />
+          </button>
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+            <Users size={20} className="text-brand-teal" />
+            Create Roster
+          </h2>
+          <form onSubmit={handleAddTeam} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-brand-text-secondary uppercase">Team Name</label>
+              <input
+                required
+                type="text"
+                value={newTeam.name}
+                onChange={(e) => setNewTeam({ ...newTeam, name: e.target.value })}
+                className="w-full bg-brand-bg border border-brand-gray/20 rounded-xl p-3 focus:outline-none focus:border-brand-teal"
+                placeholder="e.g. Eagles Varsity"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-brand-text-secondary uppercase">Level</label>
+                <select
+                  value={newTeam.level}
+                  onChange={(e) => setNewTeam({ ...newTeam, level: e.target.value })}
+                  className="w-full bg-brand-bg border border-brand-gray/20 rounded-xl p-3 focus:outline-none focus:border-brand-teal"
+                >
+                  <option value="Varsity">Varsity</option>
+                  <option value="JV">JV</option>
+                  <option value="Freshman">Freshman</option>
+                  <option value="Club">Club</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-brand-text-secondary uppercase">Season</label>
+                <input
+                  required
+                  type="text"
+                  value={newTeam.season}
+                  onChange={(e) => setNewTeam({ ...newTeam, season: e.target.value })}
+                  className="w-full bg-brand-bg border border-brand-gray/20 rounded-xl p-3 focus:outline-none focus:border-brand-teal"
+                  placeholder="2025"
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              className="w-full bg-brand-teal text-brand-bg font-bold py-4 rounded-xl mt-2 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            >
+              <Save size={20} />
+              Save Roster
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* Add Player Form */}
+      {showAddPlayerForm && activeTeam && (
+        <div className="mb-8 bg-brand-gray/5 border border-brand-gray/20 rounded-2xl p-6 relative">
+          <button 
+            onClick={() => setShowAddPlayerForm(false)}
             className="absolute top-4 right-4 text-brand-text-secondary hover:text-brand-text"
           >
             <X size={20} />
           </button>
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
             <UserPlus size={20} className="text-brand-teal" />
-            Add Player
+            Add Player to {activeTeam.name}
           </h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleAddPlayer} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-brand-text-secondary uppercase">First Name</label>
@@ -119,11 +242,15 @@ const Roster: React.FC = () => {
       )}
 
       <div className="space-y-3">
-        {players.length === 0 ? (
+        {!activeTeam ? (
           <div className="text-center py-12 bg-brand-gray/5 rounded-3xl border border-dashed border-brand-gray/20">
-            <p className="text-brand-text-secondary">No players in roster yet.</p>
+            <p className="text-brand-text-secondary italic">Select a roster to view players.</p>
+          </div>
+        ) : players.length === 0 ? (
+          <div className="text-center py-12 bg-brand-gray/5 rounded-3xl border border-dashed border-brand-gray/20">
+            <p className="text-brand-text-secondary">No players in this roster yet.</p>
             <button 
-              onClick={() => setShowAddForm(true)}
+              onClick={() => setShowAddPlayerForm(true)}
               className="text-brand-teal font-bold mt-2"
             >
               Add your first player

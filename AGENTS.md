@@ -45,6 +45,12 @@ All major tables include a `metadata` column using `text(..., { mode: 'json' })`
 - **Usage**: Access via `entity.metadata?.someField`. 
 - **Storage**: Drizzle automatically handles serialization/deserialization.
 
+### Roster Management Pattern
+The application supports multiple teams/rosters.
+- **`activeTeam`**: Managed in `MatchContext`. When a team is selected, `refreshData` filtered the players by `teamId`.
+- **Roster Selection**: Always prefer selecting an existing roster from the dropdown in the "New Match" flow to ensure historical data consistency.
+- **Player Sync**: Players are bound to a specific `teamId`.
+
 ## Git & Contribution Guidelines
 
 - **Repository**: Managed on GitHub at [revenant-73/rally-ledger](https://github.com/revenant-73/rally-ledger.git).
