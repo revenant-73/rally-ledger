@@ -7,6 +7,7 @@ export const teams = sqliteTable('teams', {
   season: text('season').notNull(),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
+  metadata: text('metadata', { mode: 'json' }).$type<Record<string, unknown>>(), // Flexible JSON storage
 });
 
 export const players = sqliteTable('players', {
@@ -20,6 +21,7 @@ export const players = sqliteTable('players', {
   photoUrl: text('photo_url'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
+  metadata: text('metadata', { mode: 'json' }).$type<Record<string, unknown>>(), // Flexible JSON storage
 });
 
 export const matches = sqliteTable('matches', {
@@ -33,6 +35,7 @@ export const matches = sqliteTable('matches', {
   notes: text('notes'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
+  metadata: text('metadata', { mode: 'json' }).$type<Record<string, unknown>>(), // Flexible JSON storage
 });
 
 export const sets = sqliteTable('sets', {
@@ -45,6 +48,7 @@ export const sets = sqliteTable('sets', {
   finalResult: text('final_result'), // 'Win' | 'Loss'
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
+  metadata: text('metadata', { mode: 'json' }).$type<Record<string, unknown>>(), // Flexible JSON storage
 });
 
 export const rallyEvents = sqliteTable('rally_events', {
@@ -65,4 +69,5 @@ export const rallyEvents = sqliteTable('rally_events', {
   playerId: text('player_id').references(() => players.id),
   notes: text('notes'),
   createdAt: text('created_at').notNull(),
+  metadata: text('metadata', { mode: 'json' }).$type<Record<string, unknown>>(), // Flexible JSON storage
 });
