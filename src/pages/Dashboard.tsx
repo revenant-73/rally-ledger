@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Zap, AlertTriangle, CloudRain, Sun } from 'lucide-react';
-import { useMatch } from '../context/MatchContext';
+import { useMatch } from '../hooks/useMatch';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -54,6 +54,14 @@ const Dashboard: React.FC = () => {
     const earnerPlayer = topEarner ? players.find(p => p.id === topEarner[0]) : null;
     const gifterPlayer = topGifter ? players.find(p => p.id === topGifter[0]) : null;
 
+    // Momentum (Cumulative point diff)
+    const momentum: number[] = [];
+    rallies.reduce((acc, r) => {
+      const newAcc = acc + (r.pointWinner === 'Us' ? 1 : -1);
+      momentum.push(newAcc);
+      return newAcc;
+    }, 0);
+
     // Suggested action
     let suggestion = 'Keep pressure on the next point.';
     if (rallies.slice(-6).filter(r => r.pointWinner === 'Opponent' && r.classification === 'Gifted').length >= 3) {
@@ -68,6 +76,7 @@ const Dashboard: React.FC = () => {
       oppEarned,
       oppGifted,
       last5,
+      momentum,
       biggestLeak,
       biggestWeapon,
       suggestion,
@@ -96,6 +105,35 @@ const Dashboard: React.FC = () => {
             <span className="text-sm font-bold uppercase tracking-wider">Commitment</span>
           </div>
           <p className="text-xl font-bold leading-tight">{metrics.suggestion}</p>
+        </div>
+
+        {/* Momentum Sparkline */}
+        <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-6">
+          <h3 className="text-sm font-bold text-brand-text-secondary uppercase mb-4 text-center tracking-widest">Match Momentum</h3>
+          <div className="h-24 flex items-end gap-1">
+            {metrics.momentum.length === 0 ? (
+              <div className="w-full h-full flex items-center justify-center text-xs text-brand-text-secondary italic">No data yet</div>
+            ) : metrics.momentum.map((diff, i) => {
+              const height = Math.min(Math.abs(diff) * 10, 100);
+              const isPositive = diff >= 0;
+              return (
+                <div key={i} className="flex-1 flex flex-col justify-center h-full relative group">
+                  <div 
+                    className={`w-full rounded-full transition-all duration-500 ${isPositive ? 'bg-brand-teal' : 'bg-brand-red opacity-60'}`}
+                    style={{ 
+                      height: `${height}%`,
+                      transform: `translateY(${isPositive ? '-50%' : '50%'})`
+                    }}
+                  />
+                  <div className="absolute top-1/2 left-0 right-0 border-t border-brand-gray/20" />
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex justify-between mt-2 text-[10px] font-bold text-brand-text-secondary uppercase">
+            <span>Start</span>
+            <span>Current: {metrics.momentum[metrics.momentum.length - 1] > 0 ? '+' : ''}{metrics.momentum[metrics.momentum.length - 1] || 0}</span>
+          </div>
         </div>
 
         {/* Earned vs Gifted Balance */}

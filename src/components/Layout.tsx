@@ -1,10 +1,12 @@
 import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Users, History, Settings } from 'lucide-react';
+import { Home, Users, History, Settings, Cloud } from 'lucide-react';
+import { useMatch } from '../hooks/useMatch';
 
 const Layout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isSyncing } = useMatch();
 
   const navItems = [
     { icon: <Home size={24} />, label: 'Home', path: '/' },
@@ -15,6 +17,17 @@ const Layout: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-brand-bg text-brand-text">
+      <div className="fixed top-4 right-4 z-50 pointer-events-none">
+        {isSyncing ? (
+          <div className="bg-brand-teal/20 backdrop-blur-sm p-2 rounded-full animate-pulse">
+            <Cloud size={16} className="text-brand-teal" />
+          </div>
+        ) : (
+          <div className="bg-brand-gray/10 backdrop-blur-sm p-2 rounded-full opacity-30">
+            <Cloud size={16} className="text-brand-text-secondary" />
+          </div>
+        )}
+      </div>
       <main className="flex-1 pb-20 overflow-auto">
         <Outlet />
       </main>

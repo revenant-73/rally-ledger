@@ -1,7 +1,17 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 
+export const users = sqliteTable('users', {
+  id: text('id').primaryKey(),
+  email: text('email').notNull().unique(),
+  name: text('name'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+  metadata: text('metadata', { mode: 'json' }).$type<Record<string, unknown>>(),
+});
+
 export const teams = sqliteTable('teams', {
   id: text('id').primaryKey(),
+  ownerId: text('owner_id').references(() => users.id), // Added owner reference
   name: text('name').notNull(),
   level: text('level').notNull(),
   season: text('season').notNull(),
@@ -31,6 +41,7 @@ export const matches = sqliteTable('matches', {
   matchDate: text('match_date').notNull(),
   location: text('location').notNull(),
   matchType: text('match_type').notNull(),
+  status: text('status').notNull().default('active'), // 'active' | 'completed'
   result: text('result'), // 'Win' | 'Loss'
   notes: text('notes'),
   createdAt: text('created_at').notNull(),
@@ -44,6 +55,7 @@ export const sets = sqliteTable('sets', {
   setNumber: integer('set_number').notNull(),
   ourScore: integer('our_score').notNull().default(0),
   opponentScore: integer('opponent_score').notNull().default(0),
+  status: text('status').notNull().default('active'), // 'active' | 'completed'
   startingServerTeam: text('starting_server_team').notNull(), // 'Us' | 'Opponent'
   finalResult: text('final_result'), // 'Win' | 'Loss'
   createdAt: text('created_at').notNull(),

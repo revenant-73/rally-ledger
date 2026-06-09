@@ -1,30 +1,13 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { Match, Set, RallyEvent, Team, Player } from '../types';
 import { db } from '../db/client';
 import { players as playersTable, matches as matchesTable, sets as setsTable, rallyEvents as rallyEventsTable, teams as teamsTable } from '../db/schema';
-import { eq } from 'drizzle-orm';
-
-interface MatchContextType {
-  activeMatch: Match | null;
-  activeSet: Set | null;
-  activeTeam: Team | null;
-  rallies: RallyEvent[];
-  teams: Team[];
-  players: Player[];
-  startMatch: (match: Match) => Promise<void>;
-  startSet: (set: Set) => Promise<void>;
-  addRally: (rally: RallyEvent) => Promise<void>;
-  undoLastRally: () => Promise<void>;
-  addPlayer: (player: Player) => Promise<void>;
-  removePlayer: (playerId: string) => Promise<void>;
-  addTeam: (team: Team) => Promise<void>;
-  selectTeam: (teamId: string) => void;
-  refreshData: () => Promise<void>;
-}
-
-const MatchContext = createContext<MatchContextType | undefined>(undefined);
+import { eq, inArray } from 'drizzle-orm';
+import { MatchContext } from './MatchContext.context';
+import { useAuth } from '../hooks/useAuth';
 
 export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [activeMatch, setActiveMatch] = useState<Match | null>(() => {
     try {
       const saved = localStorage.getItem('activeMatch');
@@ -79,27 +62,106 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
+  const [isSyncing, setIsSyncing] = useState(false);
+
   const selectTeam = (teamId: string) => {
     const team = teams.find(t => t.id === teamId) || null;
     setActiveTeam(team);
   };
 
   const addTeam = async (team: Team) => {
-    setTeams(prev => [...prev, team]);
+    if (!user) return;
+    const teamWithOwner = { ...team, ownerId: user.id };
+    setTeams(prev => [...prev, teamWithOwner]);
+    setIsSyncing(true);
     try {
-      await db.insert(teamsTable).values(team);
+      await db.insert(teamsTable).values(teamWithOwner);
     } catch (e) {
       console.error('Failed to sync team to Turso', e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const endSet = async (result: 'Win' | 'Loss') => {
+    if (!activeSet) return;
+    
+    setIsSyncing(true);
+    try {
+      await db.update(setsTable)
+        .set({ status: 'completed', finalResult: result, updatedAt: new Date().toISOString() })
+        .where(eq(setsTable.id, activeSet.id));
+      setActiveSet(null);
+    } catch (e) {
+      console.error('Failed to end set in Turso', e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const updateMatch = async (matchId: string, updates: Partial<Match>) => {
+    setIsSyncing(true);
+    try {
+      await db.update(matchesTable)
+        .set({ ...updates, updatedAt: new Date().toISOString() })
+        .where(eq(matchesTable.id, matchId));
+      
+      if (activeMatch && activeMatch.id === matchId) {
+        setActiveMatch({ ...activeMatch, ...updates });
+      }
+    } catch (e) {
+      console.error('Failed to update match in Turso', e);
+    } finally {
+      setIsSyncing(false);
     }
   };
 
   const refreshData = useCallback(async () => {
+    if (!user) return;
     console.log('Refreshing data from Turso...');
+    setIsSyncing(true);
     try {
-      const dbPlayers = await db.select().from(playersTable);
-      const dbTeams = await db.select().from(teamsTable);
-      
+      // Get only teams owned by current user
+      const dbTeams = await db.select().from(teamsTable).where(eq(teamsTable.ownerId, user.id));
       setTeams(dbTeams as Team[]);
+
+      const teamIds = dbTeams.map(t => t.id);
+      
+      let dbPlayers: Player[] = [];
+      let dbMatches: Match[] = [];
+      
+      if (teamIds.length > 0) {
+        const playersData = await db.select().from(playersTable).where(inArray(playersTable.teamId, teamIds));
+        dbPlayers = playersData as Player[];
+        
+        const matchesData = await db.select().from(matchesTable).where(inArray(matchesTable.teamId, teamIds));
+        dbMatches = matchesData as Match[];
+      }
+      
+      // Auto-resume active match if none selected
+      let currentMatch = activeMatch;
+      if (!currentMatch || !teamIds.includes(currentMatch.teamId)) {
+        const activeMatchEntry = dbMatches.find(m => m.status === 'active');
+        if (activeMatchEntry) {
+          currentMatch = activeMatchEntry as Match;
+          setActiveMatch(currentMatch);
+        } else {
+          setActiveMatch(null);
+          currentMatch = null;
+        }
+      }
+
+      // Auto-resume active set for the current match
+      if (currentMatch && !activeSet) {
+        const activeSets = await db.select()
+          .from(setsTable)
+          .where(eq(setsTable.matchId, currentMatch.id))
+          .where(eq(setsTable.status, 'active'))
+          .limit(1);
+        if (activeSets.length > 0) {
+          setActiveSet(activeSets[0] as Set);
+        }
+      }
       
       if (activeTeam) {
         const teamPlayers = dbPlayers.filter(p => p.teamId === activeTeam.id);
@@ -108,28 +170,39 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setPlayers(dbPlayers as Player[]);
       }
       
-      if (activeMatch) {
+      if (currentMatch) {
         const currentRallies = await db.select()
           .from(rallyEventsTable)
-          .where(eq(rallyEventsTable.matchId, activeMatch.id));
+          .where(eq(rallyEventsTable.matchId, currentMatch.id));
         setRallies(currentRallies as RallyEvent[]);
       }
       console.log('Data refresh complete.');
     } catch (e) {
       console.error('Failed to refresh data from Turso', e);
+    } finally {
+      setIsSyncing(false);
     }
-  }, [activeMatch, activeTeam]);
+  }, [activeMatch, activeTeam, activeSet, user]);
 
   useEffect(() => {
     localStorage.setItem('activeTeam', JSON.stringify(activeTeam));
-    if (activeTeam) {
-      refreshData();
-    }
-  }, [activeTeam, refreshData]);
+  }, [activeTeam]);
 
-  // Initial load from DB
+  // Initial load from DB and sync on changes
   useEffect(() => {
-    refreshData();
+    let isMounted = true;
+    
+    const load = async () => {
+      if (isMounted) {
+        await refreshData();
+      }
+    };
+    
+    load();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [refreshData]);
 
   useEffect(() => {
@@ -156,19 +229,25 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setActiveMatch(match);
     setRallies([]);
     setActiveSet(null);
+    setIsSyncing(true);
     try {
       await db.insert(matchesTable).values(match);
     } catch (e) {
       console.error('Failed to sync match to Turso', e);
+    } finally {
+      setIsSyncing(false);
     }
   };
 
   const startSet = async (set: Set) => {
     setActiveSet(set);
+    setIsSyncing(true);
     try {
       await db.insert(setsTable).values(set);
     } catch (e) {
       console.error('Failed to sync set to Turso', e);
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -183,6 +262,7 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       };
       setActiveSet(updatedSet);
       
+      setIsSyncing(true);
       try {
         await db.insert(rallyEventsTable).values(rally);
         await db.update(setsTable)
@@ -190,6 +270,8 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           .where(eq(setsTable.id, activeSet.id));
       } catch (e) {
         console.error('Failed to sync rally to Turso', e);
+      } finally {
+        setIsSyncing(false);
       }
     }
   };
@@ -208,6 +290,7 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       };
       setActiveSet(updatedSet);
 
+      setIsSyncing(true);
       try {
         await db.delete(rallyEventsTable).where(eq(rallyEventsTable.id, lastRally.id));
         await db.update(setsTable)
@@ -215,25 +298,33 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           .where(eq(setsTable.id, activeSet.id));
       } catch (e) {
         console.error('Failed to sync undo to Turso', e);
+      } finally {
+        setIsSyncing(false);
       }
     }
   };
 
   const addPlayer = async (player: Player) => {
     setPlayers((prev) => [...prev, player]);
+    setIsSyncing(true);
     try {
       await db.insert(playersTable).values(player);
     } catch (e) {
       console.error('Failed to sync player to Turso', e);
+    } finally {
+      setIsSyncing(false);
     }
   };
 
   const removePlayer = async (playerId: string) => {
     setPlayers((prev) => prev.filter(p => p.id !== playerId));
+    setIsSyncing(true);
     try {
       await db.delete(playersTable).where(eq(playersTable.id, playerId));
     } catch (e) {
       console.error('Failed to remove player from Turso', e);
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -245,6 +336,7 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       rallies, 
       teams, 
       players,
+      isSyncing,
       startMatch,
       startSet,
       addRally,
@@ -253,17 +345,11 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       removePlayer,
       addTeam,
       selectTeam,
+      endSet,
+      updateMatch,
       refreshData
     }}>
       {children}
     </MatchContext.Provider>
   );
-};
-
-export const useMatch = () => {
-  const context = useContext(MatchContext);
-  if (context === undefined) {
-    throw new Error('useMatch must be used within a MatchProvider');
-  }
-  return context;
 };

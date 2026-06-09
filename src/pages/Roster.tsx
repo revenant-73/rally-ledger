@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, UserPlus, X, Users, Save } from 'lucide-react';
-import { useMatch } from '../context/MatchContext';
+import { useMatch } from '../hooks/useMatch';
 import type { Player, PlayerPosition, Team } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 

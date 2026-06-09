@@ -1,7 +1,17 @@
 export type PlayerPosition = 'OH' | 'OPP' | 'MB' | 'S' | 'L' | 'DS' | 'Other';
 
+export interface User {
+  id: string;
+  email: string;
+  name?: string;
+  createdAt: string;
+  updatedAt: string;
+  metadata?: Record<string, unknown>;
+}
+
 export interface Team {
   id: string;
+  ownerId?: string;
   name: string;
   level: string;
   season: string;
@@ -31,6 +41,7 @@ export interface Match {
   matchDate: string;
   location: string;
   matchType: string;
+  status: 'active' | 'completed';
   result?: 'Win' | 'Loss';
   notes?: string;
   createdAt: string;
@@ -44,6 +55,7 @@ export interface Set {
   setNumber: number;
   ourScore: number;
   opponentScore: number;
+  status: 'active' | 'completed';
   startingServerTeam: 'Us' | 'Opponent';
   finalResult?: 'Win' | 'Loss';
   createdAt: string;
