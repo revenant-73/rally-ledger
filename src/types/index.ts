@@ -7,6 +7,7 @@ export interface Team {
   season: string;
   createdAt: string;
   updatedAt: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface Player {
@@ -20,6 +21,7 @@ export interface Player {
   photoUrl?: string;
   createdAt: string;
   updatedAt: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface Match {
@@ -33,6 +35,7 @@ export interface Match {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface Set {
@@ -45,6 +48,7 @@ export interface Set {
   finalResult?: 'Win' | 'Loss';
   createdAt: string;
   updatedAt: string;
+  metadata?: Record<string, unknown>;
 }
 
 export type OutcomeType = 
@@ -79,6 +83,7 @@ export interface RallyEvent {
   playerId?: string;
   notes?: string;
   createdAt: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface MatchSummary {
@@ -95,4 +100,5 @@ export interface MatchSummary {
   suggestedFocus: string;
   createdAt: string;
   updatedAt: string;
+  metadata?: Record<string, unknown>;
 }

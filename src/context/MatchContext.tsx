@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { Match, Set, RallyEvent, Team, Player } from '../types';
 import { db } from '../db/client';
 import { players as playersTable, matches as matchesTable, sets as setsTable, rallyEvents as rallyEventsTable } from '../db/schema';
@@ -26,7 +26,7 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const saved = localStorage.getItem('activeMatch');
       return saved && saved !== "undefined" ? JSON.parse(saved) : null;
-    } catch (e) {
+    } catch {
       return null;
     }
   });
@@ -35,7 +35,7 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const saved = localStorage.getItem('activeSet');
       return saved && saved !== "undefined" ? JSON.parse(saved) : null;
-    } catch (e) {
+    } catch {
       return null;
     }
   });
@@ -44,7 +44,7 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const saved = localStorage.getItem('rallies');
       return saved && saved !== "undefined" ? JSON.parse(saved) : [];
-    } catch (e) {
+    } catch {
       return [];
     }
   });
@@ -53,7 +53,7 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const saved = localStorage.getItem('teams');
       return saved && saved !== "undefined" ? JSON.parse(saved) : [];
-    } catch (e) {
+    } catch {
       return [];
     }
   });
@@ -62,17 +62,12 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const saved = localStorage.getItem('players');
       return saved && saved !== "undefined" ? JSON.parse(saved) : [];
-    } catch (e) {
+    } catch {
       return [];
     }
   });
 
-  // Initial load from DB
-  useEffect(() => {
-    refreshData();
-  }, []);
-
-  const refreshData = async () => {
+  const refreshData = useCallback(async () => {
     console.log('Refreshing data from Turso...');
     try {
       const dbPlayers = await db.select().from(playersTable);
@@ -91,7 +86,12 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch (e) {
       console.error('Failed to refresh data from Turso', e);
     }
-  };
+  }, [activeMatch]);
+
+  // Initial load from DB
+  useEffect(() => {
+    refreshData();
+  }, [refreshData]);
 
   useEffect(() => {
     localStorage.setItem('activeMatch', JSON.stringify(activeMatch));

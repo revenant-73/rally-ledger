@@ -38,7 +38,12 @@ No automated testing framework (Vitest/Jest) is currently configured in `.\packa
 
 ## Database Guidelines
 
-Schema changes should be reflected in `.\src\db\schema.ts`. Drizzle Kit is installed as a dev dependency for managing migrations, although specific migration scripts are not currently defined in `package.json`.
+Schema changes should be reflected in `.\src\db\schema.ts`. Drizzle Kit is installed as a dev dependency for managing migrations.
+
+### Flexible Schema Pattern
+All major tables include a `metadata` column using `text(..., { mode: 'json' })`. This allows storing arbitrary, nested data without requiring schema migrations. 
+- **Usage**: Access via `entity.metadata?.someField`. 
+- **Storage**: Drizzle automatically handles serialization/deserialization.
 
 ## Git & Contribution Guidelines
 
