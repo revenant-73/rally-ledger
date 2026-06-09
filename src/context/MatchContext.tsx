@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import type { Match, Set, RallyEvent, Team, Player } from '../types';
 import { db } from '../db/client';
 import { players as playersTable, matches as matchesTable, sets as setsTable, rallyEvents as rallyEventsTable, teams as teamsTable } from '../db/schema';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, and } from 'drizzle-orm';
 import { MatchContext } from './MatchContext.context';
 import { useAuth } from '../hooks/useAuth';
 
@@ -155,8 +155,10 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (currentMatch && !activeSet) {
         const activeSets = await db.select()
           .from(setsTable)
-          .where(eq(setsTable.matchId, currentMatch.id))
-          .where(eq(setsTable.status, 'active'))
+          .where(and(
+            eq(setsTable.matchId, currentMatch.id),
+            eq(setsTable.status, 'active')
+          ))
           .limit(1);
         if (activeSets.length > 0) {
           setActiveSet(activeSets[0] as Set);

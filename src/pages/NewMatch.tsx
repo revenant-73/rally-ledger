@@ -27,6 +27,7 @@ const NewMatch: React.FC = () => {
       matchDate: new Date().toISOString(),
       location: formData.location,
       matchType: formData.matchType,
+      status: 'active',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

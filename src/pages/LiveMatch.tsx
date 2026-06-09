@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, RotateCcw, BarChart2, MessageSquare, MoreVertical, X, Trophy, AlertCircle } from 'lucide-react';
+import { ArrowLeft, RotateCcw, BarChart2, MessageSquare, MoreVertical, X, Trophy, AlertCircle, Zap } from 'lucide-react';
 import { useMatch } from '../hooks/useMatch';
 import type { OutcomeType, Classification, RallyEvent, Set } from '../types';
 import { v4 as uuidv4 } from 'uuid';
