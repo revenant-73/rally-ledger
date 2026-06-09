@@ -54,6 +54,23 @@ const Dashboard: React.FC = () => {
     const earnerPlayer = topEarner ? players.find(p => p.id === topEarner[0]) : null;
     const gifterPlayer = topGifter ? players.find(p => p.id === topGifter[0]) : null;
 
+    // Serve & Receive Stats
+    const serveStats = {
+      aces: rallies.filter(r => r.serveResult === 'Ace').length,
+      errors: rallies.filter(r => r.serveResult === 'Error').length,
+      inSystem: rallies.filter(r => r.serveResult === 'In-System').length,
+      outOfSystem: rallies.filter(r => r.serveResult === 'Out-of-System').length,
+      total: rallies.filter(r => r.serveResult).length
+    };
+
+    const receiveStats = {
+      errors: rallies.filter(r => r.receiveResult === 'Error').length,
+      overpass: rallies.filter(r => r.receiveResult === 'Overpass').length,
+      inSystem: rallies.filter(r => r.receiveResult === 'In-System').length,
+      outOfSystem: rallies.filter(r => r.receiveResult === 'Out-of-System').length,
+      total: rallies.filter(r => r.receiveResult).length
+    };
+
     // Momentum (Cumulative point diff)
     const momentum: number[] = [];
     rallies.reduce((acc, r) => {
@@ -80,8 +97,54 @@ const Dashboard: React.FC = () => {
       biggestLeak,
       biggestWeapon,
       suggestion,
+      serveStats,
+      receiveStats,
       earner: earnerPlayer ? { name: earnerPlayer.lastName, count: topEarner[1], jersey: earnerPlayer.jerseyNumber } : null,
-      gifter: gifterPlayer ? { name: gifterPlayer.lastName, count: topGifter[1], jersey: gifterPlayer.jerseyNumber } : null
+      gifter: gifterPlayer ? { name: gifterPlayer.lastName, count: topGifter[1], jersey: gifterPlayer.jerseyNumber } : null,
+      serveMetrics: {
+        our: (() => {
+          const ourServes = rallies.filter(r => r.servingTeam === 'Us' && r.serveResult);
+          const total = ourServes.length;
+          const errors = ourServes.filter(r => r.serveResult === 'Error').length;
+          const kos = ourServes.filter(r => r.serveResult === 'Ace' || r.serveResult === 'Out-of-System').length;
+          
+          // Players with most misses
+          const missesByPlayer: Record<string, number> = {};
+          ourServes.filter(r => r.serveResult === 'Error' && r.serverPlayerId).forEach(r => {
+            if (r.serverPlayerId) {
+              missesByPlayer[r.serverPlayerId] = (missesByPlayer[r.serverPlayerId] || 0) + 1;
+            }
+          });
+          
+          const topMissers = Object.entries(missesByPlayer)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 2)
+            .map(([pid, count]) => ({
+              name: players.find(p => p.id === pid)?.lastName || 'Unknown',
+              count
+            }));
+
+          return {
+            koPct: total > 0 ? Math.round((kos / total) * 100) : 0,
+            servePct: total > 0 ? Math.round(((total - errors) / total) * 100) : 0,
+            errors,
+            topMissers
+          };
+        })(),
+        opp: (() => {
+          const oppServes = rallies.filter(r => r.servingTeam === 'Opponent' && (r.receiveResult || r.outcomeType === 'Ace' || r.outcomeType === 'Serve Error'));
+          const total = oppServes.length;
+          const errors = rallies.filter(r => r.servingTeam === 'Opponent' && r.outcomeType === 'Serve Error').length;
+          const aces = rallies.filter(r => r.servingTeam === 'Opponent' && r.outcomeType === 'Ace').length;
+          const oos = rallies.filter(r => r.servingTeam === 'Opponent' && r.receiveResult === 'Out-of-System').length;
+          
+          return {
+            koPct: total > 0 ? Math.round(((aces + oos) / total) * 100) : 0,
+            servePct: total > 0 ? Math.round(((total - errors) / total) * 100) : 0,
+            errors
+          };
+        })()
+      }
     };
   }, [rallies, players]);
 
@@ -155,6 +218,95 @@ const Dashboard: React.FC = () => {
               <span className="text-3xl font-black text-brand-gray">-{metrics.oppGifted}</span>
             </div>
             <p className="text-[10px] mt-2 text-brand-text-secondary uppercase">Earned / Gifted</p>
+          </div>
+        </div>
+
+        {/* Live Serve Percentages */}
+        <div className="grid grid-cols-2 gap-4 -mt-2">
+          <div className="px-4 py-3 bg-brand-teal/5 border border-brand-teal/10 rounded-2xl">
+            <div className="flex justify-between items-end mb-1">
+              <span className="text-[10px] font-black text-brand-teal uppercase">KO%</span>
+              <span className="text-xl font-black text-brand-teal">{metrics.serveMetrics.our.koPct}%</span>
+            </div>
+            <div className="flex justify-between items-end mb-2">
+              <span className="text-[10px] font-black text-brand-text-secondary uppercase">Serve%</span>
+              <span className="text-sm font-bold">{metrics.serveMetrics.our.servePct}%</span>
+            </div>
+            <div className="pt-2 border-t border-brand-teal/10">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-[9px] font-bold text-brand-red uppercase">Misses</span>
+                <span className="text-xs font-black text-brand-red">{metrics.serveMetrics.our.errors}</span>
+              </div>
+              {metrics.serveMetrics.our.topMissers.map((m, i) => (
+                <div key={i} className="flex justify-between text-[10px] opacity-70">
+                  <span>{m.name}</span>
+                  <span className="font-bold">{m.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="px-4 py-3 bg-brand-red/5 border border-brand-red/10 rounded-2xl">
+            <div className="flex justify-between items-end mb-1">
+              <span className="text-[10px] font-black text-brand-red uppercase">KO%</span>
+              <span className="text-xl font-black text-brand-red">{metrics.serveMetrics.opp.koPct}%</span>
+            </div>
+            <div className="flex justify-between items-end mb-2">
+              <span className="text-[10px] font-black text-brand-text-secondary uppercase">Serve%</span>
+              <span className="text-sm font-bold">{metrics.serveMetrics.opp.servePct}%</span>
+            </div>
+            <div className="pt-2 border-t border-brand-red/10">
+              <div className="flex justify-between items-center">
+                <span className="text-[9px] font-bold text-brand-red uppercase">Misses</span>
+                <span className="text-xs font-black text-brand-red">{metrics.serveMetrics.opp.errors}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Serve & Receive Performance */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-5">
+            <h3 className="text-[10px] font-bold text-brand-text-secondary uppercase mb-3 tracking-widest text-center">Serve</h3>
+            <div className="grid grid-cols-2 gap-y-3 gap-x-2">
+              <div className="text-center">
+                <p className="text-lg font-black text-brand-green">{metrics.serveStats.aces}</p>
+                <p className="text-[8px] font-bold text-brand-text-secondary uppercase">ACE</p>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-black text-brand-red">{metrics.serveStats.errors}</p>
+                <p className="text-[8px] font-bold text-brand-text-secondary uppercase">ERR</p>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-black text-brand-teal">{metrics.serveStats.inSystem}</p>
+                <p className="text-[8px] font-bold text-brand-text-secondary uppercase">InSys</p>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-black text-brand-amber">{metrics.serveStats.outOfSystem}</p>
+                <p className="text-[8px] font-bold text-brand-text-secondary uppercase">KO</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-5">
+            <h3 className="text-[10px] font-bold text-brand-text-secondary uppercase mb-3 tracking-widest text-center">Receive</h3>
+            <div className="grid grid-cols-2 gap-y-3 gap-x-2">
+              <div className="text-center">
+                <p className="text-lg font-black text-brand-teal">{metrics.receiveStats.inSystem}</p>
+                <p className="text-[8px] font-bold text-brand-text-secondary uppercase">InSys</p>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-black text-brand-amber">{metrics.receiveStats.outOfSystem}</p>
+                <p className="text-[8px] font-bold text-brand-text-secondary uppercase">KO</p>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-black text-brand-orange">{metrics.receiveStats.overpass}</p>
+                <p className="text-[8px] font-bold text-brand-text-secondary uppercase">Over</p>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-black text-brand-red">{metrics.receiveStats.errors}</p>
+                <p className="text-[8px] font-bold text-brand-text-secondary uppercase">ERR</p>
+              </div>
+            </div>
           </div>
         </div>
 
