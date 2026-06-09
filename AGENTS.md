@@ -39,3 +39,9 @@ No automated testing framework (Vitest/Jest) is currently configured in `.\packa
 ## Database Guidelines
 
 Schema changes should be reflected in `.\src\db\schema.ts`. Drizzle Kit is installed as a dev dependency for managing migrations, although specific migration scripts are not currently defined in `package.json`.
+
+## Git & Contribution Guidelines
+
+- **Repository**: Managed on GitHub at [revenant-73/rally-ledger](https://github.com/revenant-73/rally-ledger.git).
+- **Branching**: The primary development branch is `main`.
+- **Commits**: Use concise, descriptive commit messages.
