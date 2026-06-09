@@ -7,22 +7,24 @@ import { v4 as uuidv4 } from 'uuid';
 
 const NewMatch: React.FC = () => {
   const navigate = useNavigate();
-  const { startMatch } = useMatch();
+  const { startMatch, teams, selectTeam, activeTeam } = useMatch();
   
   const [formData, setFormData] = useState({
-    teamName: '',
+    teamId: activeTeam?.id || '',
     opponentName: '',
     location: '',
     matchType: 'Tournament',
-    level: 'Varsity'
+    level: activeTeam?.level || 'Varsity'
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    const selectedTeam = teams.find(t => t.id === formData.teamId);
+    
     const newMatch: Match = {
       id: uuidv4(),
-      teamId: 'team-1', // Default for MVP
+      teamId: formData.teamId,
       opponentName: formData.opponentName,
       matchDate: new Date().toISOString(),
       location: formData.location,
@@ -31,8 +33,21 @@ const NewMatch: React.FC = () => {
       updatedAt: new Date().toISOString(),
     };
 
+    if (formData.teamId) {
+      selectTeam(formData.teamId);
+    }
+    
     startMatch(newMatch);
     navigate('/match/live');
+  };
+
+  const handleTeamChange = (teamId: string) => {
+    const selectedTeam = teams.find(t => t.id === teamId);
+    setFormData({ 
+      ...formData, 
+      teamId,
+      level: selectedTeam?.level || formData.level
+    });
   };
 
   return (
@@ -47,15 +62,25 @@ const NewMatch: React.FC = () => {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
-          <label className="text-sm font-medium text-brand-text-secondary">Our Team</label>
-          <input
+          <label className="text-sm font-medium text-brand-text-secondary">Our Roster</label>
+          <select
             required
-            type="text"
-            value={formData.teamName}
-            onChange={(e) => setFormData({ ...formData, teamName: e.target.value })}
+            value={formData.teamId}
+            onChange={(e) => handleTeamChange(e.target.value)}
             className="w-full bg-brand-gray/10 border border-brand-gray/20 rounded-xl p-4 focus:outline-none focus:border-brand-teal transition-colors"
-            placeholder="Enter team name"
-          />
+          >
+            <option value="">Select a saved roster...</option>
+            {teams.map(team => (
+              <option key={team.id} value={team.id} className="bg-brand-bg">
+                {team.name} ({team.level})
+              </option>
+            ))}
+          </select>
+          {teams.length === 0 && (
+            <p className="text-xs text-brand-teal mt-1 cursor-pointer" onClick={() => navigate('/roster')}>
+              + Create your first roster
+            </p>
+          )}
         </div>
 
         <div className="space-y-2">
