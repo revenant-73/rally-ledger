@@ -467,15 +467,15 @@ const LiveMatch: React.FC = () => {
                   <button onClick={() => { setShowPlayerSelection(false); setOutcome(null); }} className="text-brand-text-secondary text-sm">Back</button>
                 </div>
               </div>
-              <div className="flex-1 grid grid-cols-3 gap-2 overflow-y-auto pb-4">
+              <div className="flex-1 grid grid-cols-4 gap-1.5 overflow-y-auto pb-4 content-start">
                 {players.sort((a, b) => Number(a.jerseyNumber) - Number(b.jerseyNumber)).map((player) => (
                   <button
                     key={player.id}
                     onClick={() => handlePlayerClick(player.id)}
-                    className="bg-brand-gray/10 border border-brand-gray/20 py-4 rounded-xl flex flex-col items-center justify-center active:scale-[0.95] transition-all"
+                    className="bg-brand-gray/10 border border-brand-gray/20 py-2 rounded-xl flex flex-col items-center justify-center active:scale-[0.95] transition-all"
                   >
-                    <span className="text-xl font-black text-brand-teal leading-none">{player.jerseyNumber}</span>
-                    <span className="text-[10px] font-bold uppercase mt-1 truncate w-full px-1">{player.lastName}</span>
+                    <span className="text-base font-black text-brand-teal leading-none">{player.jerseyNumber}</span>
+                    <span className="text-[8px] font-bold uppercase mt-0.5 truncate w-full px-1 text-center">{player.firstName}</span>
                   </button>
                 ))}
               </div>
