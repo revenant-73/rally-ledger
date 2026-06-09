@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
-import { useMatch } from '../context/MatchContext';
+import { useMatch } from '../hooks/useMatch';
 import type { Match } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -80,6 +80,26 @@ const NewMatch: React.FC = () => {
             </p>
           )}
         </div>
+
+        {/* Quick Select Rosters */}
+        {teams.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {teams.slice(0, 3).map(team => (
+              <button
+                key={team.id}
+                type="button"
+                onClick={() => handleTeamChange(team.id)}
+                className={`whitespace-nowrap px-4 py-2 rounded-full border text-xs font-bold transition-all ${
+                  formData.teamId === team.id 
+                  ? 'bg-brand-teal border-brand-teal text-brand-bg shadow-md scale-105' 
+                  : 'bg-brand-gray/5 border-brand-gray/20 text-brand-text-secondary hover:border-brand-teal/50'
+                }`}
+              >
+                {team.name}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-brand-text-secondary">Opponent</label>

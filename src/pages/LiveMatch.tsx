@@ -1,19 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, RotateCcw, BarChart2, MessageSquare } from 'lucide-react';
-import { useMatch } from '../context/MatchContext';
+import { ArrowLeft, RotateCcw, BarChart2, MessageSquare, MoreVertical, X, Trophy, AlertCircle } from 'lucide-react';
+import { useMatch } from '../hooks/useMatch';
 import type { OutcomeType, Classification, RallyEvent, Set } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 const LiveMatch: React.FC = () => {
   const navigate = useNavigate();
-  const { activeMatch, activeSet, rallies, addRally, undoLastRally, startSet, players } = useMatch();
+  const { activeMatch, activeSet, rallies, addRally, undoLastRally, startSet, players, endSet, updateMatch } = useMatch();
   
   const [pointWinner, setPointWinner] = useState<'Us' | 'Opponent' | null>(null);
   const [outcome, setOutcome] = useState<OutcomeType | null>(null);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [showPlayerSelection, setShowPlayerSelection] = useState(false);
   const [showClassification, setShowClassification] = useState(false);
+  const [rotation, setRotation] = useState<number>(1);
+  const [servingTeam, setServingTeam] = useState<'Us' | 'Opponent'>('Us');
+  const [showRotationPicker, setShowRotationPicker] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showTimeout, setShowTimeout] = useState(false);
+  const [showNoteModal, setShowNoteModal] = useState(false);
+  const [noteText, setNoteText] = useState(activeMatch?.notes || '');
+  const [toast, setToast] = useState<string | null>(null);
+  const [pendingSetNumber, setPendingSetNumber] = useState(1);
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   useEffect(() => {
     if (!activeMatch) {
@@ -23,29 +39,102 @@ const LiveMatch: React.FC = () => {
 
   if (!activeMatch) return null;
 
-  // Initialize first set if none exists
+  // Initialize next set if none exists
   if (!activeSet) {
+    const lastSetRallies = rallies.length > 0 ? rallies.filter(r => {
+      // Find the highest set number in rallies
+      const maxSetRally = rallies.reduce((prev, current) => {
+        // We don't have setId in the rally type as a simple number, but we can compare them
+        return (prev.rallyNumber > current.rallyNumber) ? prev : current;
+      });
+      return r.setId === maxSetRally.setId;
+    }) : [];
+
+    const lastSetMetrics = lastSetRallies.length > 0 ? {
+      ourScore: lastSetRallies[lastSetRallies.length - 1].scoreAfterUs,
+      oppScore: lastSetRallies[lastSetRallies.length - 1].scoreAfterOpponent,
+      ourEarned: lastSetRallies.filter(r => r.pointWinner === 'Us' && r.classification === 'Earned').length,
+      ourGifted: lastSetRallies.filter(r => r.pointWinner === 'Opponent' && r.classification === 'Gifted').length,
+    } : null;
+
     return (
       <div className="min-h-screen bg-brand-bg text-brand-text p-6 flex flex-col items-center justify-center text-center">
-        <h2 className="text-2xl font-bold mb-4">Start Set 1</h2>
-        <p className="text-brand-text-secondary mb-8">Ready to begin tracking?</p>
+        {lastSetMetrics ? (
+          <div className="mb-12 w-full max-w-sm">
+            <h3 className="text-sm font-black text-brand-teal uppercase tracking-widest mb-4">Last Set Summary</h3>
+            <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-6">
+              <div className="flex items-center justify-center gap-8 mb-6">
+                <div className="flex flex-col">
+                  <span className="text-4xl font-black text-brand-teal">{lastSetMetrics.ourScore}</span>
+                  <span className="text-[10px] font-bold text-brand-text-secondary uppercase">Us</span>
+                </div>
+                <div className="h-8 w-px bg-brand-gray/20" />
+                <div className="flex flex-col">
+                  <span className="text-4xl font-black text-brand-red">{lastSetMetrics.oppScore}</span>
+                  <span className="text-[10px] font-bold text-brand-text-secondary uppercase">Them</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center">
+                  <p className="text-xl font-black text-brand-green">+{lastSetMetrics.ourEarned}</p>
+                  <p className="text-[10px] font-bold text-brand-text-secondary uppercase">Earned</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xl font-black text-brand-amber">-{lastSetMetrics.ourGifted}</p>
+                  <p className="text-[10px] font-bold text-brand-text-secondary uppercase">Gifted</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-12">
+            <Trophy size={64} className="mx-auto text-brand-teal/20 mb-4" />
+          </div>
+        )}
+
+        <h2 className="text-3xl font-bold mb-2">Ready for Next Set?</h2>
+        <p className="text-brand-text-secondary mb-8 text-lg">Select set number to begin</p>
+        
+        <div className="grid grid-cols-5 gap-3 mb-8 w-full max-w-xs">
+          {[1, 2, 3, 4, 5].map(n => (
+            <button
+              key={n}
+              onClick={() => setPendingSetNumber(n)}
+              className={`aspect-square rounded-xl font-black text-xl flex items-center justify-center transition-all ${
+                pendingSetNumber === n ? 'bg-brand-teal text-brand-bg scale-110 shadow-lg' : 'bg-brand-gray/10 text-brand-text-secondary'
+              }`}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+
         <button
-          onClick={() => {
+          onClick={async () => {
             const newSet: Set = {
               id: uuidv4(),
               matchId: activeMatch.id,
-              setNumber: 1,
+              setNumber: pendingSetNumber,
               ourScore: 0,
               opponentScore: 0,
-              startingServerTeam: 'Us', // Should be configurable later
+              status: 'active',
+              startingServerTeam: 'Us',
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             };
-            startSet(newSet);
+            await startSet(newSet);
           }}
-          className="bg-brand-teal text-brand-bg font-bold py-4 px-8 rounded-xl text-xl"
+          className="bg-brand-teal text-brand-bg font-bold py-5 px-12 rounded-2xl text-xl shadow-xl active:scale-[0.98] transition-all"
         >
-          Start Set
+          Begin Set {pendingSetNumber}
+        </button>
+        
+        <button 
+          onClick={() => navigate('/')}
+          className="mt-8 text-brand-text-secondary font-bold flex items-center gap-2"
+        >
+          <ArrowLeft size={18} />
+          Back to Home
         </button>
       </div>
     );
@@ -83,12 +172,25 @@ const LiveMatch: React.FC = () => {
       scoreAfterUs: pointWinner === 'Us' ? activeSet.ourScore + 1 : activeSet.ourScore,
       scoreAfterOpponent: pointWinner === 'Opponent' ? activeSet.opponentScore + 1 : activeSet.opponentScore,
       pointWinner,
-      servingTeam: 'Us', // Should be tracked properly later
+      servingTeam,
+      rotationNumber: rotation,
       outcomeType: outcome,
       classification,
       playerId: selectedPlayerId || undefined,
       createdAt: new Date().toISOString(),
     };
+
+    // Logic for rotation and next server
+    if (pointWinner === 'Us') {
+      if (servingTeam === 'Opponent') {
+        // Break serve -> Rotate
+        setRotation(prev => prev === 6 ? 1 : prev + 1);
+        setToast(`Point Us! Rotated to P${rotation === 6 ? 1 : rotation + 1}`);
+      }
+      setServingTeam('Us');
+    } else {
+      setServingTeam('Opponent');
+    }
 
     addRally(newRally);
     resetEntry();
@@ -102,6 +204,20 @@ const LiveMatch: React.FC = () => {
     setShowClassification(false);
   };
 
+  const undoWithFeedback = async () => {
+    if (rallies.length === 0) return;
+    const lastRally = rallies[rallies.length - 1];
+    
+    // Reverse rotation logic if needed
+    if (lastRally.pointWinner === 'Us' && lastRally.servingTeam === 'Opponent') {
+      setRotation(prev => prev === 1 ? 6 : prev - 1);
+    }
+    setServingTeam(lastRally.servingTeam);
+    
+    setToast(`Undid: ${lastRally.outcomeType} by ${lastRally.pointWinner === 'Us' ? 'Us' : 'Them'}`);
+    await undoLastRally();
+  };
+
   const outcomes: OutcomeType[] = [
     'Ace', 'Kill', 'Block', 'Forced Error',
     'Serve Error', 'Attack Error', 'Ball Handling Error',
@@ -109,7 +225,14 @@ const LiveMatch: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-brand-bg text-brand-text flex flex-col">
+    <div className="min-h-screen bg-brand-bg text-brand-text flex flex-col relative">
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] bg-brand-teal text-brand-bg px-6 py-3 rounded-full font-bold shadow-2xl animate-bounce">
+          {toast}
+        </div>
+      )}
+
       {/* Header */}
       <header className="p-4 flex items-center justify-between border-b border-brand-gray/10">
         <button onClick={() => navigate('/')} className="text-brand-text-secondary">
@@ -119,10 +242,154 @@ const LiveMatch: React.FC = () => {
           <h2 className="text-sm font-medium text-brand-text-secondary uppercase tracking-wider">Set {activeSet.setNumber}</h2>
           <p className="font-bold">vs {activeMatch.opponentName}</p>
         </div>
-        <button onClick={() => navigate('/match/dashboard')} className="text-brand-text-secondary active:text-brand-teal">
-          <BarChart2 size={24} />
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setShowTimeout(true)} 
+            className="text-brand-text-secondary active:text-brand-teal p-1 flex flex-col items-center"
+          >
+            <RotateCcw size={20} className="rotate-90" />
+            <span className="text-[8px] font-black uppercase mt-0.5">Timeout</span>
+          </button>
+          <button onClick={() => navigate('/match/dashboard')} className="text-brand-text-secondary active:text-brand-teal p-1 flex flex-col items-center">
+            <BarChart2 size={24} />
+            <span className="text-[8px] font-black uppercase mt-0.5">Stats</span>
+          </button>
+          <button onClick={() => setShowMoreMenu(true)} className="text-brand-text-secondary active:text-brand-teal p-1 flex flex-col items-center">
+            <MoreVertical size={24} />
+            <span className="text-[8px] font-black uppercase mt-0.5">More</span>
+          </button>
+        </div>
       </header>
+
+      {/* Note Modal */}
+      {showNoteModal && (
+        <div className="fixed inset-0 z-[130] bg-brand-bg/95 backdrop-blur-md p-6 flex flex-col animate-in fade-in slide-in-from-bottom-8 duration-300">
+          <div className="flex-1 flex flex-col max-w-sm mx-auto w-full pt-12">
+            <header className="flex items-center justify-between mb-8">
+              <h2 className="text-3xl font-black text-brand-teal">MATCH NOTE</h2>
+              <button onClick={() => setShowNoteModal(false)} className="text-brand-text-secondary"><X size={28} /></button>
+            </header>
+            
+            <p className="text-brand-text-secondary text-sm mb-4">Add a coaching note, commitment, or observation for this match.</p>
+            
+            <textarea
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              placeholder="Enter note here..."
+              className="flex-1 bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-6 text-xl font-medium focus:border-brand-teal/50 outline-none resize-none"
+              autoFocus
+            />
+            
+            <button 
+              onClick={async () => {
+                if (activeMatch) {
+                  await updateMatch(activeMatch.id, { notes: noteText });
+                  setShowNoteModal(false);
+                  setToast('Note saved!');
+                }
+              }}
+              className="mt-8 bg-brand-teal text-brand-bg font-black py-6 rounded-2xl text-xl shadow-2xl active:scale-[0.98] transition-all"
+            >
+              SAVE NOTE
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Timeout Modal */}
+      {showTimeout && (
+        <div className="fixed inset-0 z-[120] bg-brand-bg/95 backdrop-blur-md p-6 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-300">
+          <div className="w-full max-w-sm space-y-8">
+            <header className="text-center">
+              <h2 className="text-4xl font-black text-brand-teal mb-2">TIMEOUT</h2>
+              <p className="text-brand-text-secondary uppercase tracking-widest font-bold">Match Weather Update</p>
+            </header>
+
+            <div className="bg-brand-gray/5 border border-brand-teal/20 rounded-3xl p-8 space-y-8">
+              <div className="flex items-center justify-center gap-12">
+                <div className="text-center">
+                  <p className="text-5xl font-black text-brand-teal">{activeSet.ourScore}</p>
+                  <p className="text-xs font-bold text-brand-text-secondary uppercase mt-2">Us</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-5xl font-black text-brand-red">{activeSet.opponentScore}</p>
+                  <p className="text-xs font-bold text-brand-text-secondary uppercase mt-2">Them</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-brand-bg rounded-2xl border border-brand-gray/10">
+                  <div className="flex items-center gap-3">
+                    <Zap size={20} className="text-brand-green" />
+                    <span className="text-sm font-bold">Earned Balance</span>
+                  </div>
+                  <span className="font-black text-brand-green">
+                    +{rallies.filter(r => r.pointWinner === 'Us' && r.classification === 'Earned').length}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-brand-bg rounded-2xl border border-brand-gray/10">
+                  <div className="flex items-center gap-3">
+                    <AlertCircle size={20} className="text-brand-amber" />
+                    <span className="text-sm font-bold">Gifted Balance</span>
+                  </div>
+                  <span className="font-black text-brand-amber">
+                    -{rallies.filter(r => r.pointWinner === 'Opponent' && r.classification === 'Gifted').length}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <button 
+              onClick={() => setShowTimeout(false)}
+              className="w-full bg-brand-teal text-brand-bg font-black py-6 rounded-2xl text-xl shadow-2xl active:scale-[0.98] transition-all"
+            >
+              RESUME TRACKING
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* More Menu Modal */}
+      {showMoreMenu && (
+        <div className="fixed inset-0 z-[110] bg-brand-bg/90 backdrop-blur-sm p-6 flex flex-col justify-end animate-in fade-in duration-300">
+          <div className="bg-brand-gray/5 border border-brand-gray/20 rounded-3xl p-6 space-y-4 max-w-sm mx-auto w-full mb-20">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xl font-bold">Match Actions</h3>
+              <button onClick={() => setShowMoreMenu(false)} className="text-brand-text-secondary"><X size={24} /></button>
+            </div>
+            
+            <button 
+              onClick={() => {
+                const winner = activeSet.ourScore > activeSet.opponentScore ? 'Win' : 'Loss';
+                if (window.confirm(`End Set ${activeSet.setNumber} as a ${winner}?`)) {
+                  endSet(winner);
+                  setShowMoreMenu(false);
+                  setToast(`Set ${activeSet.setNumber} completed!`);
+                }
+              }}
+              className="w-full flex items-center justify-between p-4 bg-brand-teal/10 text-brand-teal rounded-2xl font-bold"
+            >
+              <div className="flex items-center gap-3">
+                <Trophy size={20} />
+                <span>End Set {activeSet.setNumber}</span>
+              </div>
+              <span className="text-xs uppercase opacity-60">{activeSet.ourScore} - {activeSet.opponentScore}</span>
+            </button>
+
+            <button 
+              onClick={() => {
+                if (window.confirm("Abandon match? Current set data will be lost.")) {
+                  navigate('/');
+                }
+              }}
+              className="w-full flex items-center gap-3 p-4 bg-brand-red/10 text-brand-red rounded-2xl font-bold"
+            >
+              <AlertCircle size={20} />
+              <span>Abandon Match</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Score Display */}
       <div className="flex-1 flex flex-col p-4 space-y-4">
@@ -136,6 +403,43 @@ const LiveMatch: React.FC = () => {
             <span className="text-5xl font-black text-brand-red">{activeSet.opponentScore}</span>
           </div>
         </div>
+
+        {/* Rotation & Server Status */}
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setShowRotationPicker(!showRotationPicker)}
+            className="flex-1 bg-brand-gray/10 border border-brand-gray/20 rounded-2xl p-4 flex flex-col items-center justify-center active:scale-[0.98] transition-all"
+          >
+            <span className="text-[10px] font-bold text-brand-text-secondary uppercase">Current Rotation</span>
+            <span className="text-2xl font-black text-brand-teal">P{rotation}</span>
+          </button>
+          <button 
+            onClick={() => setServingTeam(servingTeam === 'Us' ? 'Opponent' : 'Us')}
+            className={`flex-1 border rounded-2xl p-4 flex flex-col items-center justify-center active:scale-[0.98] transition-all ${
+              servingTeam === 'Us' ? 'bg-brand-teal/20 border-brand-teal text-brand-teal' : 'bg-brand-red/20 border-brand-red text-brand-red'
+            }`}
+          >
+            <span className="text-[10px] font-bold uppercase opacity-60">Serving</span>
+            <span className="text-xl font-black">{servingTeam === 'Us' ? 'WE ARE' : 'THEY ARE'}</span>
+          </button>
+        </div>
+
+        {/* Rotation Picker Modal-lite */}
+        {showRotationPicker && (
+          <div className="grid grid-cols-6 gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
+            {[1, 2, 3, 4, 5, 6].map((p) => (
+              <button
+                key={p}
+                onClick={() => { setRotation(p); setShowRotationPicker(false); }}
+                className={`py-3 rounded-xl font-black text-lg ${
+                  rotation === p ? 'bg-brand-teal text-brand-bg' : 'bg-brand-gray/10 text-brand-text-secondary'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Input Area */}
         <div className="flex-1 bg-brand-gray/5 rounded-3xl p-4 flex flex-col">
@@ -230,13 +534,16 @@ const LiveMatch: React.FC = () => {
         {/* Action Bar */}
         <div className="grid grid-cols-3 gap-2 py-2">
           <button
-            onClick={undoLastRally}
+            onClick={undoWithFeedback}
             className="flex flex-col items-center gap-1 p-3 bg-brand-gray/5 rounded-xl text-brand-text-secondary active:text-brand-teal"
           >
             <RotateCcw size={20} />
             <span className="text-[10px] font-bold uppercase">Undo</span>
           </button>
-          <button className="flex flex-col items-center gap-1 p-3 bg-brand-gray/5 rounded-xl text-brand-text-secondary">
+          <button
+            onClick={() => setShowNoteModal(true)}
+            className="flex flex-col items-center gap-1 p-3 bg-brand-gray/5 rounded-xl text-brand-text-secondary active:text-brand-teal"
+          >
             <MessageSquare size={20} />
             <span className="text-[10px] font-bold uppercase">Note</span>
           </button>

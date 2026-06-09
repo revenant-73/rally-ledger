@@ -51,6 +51,12 @@ The application supports multiple teams/rosters.
 - **Roster Selection**: Always prefer selecting an existing roster from the dropdown in the "New Match" flow to ensure historical data consistency.
 - **Player Sync**: Players are bound to a specific `teamId`.
 
+### Live Match Persistence
+The application uses a **DB-first persistence** strategy for live tracking.
+- **`activeMatch` & `activeSet`**: These are automatically recovered from Turso if they exist with a `status: 'active'`.
+- **Sync Status**: The `isSyncing` boolean in `MatchContext` tracks pending Turso operations and is displayed in the global `Layout`.
+- **Rotations**: Managed via local state in `LiveMatch` but saved to the `rally_events` table for historical "Weather by Rotation" analysis.
+
 ## Git & Contribution Guidelines
 
 - **Repository**: Managed on GitHub at [revenant-73/rally-ledger](https://github.com/revenant-73/rally-ledger.git).
