@@ -18,7 +18,6 @@ const LiveMatch: React.FC = () => {
   const [receivePlayerId, setReceivePlayerId] = useState<string | null>(null);
   const [showReceivePlayerSelection, setShowReceivePlayerSelection] = useState(false);
   const [showPlayerSelection, setShowPlayerSelection] = useState(false);
-  const [showServerSelection, setShowServerSelection] = useState(false);
   const [showClassification, setShowClassification] = useState(false);
   const [servingTeam, setServingTeam] = useState<'Us' | 'Opponent'>('Us');
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -146,7 +145,6 @@ const LiveMatch: React.FC = () => {
 
   const handleServerClick = (playerId: string | 'none') => {
     setServerPlayerId(playerId === 'none' ? null : playerId);
-    setShowServerSelection(false);
   };
 
   const handleServeQualityClick = (quality: 'Ace' | 'Error' | 'In-System' | 'Out-of-System') => {
@@ -310,7 +308,6 @@ const LiveMatch: React.FC = () => {
     setReceivePlayerId(null);
     setShowReceivePlayerSelection(false);
     setShowPlayerSelection(false);
-    setShowServerSelection(false);
     setShowClassification(false);
   };
 

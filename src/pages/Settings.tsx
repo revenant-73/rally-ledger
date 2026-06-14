@@ -2,37 +2,52 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Trash2, Database, ShieldAlert, Info, LogOut, User as UserIcon } from 'lucide-react';
 import { db } from '../db/client';
-import { matches, sets, rallyEvents, players, teams } from '../db/schema';
+import { matches as matchesTable, sets as setsTable, rallyEvents as rallyEventsTable, players as playersTable, teams as teamsTable } from '../db/schema';
 import { useAuth } from '../hooks/useAuth';
+import { useMatch } from '../hooks/useMatch';
+import { inArray, eq } from 'drizzle-orm';
 
 const Settings: React.FC = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout: authLogout } = useAuth();
+  const { teams, matches } = useMatch();
 
   const handleLogout = () => {
-    logout();
+    authLogout();
     navigate('/login');
   };
 
   const handleResetDatabase = async () => {
-    if (window.confirm('CRITICAL: This will delete ALL matches, rosters, and stats. This cannot be undone. Are you absolutely sure?')) {
+    if (!user) return;
+    if (window.confirm('CRITICAL: This will delete YOUR matches, rosters, and stats. This cannot be undone. Are you absolutely sure?')) {
       try {
-        // In LibSQL/SQLite, we can't easily drop everything without specialized commands, 
-        // but we can delete from all tables.
-        await Promise.all([
-          db.delete(rallyEvents),
-          db.delete(sets),
-          db.delete(matches),
-          db.delete(players),
-          db.delete(teams),
-        ]);
+        const teamIds = teams.map(t => t.id);
+        const matchIds = matches.map(m => m.id);
+
+        if (matchIds.length > 0) {
+          await db.delete(rallyEventsTable).where(inArray(rallyEventsTable.matchId, matchIds));
+          await db.delete(setsTable).where(inArray(setsTable.matchId, matchIds));
+          await db.delete(matchesTable).where(inArray(matchesTable.id, matchIds));
+        }
+
+        if (teamIds.length > 0) {
+          await db.delete(playersTable).where(inArray(playersTable.teamId, teamIds));
+          await db.delete(teamsTable).where(eq(teamsTable.ownerId, user.id));
+        }
         
-        localStorage.clear();
-        alert('Database has been reset.');
-        window.location.href = '/';
+        localStorage.removeItem('activeMatch');
+        localStorage.removeItem('activeSet');
+        localStorage.removeItem('activeTeam');
+        localStorage.removeItem('rallies');
+        localStorage.removeItem('teams');
+        localStorage.removeItem('players');
+        localStorage.removeItem('matches');
+        
+        alert('Your data has been reset.');
+        window.location.reload();
       } catch (error) {
-        console.error('Failed to reset database:', error);
-        alert('Failed to reset database. See console for details.');
+        console.error('Failed to reset data:', error);
+        alert('Failed to reset data. See console for details.');
       }
     }
   };
@@ -90,8 +105,8 @@ const Settings: React.FC = () => {
                   <Trash2 size={24} />
                 </div>
                 <div className="text-left">
-                  <p className="font-bold text-brand-red">Reset Database</p>
-                  <p className="text-xs text-brand-text-secondary">Delete all matches, teams, and players</p>
+                  <p className="font-bold text-brand-red">Reset My Data</p>
+                  <p className="text-xs text-brand-text-secondary">Delete your matches, teams, and players</p>
                 </div>
               </div>
               <ShieldAlert size={20} className="text-brand-gray/20 group-hover:text-brand-red transition-colors" />

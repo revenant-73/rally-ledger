@@ -175,7 +175,7 @@ const Dashboard: React.FC = () => {
         ourGifted: setR.filter(r => r.pointWinner === 'Opponent' && r.classification === 'Gifted').length,
         serveKO: Math.round((setR.filter(r => r.servingTeam === 'Us' && (r.serveResult === 'Ace' || r.serveResult === 'Out-of-System')).length / (setR.filter(r => r.servingTeam === 'Us' && r.serveResult).length || 1)) * 100),
       };
-    }).sort((a, b) => {
+    }).sort((a, _b) => {
       // Find the actual set number from the set object if possible
       return a.id === activeSet?.id ? 1 : -1; 
     });

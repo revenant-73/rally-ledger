@@ -1,32 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ChevronRight, Calendar, MapPin, Trophy } from 'lucide-react';
-import { db } from '../db/client';
-import { matches as matchesTable } from '../db/schema';
-import { desc } from 'drizzle-orm';
-import type { Match } from '../types';
+import { useMatch } from '../hooks/useMatch';
 
 const History: React.FC = () => {
   const navigate = useNavigate();
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchHistory = async () => {
-      try {
-        const history = await db.select()
-          .from(matchesTable)
-          .orderBy(desc(matchesTable.matchDate));
-        setMatches(history as Match[]);
-      } catch (error) {
-        console.error('Failed to fetch match history:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchHistory();
-  }, []);
+  const { matches, isSyncing } = useMatch();
 
   return (
     <div className="p-6 max-w-lg mx-auto pb-24">
@@ -37,7 +16,7 @@ const History: React.FC = () => {
         <h1 className="text-3xl font-bold">History</h1>
       </header>
 
-      {loading ? (
+      {isSyncing && matches.length === 0 ? (
         <div className="flex justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-teal"></div>
         </div>

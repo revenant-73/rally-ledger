@@ -47,6 +47,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
+    localStorage.removeItem('activeMatch');
+    localStorage.removeItem('activeSet');
+    localStorage.removeItem('activeTeam');
+    localStorage.removeItem('rallies');
+    localStorage.removeItem('teams');
+    localStorage.removeItem('players');
+    localStorage.removeItem('matches');
   };
 
   return (
