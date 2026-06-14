@@ -21,6 +21,7 @@ export interface MatchContextType {
   endSet: (result: 'Win' | 'Loss') => Promise<void>;
   updateSet: (setId: string, updates: Partial<Set>) => Promise<void>;
   updateMatch: (matchId: string, updates: Partial<Match>) => Promise<void>;
+  updateTeam: (teamId: string, updates: Partial<Team>) => Promise<void>;
   refreshData: () => Promise<void>;
 }
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Play, History, Users, Settings } from 'lucide-react';
+import { Plus, Play } from 'lucide-react';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -27,30 +27,6 @@ const Home: React.FC = () => {
         >
           <Play size={28} />
           Resume Live Match
-        </button>
-      </div>
-
-      <div className="grid grid-cols-3 gap-4 pt-4">
-        <button 
-          onClick={() => navigate('/history')}
-          className="flex flex-col items-center gap-2 p-4 bg-brand-gray/5 rounded-xl text-brand-text-secondary hover:text-brand-text"
-        >
-          <History size={24} />
-          <span className="text-sm">History</span>
-        </button>
-        <button 
-          onClick={() => navigate('/roster')}
-          className="flex flex-col items-center gap-2 p-4 bg-brand-gray/5 rounded-xl text-brand-text-secondary hover:text-brand-text"
-        >
-          <Users size={24} />
-          <span className="text-sm">Roster</span>
-        </button>
-        <button 
-          onClick={() => navigate('/settings')}
-          className="flex flex-col items-center gap-2 p-4 bg-brand-gray/5 rounded-xl text-brand-text-secondary hover:text-brand-text"
-        >
-          <Settings size={24} />
-          <span className="text-sm">Settings</span>
         </button>
       </div>
     </div>
