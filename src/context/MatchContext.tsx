@@ -62,7 +62,28 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
+  const [matches, setMatches] = useState<Match[]>(() => {
+    try {
+      const saved = localStorage.getItem('matches');
+      return saved && saved !== "undefined" ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const [isSyncing, setIsSyncing] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      setActiveMatch(null);
+      setActiveSet(null);
+      setActiveTeam(null);
+      setRallies([]);
+      setTeams([]);
+      setPlayers([]);
+      setMatches([]);
+    }
+  }, [user]);
 
   const selectTeam = (teamId: string) => {
     const team = teams.find(t => t.id === teamId) || null;
@@ -153,6 +174,7 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         
         const matchesData = await db.select().from(matchesTable).where(inArray(matchesTable.teamId, teamIds));
         dbMatches = matchesData as Match[];
+        setMatches(dbMatches);
       }
       
       // Auto-resume active match if none selected
@@ -166,6 +188,11 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setActiveMatch(null);
           currentMatch = null;
         }
+      }
+
+      // Ensure active team is valid
+      if (activeTeam && !teamIds.includes(activeTeam.id)) {
+        setActiveTeam(null);
       }
 
       // Auto-resume active set for the current match
@@ -244,8 +271,13 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem('players', JSON.stringify(players));
   }, [players]);
 
+  useEffect(() => {
+    localStorage.setItem('matches', JSON.stringify(matches));
+  }, [matches]);
+
   const startMatch = async (match: Match) => {
     setActiveMatch(match);
+    setMatches(prev => [match, ...prev]);
     setRallies([]);
     setActiveSet(null);
     setIsSyncing(true);
@@ -355,6 +387,7 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       rallies, 
       teams, 
       players,
+      matches,
       isSyncing,
       startMatch,
       startSet,

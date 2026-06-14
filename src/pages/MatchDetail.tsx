@@ -5,6 +5,7 @@ import { db } from '../db/client';
 import { matches as matchesTable, sets as setsTable, rallyEvents as rallyEventsTable, players as playersTable } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import type { Match, Set, RallyEvent, Player } from '../types';
+import { useMatch } from '../hooks/useMatch';
 
 interface PlayerServeStat {
   aces: number;
@@ -25,6 +26,7 @@ interface PlayerReceiveStat {
 const MatchDetail: React.FC = () => {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
+  const { teams, isSyncing } = useMatch();
   
   const [match, setMatch] = useState<Match | null>(null);
   const [sets, setSets] = useState<Set[]>([]);
@@ -35,6 +37,11 @@ const MatchDetail: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       if (!matchId) return;
+      if (teams.length === 0 && !isSyncing) {
+        setLoading(false);
+        return;
+      }
+      if (teams.length === 0) return;
       
       try {
         const matchData = await db.select().from(matchesTable).where(eq(matchesTable.id, matchId)).limit(1);
@@ -44,6 +51,13 @@ const MatchDetail: React.FC = () => {
         }
         
         const currentMatch = matchData[0] as Match;
+        
+        // Security check: ensure the match belongs to one of the user's teams
+        if (!teams.some(t => t.id === currentMatch.teamId)) {
+          setLoading(false);
+          return;
+        }
+        
         setMatch(currentMatch);
         
         const [setsData, ralliesData, playersData] = await Promise.all([
@@ -63,7 +77,7 @@ const MatchDetail: React.FC = () => {
     };
 
     fetchData();
-  }, [matchId]);
+  }, [matchId, teams, isSyncing]);
 
   const metrics = useMemo(() => {
     if (rallies.length === 0) return null;

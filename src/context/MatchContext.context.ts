@@ -8,6 +8,7 @@ export interface MatchContextType {
   rallies: RallyEvent[];
   teams: Team[];
   players: Player[];
+  matches: Match[];
   isSyncing: boolean;
   startMatch: (match: Match) => Promise<void>;
   startSet: (set: Set) => Promise<void>;
