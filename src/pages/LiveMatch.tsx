@@ -1,22 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, RotateCcw, BarChart2, MessageSquare, MoreVertical, X, Trophy, AlertCircle, Zap, Plus, Minus } from 'lucide-react';
+import { ArrowLeft, RotateCcw, BarChart2, MessageSquare, MoreVertical, X, Trophy, AlertCircle, Zap, Plus, Minus, Sun, Cloud, CloudRain } from 'lucide-react';
 import { useMatch } from '../hooks/useMatch';
 import type { OutcomeType, Classification, RallyEvent, Set } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 const LiveMatch: React.FC = () => {
   const navigate = useNavigate();
-  const { activeMatch, activeSet, rallies, addRally, undoLastRally, startSet, players, endSet, updateMatch, updateSet } = useMatch();
+  const { activeMatch, activeSet, activeTeam, rallies, addRally, undoLastRally, startSet, players, endSet, updateMatch, updateSet } = useMatch();
   
   const [pointWinner, setPointWinner] = useState<'Us' | 'Opponent' | null>(null);
   const [outcome, setOutcome] = useState<OutcomeType | null>(null);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [serverPlayerId, setServerPlayerId] = useState<string | null>(null);
   const [serveResult, setServeResult] = useState<'Ace' | 'Error' | 'In-System' | 'Out-of-System' | null>(null);
   const [receiveResult, setReceiveResult] = useState<'Error' | 'Overpass' | 'In-System' | 'Out-of-System' | null>(null);
   const [receivePlayerId, setReceivePlayerId] = useState<string | null>(null);
   const [showReceivePlayerSelection, setShowReceivePlayerSelection] = useState(false);
   const [showPlayerSelection, setShowPlayerSelection] = useState(false);
+  const [showServerSelection, setShowServerSelection] = useState(false);
   const [showClassification, setShowClassification] = useState(false);
   const [servingTeam, setServingTeam] = useState<'Us' | 'Opponent'>('Us');
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -142,21 +144,34 @@ const LiveMatch: React.FC = () => {
     );
   }
 
+  const handleServerClick = (playerId: string | 'none') => {
+    setServerPlayerId(playerId === 'none' ? null : playerId);
+    setShowServerSelection(false);
+  };
+
   const handleServeQualityClick = (quality: 'Ace' | 'Error' | 'In-System' | 'Out-of-System') => {
     setServeResult(quality);
     if (quality === 'Ace') {
       setPointWinner('Us');
       setOutcome('Ace');
-      if (players.length > 0) setShowPlayerSelection(true);
-      else setShowClassification(true);
+      if (serverPlayerId) {
+        completeRally('Earned', 'Us', 'Ace', serverPlayerId);
+      } else if (players.length > 0) {
+        setShowPlayerSelection(true);
+      } else {
+        completeRally('Earned', 'Us', 'Ace');
+      }
     } else if (quality === 'Error') {
       setPointWinner('Opponent');
       setOutcome('Serve Error');
-      if (players.length > 0) setShowPlayerSelection(true);
-      else setShowClassification(true);
+      if (serverPlayerId) {
+        completeRally('Gifted', 'Opponent', 'Serve Error', serverPlayerId);
+      } else if (players.length > 0) {
+        setShowPlayerSelection(true);
+      } else {
+        completeRally('Gifted', 'Opponent', 'Serve Error');
+      }
     } else {
-      // Regular serve, move to receive quality (for the other team)
-      // but since we only track our receive quality, if we serve, we move to point winner
       setPointWinner(null); 
     }
   };
@@ -173,7 +188,9 @@ const LiveMatch: React.FC = () => {
   };
 
   const handleReceivePlayerClick = (playerId: string | 'none') => {
-    setReceivePlayerId(playerId === 'none' ? null : playerId);
+    const pId = playerId === 'none' ? null : playerId;
+    setReceivePlayerId(pId);
+    setSelectedPlayerId(pId);
     setShowReceivePlayerSelection(false);
     if (receiveResult === 'Error') {
       setPointWinner('Opponent');
@@ -186,23 +203,54 @@ const LiveMatch: React.FC = () => {
     setPointWinner(winner);
   };
 
+  const positiveOutcomes: OutcomeType[] = ['Ace', 'Kill', 'Block', 'Forced Error'];
+  const errorOutcomes: OutcomeType[] = [
+    'Serve Error', 'Attack Error', 'Ball Handling Error',
+    'Net / Line Violation', 'Free Ball Error', 'Other'
+  ];
+
   const handleOutcomeClick = (type: OutcomeType) => {
     setOutcome(type);
-    if (players.length > 0) {
+    const isPositive = positiveOutcomes.includes(type);
+    const classification = isPositive ? 'Earned' : 'Gifted';
+    
+    // Logic: 
+    // - If WE earn a point (Kill/Block/etc), we want to know WHO earned it.
+    // - If THEY error (Gifted to us), we don't need to select one of our players.
+    // - If THEY earn a point (Earned by them), we don't track their players.
+    // - If WE error (Gifted to them), we want to know WHO erred (leak tracking).
+    const shouldSelectPlayer = (pointWinner === 'Us' && isPositive) || (pointWinner === 'Opponent' && !isPositive);
+
+    if (players.length > 0 && shouldSelectPlayer) {
       setShowPlayerSelection(true);
     } else {
-      setShowClassification(true);
+      completeRally(classification, undefined, type, null);
     }
   };
 
   const handlePlayerClick = (playerId: string | 'none') => {
-    setSelectedPlayerId(playerId === 'none' ? null : playerId);
+    const pId = playerId === 'none' ? null : playerId;
+    setSelectedPlayerId(pId);
     setShowPlayerSelection(false);
-    setShowClassification(true);
+    
+    // Auto-classify based on outcome
+    if (outcome) {
+      const classification = positiveOutcomes.includes(outcome) ? 'Earned' : 'Gifted';
+      completeRally(classification, undefined, undefined, pId);
+    }
   };
 
-  const handleClassificationClick = (classification: Classification) => {
-    if (!pointWinner || !outcome || !activeSet) return;
+  const completeRally = (
+    classification: Classification, 
+    winnerOverride?: 'Us' | 'Opponent', 
+    outcomeOverride?: OutcomeType,
+    playerOverride?: string | null
+  ) => {
+    const winner = winnerOverride || pointWinner;
+    const finalOutcome = outcomeOverride || outcome;
+    const finalPlayerId = playerOverride !== undefined ? playerOverride : selectedPlayerId;
+
+    if (!winner || !finalOutcome || !activeSet) return;
 
     const newRally: RallyEvent = {
       id: uuidv4(),
@@ -211,21 +259,21 @@ const LiveMatch: React.FC = () => {
       rallyNumber: rallies.length + 1,
       scoreBeforeUs: activeSet.ourScore,
       scoreBeforeOpponent: activeSet.opponentScore,
-      scoreAfterUs: pointWinner === 'Us' ? activeSet.ourScore + 1 : activeSet.ourScore,
-      scoreAfterOpponent: pointWinner === 'Opponent' ? activeSet.opponentScore + 1 : activeSet.opponentScore,
-      pointWinner,
+      scoreAfterUs: winner === 'Us' ? activeSet.ourScore + 1 : activeSet.ourScore,
+      scoreAfterOpponent: winner === 'Opponent' ? activeSet.opponentScore + 1 : activeSet.opponentScore,
+      pointWinner: winner,
       servingTeam,
-      outcomeType: outcome,
+      serverPlayerId: serverPlayerId || undefined,
+      outcomeType: finalOutcome,
       classification,
-      playerId: selectedPlayerId || undefined,
+      playerId: finalPlayerId || undefined,
       serveResult: serveResult || undefined,
       receiveResult: receiveResult || undefined,
       receivePlayerId: receivePlayerId || undefined,
       createdAt: new Date().toISOString(),
     };
 
-    // Logic for next server
-    if (pointWinner === 'Us') {
+    if (winner === 'Us') {
       if (servingTeam === 'Opponent') {
         setToast(`Point Us!`);
       }
@@ -236,6 +284,10 @@ const LiveMatch: React.FC = () => {
 
     addRally(newRally);
     resetEntry();
+  };
+
+  const handleClassificationClick = (classification: Classification) => {
+    completeRally(classification);
   };
 
   const handleManualScoreChange = async (team: 'Us' | 'Opponent', delta: number) => {
@@ -252,11 +304,13 @@ const LiveMatch: React.FC = () => {
     setPointWinner(null);
     setOutcome(null);
     setSelectedPlayerId(null);
+    setServerPlayerId(null);
     setServeResult(null);
     setReceiveResult(null);
     setReceivePlayerId(null);
     setShowReceivePlayerSelection(false);
     setShowPlayerSelection(false);
+    setShowServerSelection(false);
     setShowClassification(false);
   };
 
@@ -269,12 +323,6 @@ const LiveMatch: React.FC = () => {
     setToast(`Undid: ${lastRally.outcomeType} by ${lastRally.pointWinner === 'Us' ? 'Us' : 'Them'}`);
     await undoLastRally();
   };
-
-  const outcomes: OutcomeType[] = [
-    'Ace', 'Kill', 'Block', 'Forced Error',
-    'Serve Error', 'Attack Error', 'Ball Handling Error',
-    'Net / Line Violation', 'Free Ball Error', 'Other'
-  ];
 
   return (
     <div className="min-h-screen bg-brand-bg text-brand-text flex flex-col relative">
@@ -500,13 +548,34 @@ const LiveMatch: React.FC = () => {
             }`}
           >
             <span className="text-[10px] font-bold uppercase opacity-60">Currently Serving</span>
-            <span className="text-2xl font-black">{servingTeam === 'Us' ? 'WE ARE' : 'THEY ARE'}</span>
+            <span className="text-2xl font-black uppercase tracking-tight">
+              {servingTeam === 'Us' ? (activeTeam?.name || 'WE ARE') : activeMatch.opponentName}
+            </span>
           </button>
         </div>
 
         {/* Input Area */}
         <div className="flex-1 bg-brand-gray/5 rounded-3xl p-4 flex flex-col">
-          {(!serveResult && !receiveResult) ? (
+          {servingTeam === 'Us' && !serverPlayerId ? (
+            <div className="flex-1 flex flex-col">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold uppercase tracking-tight">Who is serving?</h3>
+                <button onClick={() => setServerPlayerId('none')} className="text-brand-teal text-sm font-bold uppercase">Skip</button>
+              </div>
+              <div className="flex-1 grid grid-cols-4 gap-1.5 overflow-y-auto pb-4 content-start">
+                {players.sort((a, b) => Number(a.jerseyNumber) - Number(b.jerseyNumber)).map((player) => (
+                  <button
+                    key={player.id}
+                    onClick={() => handleServerClick(player.id)}
+                    className="bg-brand-gray/10 border border-brand-gray/20 py-2 rounded-xl flex flex-col items-center justify-center active:scale-[0.95] transition-all"
+                  >
+                    <span className="text-base font-black text-brand-teal leading-none">{player.jerseyNumber}</span>
+                    <span className="text-[8px] font-bold uppercase mt-0.5 truncate w-full px-1 text-center">{player.firstName}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (!serveResult && !receiveResult) ? (
             <div className="flex-1 flex flex-col">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold">
@@ -517,17 +586,24 @@ const LiveMatch: React.FC = () => {
               <div className="flex-1 grid grid-cols-1 gap-3">
                 {servingTeam === 'Us' ? (
                   <>
-                    <button onClick={() => handleServeQualityClick('Ace')} className="bg-brand-green/20 border border-brand-green/50 py-4 rounded-xl font-black text-brand-green text-xl">ACE</button>
-                    <button onClick={() => handleServeQualityClick('In-System')} className="bg-brand-teal/10 border border-brand-teal/30 py-4 rounded-xl font-bold text-xl">InSys</button>
-                    <button onClick={() => handleServeQualityClick('Out-of-System')} className="bg-brand-amber/10 border border-brand-amber/30 py-4 rounded-xl font-bold text-xl">KO</button>
-                    <button onClick={() => handleServeQualityClick('Error')} className="bg-brand-red/20 border border-brand-red/50 py-4 rounded-xl font-black text-brand-red text-xl">ERR</button>
+                    <button onClick={() => handleServeQualityClick('Ace')} className="bg-brand-green/20 border border-brand-green/50 py-4 rounded-xl font-black text-brand-green text-xl shadow-sm active:scale-95 transition-all">ACE</button>
+                    <button onClick={() => handleServeQualityClick('In-System')} className="bg-brand-teal/10 border border-brand-teal/30 py-4 rounded-xl font-bold text-xl active:scale-95 transition-all">InSys</button>
+                    <button onClick={() => handleServeQualityClick('Out-of-System')} className="bg-brand-amber/10 border border-brand-amber/30 py-4 rounded-xl font-bold text-xl active:scale-95 transition-all">KO</button>
+                    <button onClick={() => handleServeQualityClick('Error')} className="bg-brand-red/20 border border-brand-red/50 py-4 rounded-xl font-black text-brand-red text-xl shadow-sm active:scale-95 transition-all">ERR</button>
                   </>
                 ) : (
                   <>
-                    <button onClick={() => handleReceiveQualityClick('In-System')} className="bg-brand-teal/10 border border-brand-teal/30 py-4 rounded-xl font-bold text-xl">InSys</button>
-                    <button onClick={() => handleReceiveQualityClick('Out-of-System')} className="bg-brand-amber/10 border border-brand-amber/30 py-4 rounded-xl font-bold text-xl">KO</button>
-                    <button onClick={() => handleReceiveQualityClick('Overpass')} className="bg-brand-orange/10 border border-brand-orange/30 py-4 rounded-xl font-bold text-xl">OVER</button>
-                    <button onClick={() => handleReceiveQualityClick('Error')} className="bg-brand-red/20 border border-brand-red/50 py-4 rounded-xl font-black text-brand-red text-xl">ERR (ACE)</button>
+                    <button onClick={() => handleReceiveQualityClick('In-System')} className="bg-brand-teal/10 border border-brand-teal/30 py-4 rounded-xl font-bold text-xl active:scale-95 transition-all">InSys</button>
+                    <button onClick={() => handleReceiveQualityClick('Out-of-System')} className="bg-brand-amber/10 border border-brand-amber/30 py-4 rounded-xl font-bold text-xl active:scale-95 transition-all">KO</button>
+                    <button onClick={() => handleReceiveQualityClick('Overpass')} className="bg-brand-orange/10 border border-brand-orange/30 py-4 rounded-xl font-bold text-xl active:scale-95 transition-all">OVER</button>
+                    <button onClick={() => handleReceiveQualityClick('Error')} className="bg-brand-red/20 border border-brand-red/50 py-4 rounded-xl font-black text-brand-red text-xl shadow-sm active:scale-95 transition-all">ACE</button>
+                    <button 
+                      onClick={() => completeRally('Gifted', 'Us', 'Serve Error', null)} 
+                      className="mt-2 bg-brand-gray/10 border border-brand-gray/30 py-4 rounded-xl font-black text-brand-text-secondary text-xl active:scale-95 transition-all flex items-center justify-center gap-2"
+                    >
+                      <X size={20} />
+                      OPP SERVE ERR
+                    </button>
                   </>
                 )}
               </div>
@@ -566,15 +642,17 @@ const LiveMatch: React.FC = () => {
               <div className="flex-1 grid grid-cols-1 gap-4">
                 <button
                   onClick={() => handlePointClick('Us')}
-                  className="bg-brand-teal text-brand-bg text-3xl font-black rounded-2xl active:scale-[0.98] transition-all"
+                  className="bg-brand-teal text-brand-bg text-3xl font-black rounded-3xl active:scale-[0.96] transition-all flex flex-col items-center justify-center gap-2 py-8 shadow-xl active:shadow-inner"
                 >
-                  WE WON POINT
+                  <Trophy size={32} />
+                  WE WON
                 </button>
                 <button
                   onClick={() => handlePointClick('Opponent')}
-                  className="bg-brand-red text-brand-bg text-3xl font-black rounded-2xl active:scale-[0.98] transition-all"
+                  className="bg-brand-red text-brand-bg text-3xl font-black rounded-3xl active:scale-[0.96] transition-all flex flex-col items-center justify-center gap-2 py-8 shadow-xl active:shadow-inner"
                 >
-                  THEY WON POINT
+                  <X size={32} />
+                  THEY WON
                 </button>
               </div>
             </div>
@@ -609,20 +687,23 @@ const LiveMatch: React.FC = () => {
               <div className="space-y-4">
                 <button
                   onClick={() => handleClassificationClick('Earned')}
-                  className="w-full bg-brand-green/20 border-2 border-brand-green text-brand-green py-6 rounded-2xl text-2xl font-black active:scale-[0.98] transition-all"
+                  className="w-full bg-brand-green/20 border-2 border-brand-green text-brand-green py-8 rounded-3xl text-3xl font-black active:scale-[0.96] transition-all flex items-center justify-center gap-4 shadow-lg active:shadow-inner"
                 >
+                  <Sun size={32} />
                   EARNED
                 </button>
                 <button
                   onClick={() => handleClassificationClick('Gifted')}
-                  className="w-full bg-brand-amber/20 border-2 border-brand-amber text-brand-amber py-6 rounded-2xl text-2xl font-black active:scale-[0.98] transition-all"
+                  className="w-full bg-brand-amber/20 border-2 border-brand-amber text-brand-amber py-8 rounded-3xl text-3xl font-black active:scale-[0.96] transition-all flex items-center justify-center gap-4 shadow-lg active:shadow-inner"
                 >
+                  <CloudRain size={32} />
                   GIFTED
                 </button>
                 <button
                   onClick={() => handleClassificationClick('Neutral')}
-                  className="w-full bg-brand-gray/20 border-2 border-brand-gray text-brand-gray py-6 rounded-2xl text-2xl font-black active:scale-[0.98] transition-all"
+                  className="w-full bg-brand-gray/20 border-2 border-brand-gray text-brand-gray py-8 rounded-3xl text-3xl font-black active:scale-[0.96] transition-all flex items-center justify-center gap-4 shadow-lg active:shadow-inner"
                 >
+                  <Cloud size={32} />
                   NEUTRAL
                 </button>
               </div>
@@ -636,23 +717,43 @@ const LiveMatch: React.FC = () => {
                 <h3 className="text-lg font-bold">How did it end?</h3>
                 <button onClick={() => setPointWinner(null)} className="text-brand-text-secondary text-sm">Back</button>
               </div>
-              <div className="flex-1 grid grid-cols-2 gap-2 overflow-y-auto">
-                {outcomes.map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => handleOutcomeClick(type)}
-                    className="bg-brand-gray/10 border border-brand-gray/20 py-4 rounded-xl font-bold active:scale-[0.95] transition-all"
-                  >
-                    {type}
-                  </button>
-                ))}
+              <div className="flex-1 overflow-y-auto space-y-6">
+                <div>
+                  <p className="text-[10px] font-black text-brand-teal uppercase tracking-widest mb-3 px-1">Earned Points</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {positiveOutcomes.map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => handleOutcomeClick(type)}
+                        className="bg-brand-teal/10 border border-brand-teal/20 py-4 rounded-xl font-black text-brand-teal active:scale-[0.95] transition-all"
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-black text-brand-red uppercase tracking-widest mb-3 px-1">Errors</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {errorOutcomes.map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => handleOutcomeClick(type)}
+                        className="bg-brand-red/10 border border-brand-red/20 py-4 rounded-xl font-black text-brand-red active:scale-[0.95] transition-all"
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           )}
         </div>
 
         {/* Action Bar */}
-        <div className="grid grid-cols-3 gap-2 py-2">
+        <div className="grid grid-cols-2 gap-2 py-2">
           <button
             onClick={undoWithFeedback}
             className="flex flex-col items-center gap-1 p-3 bg-brand-gray/5 rounded-xl text-brand-text-secondary active:text-brand-teal"
@@ -666,10 +767,6 @@ const LiveMatch: React.FC = () => {
           >
             <MessageSquare size={20} />
             <span className="text-[10px] font-bold uppercase">Note</span>
-          </button>
-          <button className="flex flex-col items-center gap-1 p-3 bg-brand-gray/5 rounded-xl text-brand-text-secondary">
-            <RotateCcw size={20} className="rotate-180" />
-            <span className="text-[10px] font-bold uppercase">Sub</span>
           </button>
         </div>
       </div>
