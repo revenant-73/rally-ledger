@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, UserPlus, X, Users, Save } from 'lucide-react';
+import { Plus, Trash2, UserPlus, X, Users, Save, Edit2 } from 'lucide-react';
 import { useMatch } from '../hooks/useMatch';
 import type { Player, PlayerPosition, Team } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 const Roster: React.FC = () => {
-  const { players, addPlayer, removePlayer, teams, activeTeam, addTeam, selectTeam } = useMatch();
+  const { players, addPlayer, removePlayer, teams, activeTeam, addTeam, selectTeam, updateTeam } = useMatch();
   const [showAddPlayerForm, setShowAddPlayerForm] = useState(false);
   const [showAddTeamForm, setShowAddTeamForm] = useState(false);
+  const [isEditingTeam, setIsEditingTeam] = useState(false);
   
   const [newTeam, setNewTeam] = useState({
     name: '',
@@ -22,20 +23,41 @@ const Roster: React.FC = () => {
     position: 'OH' as PlayerPosition
   });
 
-  const handleAddTeam = (e: React.FormEvent) => {
+  const handleEditClick = () => {
+    if (activeTeam) {
+      setNewTeam({
+        name: activeTeam.name,
+        level: activeTeam.level,
+        season: activeTeam.season
+      });
+      setIsEditingTeam(true);
+      setShowAddTeamForm(true);
+    }
+  };
+
+  const handleAddTeam = async (e: React.FormEvent) => {
     e.preventDefault();
-    const team: Team = {
-      id: uuidv4(),
-      name: newTeam.name,
-      level: newTeam.level,
-      season: newTeam.season,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    addTeam(team);
-    selectTeam(team.id);
+    if (isEditingTeam && activeTeam) {
+      await updateTeam(activeTeam.id, {
+        name: newTeam.name,
+        level: newTeam.level,
+        season: newTeam.season,
+      });
+    } else {
+      const team: Team = {
+        id: uuidv4(),
+        name: newTeam.name,
+        level: newTeam.level,
+        season: newTeam.season,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      await addTeam(team);
+      selectTeam(team.id);
+    }
     setNewTeam({ name: '', level: 'High School', season: new Date().getFullYear().toString() });
     setShowAddTeamForm(false);
+    setIsEditingTeam(false);
   };
 
   const handleAddPlayer = (e: React.FormEvent) => {
@@ -66,12 +88,25 @@ const Roster: React.FC = () => {
         <h1 className="text-3xl font-bold">Roster</h1>
         <div className="flex gap-2">
           <button
-            onClick={() => setShowAddTeamForm(true)}
+            onClick={() => {
+              setIsEditingTeam(false);
+              setNewTeam({ name: '', level: 'High School', season: new Date().getFullYear().toString() });
+              setShowAddTeamForm(true);
+            }}
             className="bg-brand-gray/10 text-brand-text p-2 rounded-full hover:bg-brand-gray/20 transition-all"
             title="Create New Team"
           >
             <Users size={24} />
           </button>
+          {activeTeam && (
+            <button
+              onClick={handleEditClick}
+              className="bg-brand-gray/10 text-brand-text p-2 rounded-full hover:bg-brand-gray/20 transition-all"
+              title="Edit Roster"
+            >
+              <Edit2 size={24} />
+            </button>
+          )}
           <button
             onClick={() => setShowAddPlayerForm(true)}
             className="bg-brand-teal text-brand-bg p-2 rounded-full hover:bg-brand-teal/90 transition-all"
@@ -117,7 +152,7 @@ const Roster: React.FC = () => {
           </button>
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
             <Users size={20} className="text-brand-teal" />
-            Create Roster
+            {isEditingTeam ? 'Edit Roster' : 'Create Roster'}
           </h2>
           <form onSubmit={handleAddTeam} className="space-y-4">
             <div className="space-y-1">
@@ -160,7 +195,7 @@ const Roster: React.FC = () => {
               className="w-full bg-brand-teal text-brand-bg font-bold py-4 rounded-xl mt-2 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
             >
               <Save size={20} />
-              Save Roster
+              {isEditingTeam ? 'Update Roster' : 'Save Roster'}
             </button>
           </form>
         </div>
@@ -261,8 +296,8 @@ const Roster: React.FC = () => {
               className="flex items-center justify-between bg-brand-gray/5 border border-brand-gray/10 p-4 rounded-2xl hover:border-brand-teal/30 transition-all"
             >
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-brand-teal/10 rounded-full flex items-center justify-center text-brand-teal font-black text-lg">
-                  {player.jerseyNumber}
+                <div className="w-12 h-12 bg-brand-gray/10 rounded-full flex items-center justify-center text-brand-text-secondary font-black text-lg">
+                  #{player.jerseyNumber}
                 </div>
                 <div>
                   <p className="font-bold text-lg">{player.firstName} {player.lastName}</p>

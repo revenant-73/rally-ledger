@@ -29,7 +29,9 @@ const Dashboard: React.FC = () => {
     giftedByUs.forEach(r => {
       leakCounts[r.outcomeType] = (leakCounts[r.outcomeType] || 0) + 1;
     });
-    const biggestLeak = Object.entries(leakCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'None';
+    const biggestLeak = Object.entries(leakCounts)
+      .filter(([_, count]) => count > 0)
+      .sort((a, b) => b[1] - a[1])[0]?.[0] || 'None';
 
     // Find biggest weapon (Match level)
     const earnedByUs = matchRallies.filter(r => r.pointWinner === 'Us' && r.classification === 'Earned');
@@ -37,7 +39,9 @@ const Dashboard: React.FC = () => {
     earnedByUs.forEach(r => {
       weaponCounts[r.outcomeType] = (weaponCounts[r.outcomeType] || 0) + 1;
     });
-    const biggestWeapon = Object.entries(weaponCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'None';
+    const biggestWeapon = Object.entries(weaponCounts)
+      .filter(([_, count]) => count > 0)
+      .sort((a, b) => b[1] - a[1])[0]?.[0] || 'None';
 
     // Player Leaders (Match level)
     const playerEarned: Record<string, number> = {};
@@ -53,11 +57,83 @@ const Dashboard: React.FC = () => {
       }
     });
 
-    const topEarner = Object.entries(playerEarned).sort((a, b) => b[1] - a[1])[0];
-    const topGifter = Object.entries(playerGifted).sort((a, b) => b[1] - a[1])[0];
+    const topEarners = Object.entries(playerEarned)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([pid, count]) => {
+        const p = players.find(player => player.id === pid);
+        return p ? { name: p.lastName, count, jersey: p.jerseyNumber } : null;
+      })
+      .filter(Boolean);
 
-    const earnerPlayer = topEarner ? players.find(p => p.id === topEarner[0]) : null;
-    const gifterPlayer = topGifter ? players.find(p => p.id === topGifter[0]) : null;
+    const topGifters = Object.entries(playerGifted)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([pid, count]) => {
+        const p = players.find(player => player.id === pid);
+        return p ? { name: p.lastName, count, jersey: p.jerseyNumber } : null;
+      })
+      .filter(Boolean);
+
+    // Player Serving Stats (Match level)
+    const playerServes: Record<string, { total: number, errors: number, kos: number }> = {};
+    matchRallies.forEach(r => {
+      if (r.servingTeam === 'Us' && r.serverPlayerId && r.serveResult) {
+        if (!playerServes[r.serverPlayerId]) {
+          playerServes[r.serverPlayerId] = { total: 0, errors: 0, kos: 0 };
+        }
+        playerServes[r.serverPlayerId].total++;
+        if (r.serveResult === 'Error') playerServes[r.serverPlayerId].errors++;
+        if (r.serveResult === 'Ace' || r.serveResult === 'Out-of-System') playerServes[r.serverPlayerId].kos++;
+      }
+    });
+
+    const servingByPlayer = Object.entries(playerServes)
+      .map(([pid, stats]) => {
+        const p = players.find(player => player.id === pid);
+        return p ? {
+          name: p.lastName,
+          jersey: p.jerseyNumber,
+          koPct: Math.round((stats.kos / stats.total) * 100),
+          servePct: Math.round(((stats.total - stats.errors) / stats.total) * 100)
+        } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => (b?.koPct || 0) - (a?.koPct || 0));
+
+    // Player Passing Stats (Match level)
+    const playerPassing: Record<string, { ace: number, overpass: number, oos: number, is: number, total: number }> = {};
+    matchRallies.forEach(r => {
+      if (r.servingTeam === 'Opponent' && r.receivePlayerId && r.receiveResult) {
+        if (!playerPassing[r.receivePlayerId]) {
+          playerPassing[r.receivePlayerId] = { ace: 0, overpass: 0, oos: 0, is: 0, total: 0 };
+        }
+        playerPassing[r.receivePlayerId].total++;
+        if (r.receiveResult === 'Error') playerPassing[r.receivePlayerId].ace++;
+        if (r.receiveResult === 'Overpass') playerPassing[r.receivePlayerId].overpass++;
+        if (r.receiveResult === 'Out-of-System') playerPassing[r.receivePlayerId].oos++;
+        if (r.receiveResult === 'In-System') playerPassing[r.receivePlayerId].is++;
+      }
+    });
+
+    const passingByPlayer = Object.entries(playerPassing)
+      .map(([pid, stats]) => {
+        const p = players.find(player => player.id === pid);
+        const score = stats.total > 0 
+          ? Number(((stats.ace * 0 + stats.overpass * 1 + stats.oos * 2 + stats.is * 3) / stats.total).toFixed(2))
+          : 0;
+        return p ? {
+          name: p.lastName,
+          jersey: p.jerseyNumber,
+          ace: stats.ace,
+          overpass: stats.overpass,
+          oos: stats.oos,
+          is: stats.is,
+          score
+        } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => (b?.score || 0) - (a?.score || 0));
 
     // Serve & Receive Stats (Set level for team performance)
     const serveStats = {
@@ -200,8 +276,10 @@ const Dashboard: React.FC = () => {
         gifted: matchRallies.filter(r => r.pointWinner === 'Opponent' && r.classification === 'Gifted').length,
         servePct: Math.round(((matchRallies.filter(r => r.servingTeam === 'Us' && r.serveResult && r.serveResult !== 'Error').length) / (matchRallies.filter(r => r.servingTeam === 'Us' && r.serveResult).length || 1)) * 100)
       },
-      earner: earnerPlayer ? { name: earnerPlayer.lastName, count: topEarner[1], jersey: earnerPlayer.jerseyNumber } : null,
-      gifter: gifterPlayer ? { name: gifterPlayer.lastName, count: topGifter[1], jersey: gifterPlayer.jerseyNumber } : null,
+      topEarners: topEarners as { name: string, count: number, jersey: string }[],
+      topGifters: topGifters as { name: string, count: number, jersey: string }[],
+      servingByPlayer: servingByPlayer as { name: string, jersey: string, koPct: number, servePct: number }[],
+      passingByPlayer: passingByPlayer as { name: string, jersey: string, ace: number, overpass: number, oos: number, is: number, score: number }[],
       serveMetrics: {
         our: (() => {
           const ourServes = setRallies.filter(r => r.servingTeam === 'Us' && r.serveResult);
@@ -337,13 +415,13 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Earned vs Gifted Balance - Tug of War Visualization */}
+        {/* Earned vs Leaks Balance - Tug of War Visualization */}
         <div className="space-y-4">
           <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-6">
             <div className="flex justify-between items-end mb-4">
               <div>
                 <h3 className="text-sm font-bold text-brand-text-secondary uppercase tracking-widest">Our Execution</h3>
-                <p className="text-[10px] text-brand-text-secondary font-bold uppercase mt-1">Earned vs Gifted</p>
+                <p className="text-[10px] text-brand-text-secondary font-bold uppercase mt-1">Earned vs Leaks</p>
               </div>
               <div className="text-right">
                 <span className={`text-xl font-black ${metrics.ourEarned >= metrics.ourGifted ? 'text-brand-green' : 'text-brand-amber'}`}>
@@ -371,7 +449,7 @@ const Dashboard: React.FC = () => {
             <div className="flex justify-between items-end mb-4">
               <div>
                 <h3 className="text-sm font-bold text-brand-text-secondary uppercase tracking-widest">Their Execution</h3>
-                <p className="text-[10px] text-brand-text-secondary font-bold uppercase mt-1">Earned vs Gifted</p>
+                <p className="text-[10px] text-brand-text-secondary font-bold uppercase mt-1">Earned vs Given</p>
               </div>
               <div className="text-right">
                 <span className={`text-xl font-black ${metrics.oppEarned >= metrics.oppGifted ? 'text-brand-text' : 'text-brand-gray'}`}>
@@ -567,60 +645,118 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Leak vs Weapon */}
+        {/* Player Metrics */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-brand-red/5 border border-brand-red/20 rounded-3xl p-6">
-            <div className="flex items-center gap-2 text-brand-red mb-3">
-              <AlertTriangle size={16} />
-              <span className="text-[10px] font-bold uppercase">Biggest Leak</span>
+          {metrics.topEarners.length > 0 && (
+            <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-5">
+              <h3 className="text-[10px] font-bold text-brand-green uppercase mb-4 tracking-widest text-center">Point Producers</h3>
+              <div className="space-y-3">
+                {metrics.topEarners.map((player, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-brand-gray/10 rounded-full flex items-center justify-center text-brand-text-secondary font-black text-[10px]">
+                        #{player.jersey}
+                      </div>
+                      <span className="text-xs font-bold truncate max-w-[60px]">{player.name}</span>
+                    </div>
+                    <span className="text-xs font-black text-brand-green">{player.count}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <p className="text-lg font-bold leading-tight">{metrics.biggestLeak}</p>
-          </div>
-          <div className="bg-brand-green/5 border border-brand-green/20 rounded-3xl p-6">
-            <div className="flex items-center gap-2 text-brand-green mb-3">
-              <Zap size={16} />
-              <span className="text-[10px] font-bold uppercase">Biggest Weapon</span>
+          )}
+
+          {metrics.topGifters.length > 0 && (
+            <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-5">
+              <h3 className="text-[10px] font-bold text-brand-red uppercase mb-4 tracking-widest text-center">Point Leaks</h3>
+              <div className="space-y-3">
+                {metrics.topGifters.map((player, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-brand-gray/10 rounded-full flex items-center justify-center text-brand-text-secondary font-black text-[10px]">
+                        #{player.jersey}
+                      </div>
+                      <span className="text-xs font-bold truncate max-w-[60px]">{player.name}</span>
+                    </div>
+                    <span className="text-xs font-black text-brand-red">{player.count}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <p className="text-lg font-bold leading-tight">{metrics.biggestWeapon}</p>
-          </div>
+          )}
         </div>
 
-        {/* Player Leaders */}
-        {(metrics.earner || metrics.gifter) && (
-          <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-6">
-            <h3 className="text-sm font-bold text-brand-text-secondary uppercase mb-4">Player Leaders (Match)</h3>
-            <div className="space-y-4">
-              {metrics.earner && (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-brand-green/10 rounded-full flex items-center justify-center text-brand-green font-black text-xs">
-                      {metrics.earner.jersey}
+        {/* Player Detail Metrics */}
+        <div className="grid grid-cols-1 gap-4">
+          {metrics.servingByPlayer.length > 0 && (
+            <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-6">
+              <h3 className="text-sm font-bold text-brand-text-secondary uppercase mb-4">Serving by Player</h3>
+              <div className="space-y-4">
+                {metrics.servingByPlayer.map((player, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-brand-gray/10 rounded-full flex items-center justify-center text-brand-text-secondary font-black text-xs">
+                        #{player.jersey}
+                      </div>
+                      <span className="font-bold">{player.name}</span>
                     </div>
-                    <span className="font-bold">{metrics.earner.name}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-brand-green">
-                    <span className="text-sm font-black">{metrics.earner.count}</span>
-                    <span className="text-[10px] font-bold uppercase">Earned</span>
-                  </div>
-                </div>
-              )}
-              {metrics.gifter && (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-brand-red/10 rounded-full flex items-center justify-center text-brand-red font-black text-xs">
-                      {metrics.gifter.jersey}
+                    <div className="flex gap-4">
+                      <div className="text-right">
+                        <p className="text-xs font-black text-brand-teal">{player.koPct}%</p>
+                        <p className="text-[8px] font-bold text-brand-text-secondary uppercase">KO%</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs font-black">{player.servePct}%</p>
+                        <p className="text-[8px] font-bold text-brand-text-secondary uppercase">Srv%</p>
+                      </div>
                     </div>
-                    <span className="font-bold">{metrics.gifter.name}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-brand-red">
-                    <span className="text-sm font-black">{metrics.gifter.count}</span>
-                    <span className="text-[10px] font-bold uppercase">Gifted</span>
-                  </div>
-                </div>
-              )}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {metrics.passingByPlayer.length > 0 && (
+            <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-6">
+              <h3 className="text-sm font-bold text-brand-text-secondary uppercase mb-4">Passing by Player</h3>
+              <div className="space-y-6">
+                {metrics.passingByPlayer.map((player, i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-brand-gray/10 rounded-full flex items-center justify-center text-brand-text-secondary font-black text-xs">
+                          #{player.jersey}
+                        </div>
+                        <span className="font-bold">{player.name}</span>
+                      </div>
+                      <div className="bg-brand-teal text-brand-bg px-3 py-1 rounded-full font-black text-sm">
+                        {player.score}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      <div className="bg-brand-gray/5 p-2 rounded-xl text-center">
+                        <p className="text-xs font-black">{player.is}</p>
+                        <p className="text-[8px] font-bold text-brand-text-secondary uppercase">3s</p>
+                      </div>
+                      <div className="bg-brand-gray/5 p-2 rounded-xl text-center">
+                        <p className="text-xs font-black">{player.oos}</p>
+                        <p className="text-[8px] font-bold text-brand-text-secondary uppercase">2s</p>
+                      </div>
+                      <div className="bg-brand-gray/5 p-2 rounded-xl text-center">
+                        <p className="text-xs font-black">{player.overpass}</p>
+                        <p className="text-[8px] font-bold text-brand-text-secondary uppercase">1s</p>
+                      </div>
+                      <div className="bg-brand-gray/5 p-2 rounded-xl text-center">
+                        <p className="text-xs font-black text-brand-red">{player.ace}</p>
+                        <p className="text-[8px] font-bold text-brand-red uppercase">0s</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Match History & Cumulative */}
         <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl overflow-hidden">

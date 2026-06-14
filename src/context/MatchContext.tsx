@@ -154,6 +154,34 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  const updateTeam = async (teamId: string, updates: Partial<Team>) => {
+    if (!user) return;
+    
+    // Safety check: Ensure the user owns this team
+    const teamToUpdate = teams.find(t => t.id === teamId);
+    if (!teamToUpdate || teamToUpdate.ownerId !== user.id) {
+      console.error('Unauthorized team update attempt');
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      await db.update(teamsTable)
+        .set({ ...updates, updatedAt: new Date().toISOString() })
+        .where(eq(teamsTable.id, teamId));
+      
+      setTeams(prev => prev.map(t => t.id === teamId ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t));
+      
+      if (activeTeam && activeTeam.id === teamId) {
+        setActiveTeam({ ...activeTeam, ...updates, updatedAt: new Date().toISOString() });
+      }
+    } catch (e) {
+      console.error('Failed to update team in Turso', e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const refreshData = useCallback(async () => {
     if (!user) return;
     console.log('Refreshing data from Turso...');
@@ -356,6 +384,15 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const addPlayer = async (player: Player) => {
+    if (!user) return;
+    
+    // Safety check: Ensure the user owns the team they are adding a player to
+    const targetTeam = teams.find(t => t.id === player.teamId);
+    if (!targetTeam || targetTeam.ownerId !== user.id) {
+      console.error('Unauthorized player add attempt');
+      return;
+    }
+
     setPlayers((prev) => [...prev, player]);
     setIsSyncing(true);
     try {
@@ -368,6 +405,18 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const removePlayer = async (playerId: string) => {
+    if (!user) return;
+
+    // Safety check: Ensure the player belongs to a team owned by the user
+    const playerToRemove = players.find(p => p.id === playerId);
+    if (playerToRemove) {
+      const targetTeam = teams.find(t => t.id === playerToRemove.teamId);
+      if (!targetTeam || targetTeam.ownerId !== user.id) {
+        console.error('Unauthorized player remove attempt');
+        return;
+      }
+    }
+
     setPlayers((prev) => prev.filter(p => p.id !== playerId));
     setIsSyncing(true);
     try {
@@ -400,6 +449,7 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       endSet,
       updateSet,
       updateMatch,
+      updateTeam,
       refreshData
     }}>
       {children}

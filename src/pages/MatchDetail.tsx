@@ -93,7 +93,9 @@ const MatchDetail: React.FC = () => {
     giftedByUs.forEach(r => {
       leakCounts[r.outcomeType] = (leakCounts[r.outcomeType] || 0) + 1;
     });
-    const biggestLeak = Object.entries(leakCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'None';
+    const biggestLeak = Object.entries(leakCounts)
+      .filter(([_, count]) => count > 0)
+      .sort((a, b) => b[1] - a[1])[0]?.[0] || 'None';
 
     // Find biggest weapon
     const earnedByUs = rallies.filter(r => r.pointWinner === 'Us' && r.classification === 'Earned');
@@ -101,7 +103,9 @@ const MatchDetail: React.FC = () => {
     earnedByUs.forEach(r => {
       weaponCounts[r.outcomeType] = (weaponCounts[r.outcomeType] || 0) + 1;
     });
-    const biggestWeapon = Object.entries(weaponCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'None';
+    const biggestWeapon = Object.entries(weaponCounts)
+      .filter(([_, count]) => count > 0)
+      .sort((a, b) => b[1] - a[1])[0]?.[0] || 'None';
 
     // Player Leaders
     const playerEarned: Record<string, number> = {};
@@ -280,16 +284,16 @@ const MatchDetail: React.FC = () => {
 
         {metrics && (
           <>
-            {/* Earned vs Gifted Balance */}
+            {/* Execution vs Point Leaks Balance */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-6 flex flex-col items-center">
                 <span className="text-xs font-bold text-brand-text-secondary uppercase mb-2">Our Balance</span>
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-black text-brand-green">+{metrics.ourEarned}</span>
                   <span className="text-brand-text-secondary">/</span>
-                  <span className="text-3xl font-black text-brand-amber">-{metrics.ourGifted}</span>
+                  <span className="text-3xl font-black text-brand-red">-{metrics.ourGifted}</span>
                 </div>
-                <p className="text-[10px] mt-2 text-brand-text-secondary uppercase">Earned / Gifted</p>
+                <p className="text-[10px] mt-2 text-brand-text-secondary uppercase">Execution / Leaks</p>
               </div>
               <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-6 flex flex-col items-center">
                 <span className="text-xs font-bold text-brand-text-secondary uppercase mb-2">Their Balance</span>
@@ -298,7 +302,7 @@ const MatchDetail: React.FC = () => {
                   <span className="text-brand-text-secondary">/</span>
                   <span className="text-3xl font-black text-brand-gray">-{metrics.oppGifted}</span>
                 </div>
-                <p className="text-[10px] mt-2 text-brand-text-secondary uppercase">Earned / Gifted</p>
+                <p className="text-[10px] mt-2 text-brand-text-secondary uppercase">Execution / Leaks</p>
               </div>
             </div>
 
@@ -401,54 +405,36 @@ const MatchDetail: React.FC = () => {
               </div>
             </div>
 
-            {/* Leak vs Weapon */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-brand-red/5 border border-brand-red/20 rounded-3xl p-6">
-                <div className="flex items-center gap-2 text-brand-red mb-3">
-                  <AlertTriangle size={16} />
-                  <span className="text-[10px] font-bold uppercase">Biggest Leak</span>
-                </div>
-                <p className="text-lg font-bold leading-tight">{metrics.biggestLeak}</p>
-              </div>
-              <div className="bg-brand-green/5 border border-brand-green/20 rounded-3xl p-6">
-                <div className="flex items-center gap-2 text-brand-green mb-3">
-                  <Zap size={16} />
-                  <span className="text-[10px] font-bold uppercase">Biggest Weapon</span>
-                </div>
-                <p className="text-lg font-bold leading-tight">{metrics.biggestWeapon}</p>
-              </div>
-            </div>
-
-            {/* Player Leaders */}
+            {/* Player Performance */}
             {(metrics.earner || metrics.gifter) && (
               <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-6">
-                <h3 className="text-sm font-bold text-brand-text-secondary uppercase mb-4">Match Leaders</h3>
+                <h3 className="text-sm font-bold text-brand-text-secondary uppercase mb-4 tracking-widest text-center">Match Performance</h3>
                 <div className="space-y-4">
                   {metrics.earner && (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-brand-green/10 rounded-full flex items-center justify-center text-brand-green font-black text-xs">
-                          {metrics.earner.jersey}
+                        <div className="w-8 h-8 bg-brand-gray/10 rounded-full flex items-center justify-center text-brand-text-secondary font-black text-xs">
+                          #{metrics.earner.jersey}
                         </div>
                         <span className="font-bold">{metrics.earner.name}</span>
                       </div>
                       <div className="flex items-center gap-2 text-brand-green">
                         <span className="text-sm font-black">{metrics.earner.count}</span>
-                        <span className="text-[10px] font-bold uppercase">Earned</span>
+                        <span className="text-[10px] font-bold uppercase">Execution</span>
                       </div>
                     </div>
                   )}
                   {metrics.gifter && (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-brand-red/10 rounded-full flex items-center justify-center text-brand-red font-black text-xs">
-                          {metrics.gifter.jersey}
+                        <div className="w-8 h-8 bg-brand-gray/10 rounded-full flex items-center justify-center text-brand-text-secondary font-black text-xs">
+                          #{metrics.gifter.jersey}
                         </div>
                         <span className="font-bold">{metrics.gifter.name}</span>
                       </div>
                       <div className="flex items-center gap-2 text-brand-red">
                         <span className="text-sm font-black">{metrics.gifter.count}</span>
-                        <span className="text-[10px] font-bold uppercase">Gifted</span>
+                        <span className="text-[10px] font-bold uppercase">Leaks</span>
                       </div>
                     </div>
                   )}
