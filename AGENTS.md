@@ -55,7 +55,6 @@ The application supports multiple teams/rosters.
 The application uses a **DB-first persistence** strategy for live tracking.
 - **`activeMatch` & `activeSet`**: These are automatically recovered from Turso if they exist with a `status: 'active'`.
 - **Sync Status**: The `isSyncing` boolean in `MatchContext` tracks pending Turso operations and is displayed in the global `Layout`.
-- **Rotations**: Managed via local state in `LiveMatch` but saved to the `rally_events` table for historical "Weather by Rotation" analysis.
 
 ## Git & Contribution Guidelines
 

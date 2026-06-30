@@ -1,27 +1,12 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Zap, AlertTriangle, Calendar, MapPin, Trophy } from 'lucide-react';
+import { ArrowLeft, Zap, Calendar, MapPin, Trophy } from 'lucide-react';
 import { db } from '../db/client';
 import { matches as matchesTable, sets as setsTable, rallyEvents as rallyEventsTable, players as playersTable } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import type { Match, Set, RallyEvent, Player } from '../types';
 import { useMatch } from '../hooks/useMatch';
-
-interface PlayerServeStat {
-  aces: number;
-  errors: number;
-  inSystem: number;
-  outOfSystem: number;
-  total: number;
-}
-
-interface PlayerReceiveStat {
-  errors: number;
-  overpass: number;
-  inSystem: number;
-  outOfSystem: number;
-  total: number;
-}
+import { useMatchDetailMetrics } from '../hooks/useMatchDetailMetrics';
 
 const MatchDetail: React.FC = () => {
   const { matchId } = useParams<{ matchId: string }>();
@@ -33,6 +18,8 @@ const MatchDetail: React.FC = () => {
   const [rallies, setRallies] = useState<RallyEvent[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const metrics = useMatchDetailMetrics(rallies, players);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -52,7 +39,6 @@ const MatchDetail: React.FC = () => {
         
         const currentMatch = matchData[0] as Match;
         
-        // Security check: ensure the match belongs to one of the user's teams
         if (!teams.some(t => t.id === currentMatch.teamId)) {
           setLoading(false);
           return;
@@ -78,114 +64,6 @@ const MatchDetail: React.FC = () => {
 
     fetchData();
   }, [matchId, teams, isSyncing]);
-
-  const metrics = useMemo(() => {
-    if (rallies.length === 0) return null;
-
-    const ourEarned = rallies.filter(r => r.pointWinner === 'Us' && r.classification === 'Earned').length;
-    const ourGifted = rallies.filter(r => r.pointWinner === 'Opponent' && r.classification === 'Gifted').length;
-    const oppEarned = rallies.filter(r => r.pointWinner === 'Opponent' && r.classification === 'Earned').length;
-    const oppGifted = rallies.filter(r => r.pointWinner === 'Us' && r.classification === 'Gifted').length;
-
-    // Find biggest leak
-    const giftedByUs = rallies.filter(r => r.pointWinner === 'Opponent' && r.classification === 'Gifted');
-    const leakCounts: Record<string, number> = {};
-    giftedByUs.forEach(r => {
-      leakCounts[r.outcomeType] = (leakCounts[r.outcomeType] || 0) + 1;
-    });
-    const biggestLeak = Object.entries(leakCounts)
-      .filter(([_, count]) => count > 0)
-      .sort((a, b) => b[1] - a[1])[0]?.[0] || 'None';
-
-    // Find biggest weapon
-    const earnedByUs = rallies.filter(r => r.pointWinner === 'Us' && r.classification === 'Earned');
-    const weaponCounts: Record<string, number> = {};
-    earnedByUs.forEach(r => {
-      weaponCounts[r.outcomeType] = (weaponCounts[r.outcomeType] || 0) + 1;
-    });
-    const biggestWeapon = Object.entries(weaponCounts)
-      .filter(([_, count]) => count > 0)
-      .sort((a, b) => b[1] - a[1])[0]?.[0] || 'None';
-
-    // Player Leaders
-    const playerEarned: Record<string, number> = {};
-    const playerGifted: Record<string, number> = {};
-
-    rallies.forEach(r => {
-      if (r.playerId) {
-        if (r.pointWinner === 'Us' && r.classification === 'Earned') {
-          playerEarned[r.playerId] = (playerEarned[r.playerId] || 0) + 1;
-        } else if (r.pointWinner === 'Opponent' && r.classification === 'Gifted') {
-          playerGifted[r.playerId] = (playerGifted[r.playerId] || 0) + 1;
-        }
-      }
-    });
-
-    const topEarner = Object.entries(playerEarned).sort((a, b) => b[1] - a[1])[0];
-    const topGifter = Object.entries(playerGifted).sort((a, b) => b[1] - a[1])[0];
-
-    const earnerPlayer = topEarner ? players.find(p => p.id === topEarner[0]) : null;
-    const gifterPlayer = topGifter ? players.find(p => p.id === topGifter[0]) : null;
-
-    // Individual stats
-    const playerServeStats: Record<string, PlayerServeStat> = {};
-    const playerReceiveStats: Record<string, PlayerReceiveStat> = {};
-
-    rallies.forEach(r => {
-      if (r.serveResult && r.serverPlayerId) {
-        if (!playerServeStats[r.serverPlayerId]) {
-          playerServeStats[r.serverPlayerId] = { aces: 0, errors: 0, inSystem: 0, outOfSystem: 0, total: 0 };
-        }
-        playerServeStats[r.serverPlayerId].total++;
-        if (r.serveResult === 'Ace') playerServeStats[r.serverPlayerId].aces++;
-        if (r.serveResult === 'Error') playerServeStats[r.serverPlayerId].errors++;
-        if (r.serveResult === 'In-System') playerServeStats[r.serverPlayerId].inSystem++;
-        if (r.serveResult === 'Out-of-System') playerServeStats[r.serverPlayerId].outOfSystem++;
-      }
-      if (r.receiveResult && r.receivePlayerId) {
-        if (!playerReceiveStats[r.receivePlayerId]) {
-          playerReceiveStats[r.receivePlayerId] = { errors: 0, overpass: 0, inSystem: 0, outOfSystem: 0, total: 0 };
-        }
-        playerReceiveStats[r.receivePlayerId].total++;
-        if (r.receiveResult === 'Error') playerReceiveStats[r.receivePlayerId].errors++;
-        if (r.receiveResult === 'Overpass') playerReceiveStats[r.receivePlayerId].overpass++;
-        if (r.receiveResult === 'In-System') playerReceiveStats[r.receivePlayerId].inSystem++;
-        if (r.receiveResult === 'Out-of-System') playerReceiveStats[r.receivePlayerId].outOfSystem++;
-      }
-    });
-
-    // Serve & Receive Stats
-    const serveStats = {
-      aces: rallies.filter(r => r.serveResult === 'Ace').length,
-      errors: rallies.filter(r => r.serveResult === 'Error').length,
-      inSystem: rallies.filter(r => r.serveResult === 'In-System').length,
-      outOfSystem: rallies.filter(r => r.serveResult === 'Out-of-System').length,
-      total: rallies.filter(r => r.serveResult).length
-    };
-
-    const receiveStats = {
-      errors: rallies.filter(r => r.receiveResult === 'Error').length,
-      overpass: rallies.filter(r => r.receiveResult === 'Overpass').length,
-      inSystem: rallies.filter(r => r.receiveResult === 'In-System').length,
-      outOfSystem: rallies.filter(r => r.receiveResult === 'Out-of-System').length,
-      total: rallies.filter(r => r.receiveResult).length
-    };
-
-    return {
-      ourEarned,
-      ourGifted,
-      oppEarned,
-      oppGifted,
-      biggestLeak,
-      biggestWeapon,
-      earner: earnerPlayer ? { name: earnerPlayer.lastName, count: topEarner[1], jersey: earnerPlayer.jerseyNumber } : null,
-      gifter: gifterPlayer ? { name: gifterPlayer.lastName, count: topGifter[1], jersey: gifterPlayer.jerseyNumber } : null,
-      serveStats,
-      receiveStats,
-      playerServeStats,
-      playerReceiveStats
-    };
-  }, [rallies, players]);
 
   if (loading) {
     return (
@@ -218,6 +96,36 @@ const MatchDetail: React.FC = () => {
       </header>
 
       <div className="space-y-6">
+        {/* Post-Match Summary / Key Insights */}
+        {metrics && (
+          <div className="bg-brand-teal/5 border-2 border-brand-teal/20 rounded-3xl p-6 shadow-sm">
+            <h3 className="text-xs font-black text-brand-teal uppercase mb-4 tracking-widest">Post-Match Report</h3>
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-brand-bg p-4 rounded-2xl border border-brand-gray/10">
+                <p className="text-[10px] font-bold text-brand-text-secondary uppercase mb-1">Top Source</p>
+                <p className="text-lg font-black text-brand-teal uppercase">{metrics.biggestWeapon}</p>
+              </div>
+              <div className="bg-brand-bg p-4 rounded-2xl border border-brand-gray/10">
+                <p className="text-[10px] font-bold text-brand-text-secondary uppercase mb-1">Top Leak</p>
+                <p className="text-lg font-black text-brand-red uppercase">{metrics.biggestLeak}</p>
+              </div>
+            </div>
+            
+            <div className="bg-brand-bg p-4 rounded-2xl border border-brand-gray/10">
+              <p className="text-[10px] font-bold text-brand-teal uppercase mb-2 tracking-widest">Suggested Practice Focus</p>
+              <p className="text-sm font-bold text-brand-text leading-tight">
+                {metrics.ourGifted > metrics.ourEarned 
+                  ? "Execution Leak: Focus on reducing unforced errors and making the opponent earn their points. High priority on skill consistency."
+                  : metrics.biggestLeak === 'Serve Error' 
+                  ? "Serving Consistency: High error rate on serve. Practice serving under pressure with specific targets."
+                  : metrics.biggestLeak === 'Attack Error'
+                  ? "Smart Attacking: Too many attack errors. Focus on identifying when to swing for a kill vs. when to keep the ball in play."
+                  : "Maintain Pressure: Keep refining your top scoring sources while tightening up individual consistency."}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Match Info Card */}
         <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-6">
           <div className="grid grid-cols-2 gap-4">
@@ -338,19 +246,17 @@ const MatchDetail: React.FC = () => {
                     {Object.entries(metrics.playerServeStats)
                       .sort((a, b) => (b[1].aces + b[1].outOfSystem) - (a[1].aces + a[1].outOfSystem))
                       .slice(0, 3)
-                      .map(([playerId, stats]: [string, PlayerServeStat]) => {
-                        const player = players.find(p => p.id === playerId);
-                        if (!player) return null;
-                        return (
-                          <div key={playerId} className="flex items-center justify-between text-xs">
-                            <span className="font-bold">#{player.jerseyNumber} {player.lastName}</span>
-                            <div className="flex gap-3">
-                              <span className="text-brand-green font-black">{stats.aces} ACE</span>
-                              <span className="text-brand-amber font-black">{stats.outOfSystem} KO</span>
-                              <span className="text-brand-red font-black">{stats.errors} ERR</span>
+                      .map(([pid, stats]) => {
+                        const p = players.find(player => player.id === pid);
+                        return p ? (
+                          <div key={pid} className="flex justify-between items-center text-xs">
+                            <span className="font-bold">#{p.jerseyNumber} {p.lastName}</span>
+                            <div className="flex gap-4">
+                              <span className="text-brand-teal font-black">KO {Math.round(((stats.aces + stats.outOfSystem) / stats.total) * 100)}%</span>
+                              <span className="text-brand-text-secondary">In {Math.round(((stats.total - stats.errors) / stats.total) * 100)}%</span>
                             </div>
                           </div>
-                        );
+                        ) : null;
                       })}
                   </div>
                 )}
@@ -358,97 +264,80 @@ const MatchDetail: React.FC = () => {
 
               <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-6">
                 <h3 className="text-sm font-bold text-brand-text-secondary uppercase mb-4 tracking-widest flex items-center gap-2">
-                  <AlertTriangle size={16} className="text-brand-amber" />
+                  <Zap size={16} className="text-brand-teal" />
                   Receive Performance
                 </h3>
                 <div className="grid grid-cols-4 gap-2 mb-6">
                   <div className="text-center">
-                    <p className="text-xl font-black text-brand-teal">{metrics.receiveStats.inSystem}</p>
-                    <p className="text-[8px] font-bold text-brand-text-secondary uppercase">InSys</p>
+                    <p className="text-xl font-black text-brand-green">{metrics.receiveStats.inSystem}</p>
+                    <p className="text-[8px] font-bold text-brand-text-secondary uppercase">3s</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xl font-black text-brand-amber">{metrics.receiveStats.outOfSystem}</p>
-                    <p className="text-[8px] font-bold text-brand-text-secondary uppercase">KO</p>
+                    <p className="text-xl font-black text-brand-teal">{metrics.receiveStats.outOfSystem}</p>
+                    <p className="text-[8px] font-bold text-brand-text-secondary uppercase">2s</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xl font-black text-brand-orange">{metrics.receiveStats.overpass}</p>
-                    <p className="text-[8px] font-bold text-brand-text-secondary uppercase">Over</p>
+                    <p className="text-xl font-black text-brand-amber">{metrics.receiveStats.overpass}</p>
+                    <p className="text-[8px] font-bold text-brand-text-secondary uppercase">1s</p>
                   </div>
                   <div className="text-center">
                     <p className="text-xl font-black text-brand-red">{metrics.receiveStats.errors}</p>
-                    <p className="text-[8px] font-bold text-brand-text-secondary uppercase">ERR</p>
+                    <p className="text-[8px] font-bold text-brand-red uppercase">0s</p>
                   </div>
                 </div>
 
                 {Object.keys(metrics.playerReceiveStats).length > 0 && (
                   <div className="space-y-2 pt-4 border-t border-brand-gray/10">
-                    <p className="text-[10px] font-black text-brand-text-secondary uppercase mb-2">Top Receivers (InSys)</p>
+                    <p className="text-[10px] font-black text-brand-text-secondary uppercase mb-2">Top Passers (Score)</p>
                     {Object.entries(metrics.playerReceiveStats)
-                      .sort((a, b) => b[1].inSystem - a[1].inSystem)
+                      .map(([pid, stats]) => ({
+                        pid,
+                        score: Number(((stats.inSystem * 3 + stats.outOfSystem * 2 + stats.overpass * 1) / stats.total).toFixed(2))
+                      }))
+                      .sort((a, b) => b.score - a.score)
                       .slice(0, 3)
-                      .map(([playerId, stats]: [string, PlayerReceiveStat]) => {
-                        const player = players.find(p => p.id === playerId);
-                        if (!player) return null;
-                        return (
-                          <div key={playerId} className="flex items-center justify-between text-xs">
-                            <span className="font-bold">#{player.jerseyNumber} {player.lastName}</span>
-                            <div className="flex gap-3">
-                              <span className="text-brand-teal font-black">{stats.inSystem} InSys</span>
-                              <span className="text-brand-amber font-black">{stats.outOfSystem} KO</span>
-                              <span className="text-brand-red font-black">{stats.errors} ERR</span>
-                            </div>
+                      .map(({ pid, score }) => {
+                        const p = players.find(player => player.id === pid);
+                        return p ? (
+                          <div key={pid} className="flex justify-between items-center text-xs">
+                            <span className="font-bold">#{p.jerseyNumber} {p.lastName}</span>
+                            <span className={`font-black ${score >= 2.2 ? 'text-brand-green' : score >= 1.8 ? 'text-brand-teal' : 'text-brand-amber'}`}>
+                              {score} Avg
+                            </span>
                           </div>
-                        );
+                        ) : null;
                       })}
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Player Performance */}
-            {(metrics.earner || metrics.gifter) && (
+            {/* Key Leaders */}
+            <div className="grid grid-cols-2 gap-4">
               <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-6">
-                <h3 className="text-sm font-bold text-brand-text-secondary uppercase mb-4 tracking-widest text-center">Match Performance</h3>
-                <div className="space-y-4">
-                  {metrics.earner && (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-brand-gray/10 rounded-full flex items-center justify-center text-brand-text-secondary font-black text-xs">
-                          #{metrics.earner.jersey}
-                        </div>
-                        <span className="font-bold">{metrics.earner.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-brand-green">
-                        <span className="text-sm font-black">{metrics.earner.count}</span>
-                        <span className="text-[10px] font-bold uppercase">Execution</span>
-                      </div>
-                    </div>
-                  )}
-                  {metrics.gifter && (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-brand-gray/10 rounded-full flex items-center justify-center text-brand-text-secondary font-black text-xs">
-                          #{metrics.gifter.jersey}
-                        </div>
-                        <span className="font-bold">{metrics.gifter.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-brand-red">
-                        <span className="text-sm font-black">{metrics.gifter.count}</span>
-                        <span className="text-[10px] font-bold uppercase">Leaks</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <h3 className="text-[10px] font-black text-brand-green uppercase tracking-widest mb-4">Top Earner</h3>
+                {metrics.earner ? (
+                  <div className="text-center">
+                    <p className="text-3xl font-black text-brand-green">{metrics.earner.count}</p>
+                    <p className="text-sm font-bold mt-1">#{metrics.earner.jersey} {metrics.earner.name}</p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-brand-text-secondary italic text-center">No data</p>
+                )}
               </div>
-            )}
+              <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-6">
+                <h3 className="text-[10px] font-black text-brand-red uppercase tracking-widest mb-4">Top Gifter</h3>
+                {metrics.gifter ? (
+                  <div className="text-center">
+                    <p className="text-3xl font-black text-brand-red">{metrics.gifter.count}</p>
+                    <p className="text-sm font-bold mt-1">#{metrics.gifter.jersey} {metrics.gifter.name}</p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-brand-text-secondary italic text-center">No data</p>
+                )}
+              </div>
+            </div>
           </>
-        )}
-        
-        {match.notes && (
-          <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-6">
-            <h3 className="text-sm font-bold text-brand-text-secondary uppercase mb-2 tracking-widest">Match Notes</h3>
-            <p className="text-sm text-brand-text leading-relaxed whitespace-pre-wrap">{match.notes}</p>
-          </div>
         )}
       </div>
     </div>

@@ -89,7 +89,6 @@ export interface RallyEvent {
   pointWinner: 'Us' | 'Opponent';
   servingTeam: 'Us' | 'Opponent';
   serverPlayerId?: string;
-  rotationNumber?: number;
   outcomeType: OutcomeType;
   classification: Classification;
   playerId?: string;
