@@ -75,13 +75,9 @@ export const rallyEvents = sqliteTable('rally_events', {
   pointWinner: text('point_winner').notNull(), // 'Us' | 'Opponent'
   servingTeam: text('serving_team').notNull(), // 'Us' | 'Opponent'
   serverPlayerId: text('server_player_id'),
-  rotationNumber: integer('rotation_number'),
   outcomeType: text('outcome_type').notNull(), // OutcomeType
   classification: text('classification').notNull(), // Classification
   playerId: text('player_id').references(() => players.id),
-  serveResult: text('serve_result'), // 'Ace' | 'Error' | 'In-System' | 'Out-of-System'
-  receiveResult: text('receive_result'), // 'Error' | 'Overpass' | 'In-System' | 'Out-of-System'
-  receivePlayerId: text('receive_player_id').references(() => players.id),
   notes: text('notes'),
   createdAt: text('created_at').notNull(),
   metadata: text('metadata', { mode: 'json' }).$type<Record<string, unknown>>(), // Flexible JSON storage
