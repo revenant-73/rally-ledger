@@ -8,6 +8,8 @@ interface RotationDisplayProps {
   currentRotation: number;
   servingTeam: 'Us' | 'Opponent';
   onManualRotate?: () => void;
+  onPlayerClick?: (playerIdx: number) => void;
+  liberoServingPosition?: number;
 }
 
 const RotationDisplay: React.FC<RotationDisplayProps> = ({ 
@@ -15,13 +17,15 @@ const RotationDisplay: React.FC<RotationDisplayProps> = ({
   players, 
   currentRotation,
   servingTeam,
-  onManualRotate
+  onManualRotate,
+  onPlayerClick,
+  liberoServingPosition
 }) => {
   // Map positions to their current location based on rotation
   // Rotation 1: Pos 1 is back right, Pos 2 is front right, etc.
   // We want to show the current physical positions on the court.
   
-  const getPlayerByPos = (physicalZone: number) => {
+  const getPlayerInfoByPos = (physicalZone: number) => {
     // physicalZone 1 is Bottom Right
     // physicalZone 2 is Top Right
     // physicalZone 3 is Top Middle
@@ -36,7 +40,9 @@ const RotationDisplay: React.FC<RotationDisplayProps> = ({
     if (playerIdx > 6) playerIdx -= 6;
     
     const playerId = lineup[`position${playerIdx}` as keyof Lineup] as string;
-    return players.find(p => p.id === playerId);
+    const player = players.find(p => p.id === playerId);
+    
+    return { player, playerIdx };
   };
 
   // Physical Layout from User Perspective (Fixed Zones):
@@ -71,31 +77,47 @@ const RotationDisplay: React.FC<RotationDisplayProps> = ({
       
       <div className="grid grid-cols-3 gap-1 aspect-[5/2]">
         {positions.map(pos => {
-          const player = getPlayerByPos(pos);
+          const { player, playerIdx } = getPlayerInfoByPos(pos);
           // The server is ALWAYS the player physically in Position 1
           const isServer = servingTeam === 'Us' && pos === 1;
+          const isLibero = player?.position === 'L' || player?.position === 'DS'; // Simplification for UI
+          const isLiberoServing = isServer && playerIdx === liberoServingPosition;
           
           return (
-            <div 
+            <button 
               key={pos} 
+              onClick={() => onPlayerClick?.(playerIdx)}
+              disabled={!onPlayerClick}
               className={`relative rounded flex flex-col items-center justify-center border transition-all ${
                 isServer 
                   ? 'bg-brand-teal/20 border-brand-teal shadow-inner' 
                   : 'bg-brand-bg border-brand-gray/10'
-              }`}
+              } ${onPlayerClick ? 'active:scale-95' : ''}`}
             >
               <div className="absolute top-0.5 right-0.5 px-0.5 bg-brand-gray/10 rounded-[2px]">
                 <span className="text-[5px] font-black text-brand-text-secondary opacity-60">{pos}</span>
               </div>
-              <span className={`text-lg font-black leading-none ${isServer ? 'text-brand-teal' : 'text-brand-text'}`}>
+              
+              {isLibero && (
+                <div className="absolute top-0.5 left-0.5">
+                  <div className="w-1.5 h-1.5 bg-brand-amber rounded-full" />
+                </div>
+              )}
+
+              <span className={`text-lg font-black leading-none ${isServer ? 'text-brand-teal' : 'text-brand-text'} ${isLibero ? 'text-brand-amber' : ''}`}>
                 {player?.jerseyNumber || '?'}
               </span>
-              {isServer && (
+              
+              {isLiberoServing && (
+                <div className="absolute -bottom-0.5 bg-brand-amber text-brand-bg text-[4px] font-black px-0.5 rounded uppercase">Libero</div>
+              )}
+
+              {isServer && !isLiberoServing && (
                 <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-brand-teal rounded-full flex items-center justify-center">
                   <div className="w-0.5 h-0.5 bg-brand-bg rounded-full animate-ping" />
                 </div>
               )}
-            </div>
+            </button>
           );
         })}
       </div>

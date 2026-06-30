@@ -62,12 +62,15 @@ export interface Lineup {
 
 export interface SetMetadata extends Record<string, unknown> {
   startingLineup?: Lineup;
+  currentLineup?: Lineup;
   currentRotation?: number; // 1-6
+  liberoServingPosition?: number; // 1-6 (The position in the rotation where the libero is allowed to serve)
 }
 
 export interface RallyMetadata extends Record<string, unknown> {
   rotation?: number;
   lineup?: Lineup;
+  isLiberoServing?: boolean;
 }
 
 export interface Set {

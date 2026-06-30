@@ -56,6 +56,29 @@ The application uses a **DB-first persistence** strategy for live tracking.
 - **`activeMatch` & `activeSet`**: These are automatically recovered from Turso if they exist with a `status: 'active'`.
 - **Sync Status**: The `isSyncing` boolean in `MatchContext` tracks pending Turso operations and is displayed in the global `Layout`.
 
+## Live Match Logic & Automation
+
+- **Automated Server Detection**: The system calculates the current server based on the active rotation and starting lineup. 
+- **Verification-First Entry**: Instead of asking "Who is serving?", the UI highlights the predicted server in the `RallyEntryArea` to facilitate quick confirmation rather than manual searching.
+- **Substitution & Libero Management**: Real-time management of court personnel.
+    - **Substitutions**: Bench players can be substituted into any of the 6 court positions.
+    - **Libero Swapping**: Designated liberos can be swapped in/out of any position without counting as a formal substitution.
+    - **Libero serving**: Support for tracking the single rotation per set where a libero is permitted to serve.
+
+## UI Optimization Patterns
+
+To ensure rapid data entry on mobile devices, the following UI patterns are enforced:
+- **Compact Court Layout**: The `RotationDisplay` uses a high-density grid (`aspect-[5/2]`) with minimized padding to keep player selection visible without scrolling.
+- **Interactive Court Elements**: Court zones are interactive, allowing for quick access to personnel management (subs/liberos) during the match.
+- **High Visibility Identifiers**: Jersey numbers on the court use `text-lg font-black` to ensure they are readable at a glance despite the compact layout.
+- **Contextual Position Indicators**: Court position numbers (1-6) are displayed in subtle absolute-positioned boxes in the top-right of each zone.
+- **Density Over Whitespace**: Components like `LiveMatchScoreboard` and `RallyEntryArea` prioritize vertical density (e.g., `h-20` for scores, `py-3` for player buttons) to minimize scrolling.
+
+## In-Progress & Future Suggestions
+
+- **Full Automation of Server Confirmation**: Exploring a "single-tap" confirmation for the predicted server to further speed up rally entry.
+- **Dynamic Density Scaling**: Potential implementation of auto-scaling UI elements based on the number of players in the roster to maximize space usage.
+
 ## Git & Contribution Guidelines
 
 - **Repository**: Managed on GitHub at [revenant-73/rally-ledger](https://github.com/revenant-73/rally-ledger.git).
