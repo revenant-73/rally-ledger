@@ -49,6 +49,27 @@ export interface Match {
   metadata?: Record<string, unknown>;
 }
 
+export interface Lineup {
+  position1: string; // Player ID
+  position2: string;
+  position3: string;
+  position4: string;
+  position5: string;
+  position6: string;
+  libero1?: string;
+  libero2?: string;
+}
+
+export interface SetMetadata extends Record<string, unknown> {
+  startingLineup?: Lineup;
+  currentRotation?: number; // 1-6
+}
+
+export interface RallyMetadata extends Record<string, unknown> {
+  rotation?: number;
+  lineup?: Lineup;
+}
+
 export interface Set {
   id: string;
   matchId: string;
@@ -60,7 +81,7 @@ export interface Set {
   finalResult?: 'Win' | 'Loss';
   createdAt: string;
   updatedAt: string;
-  metadata?: Record<string, unknown>;
+  metadata?: SetMetadata;
 }
 
 export type OutcomeType = 
@@ -97,7 +118,7 @@ export interface RallyEvent {
   receivePlayerId?: string;
   notes?: string;
   createdAt: string;
-  metadata?: Record<string, unknown>;
+  metadata?: RallyMetadata;
 }
 
 export interface MatchSummary {

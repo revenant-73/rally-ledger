@@ -14,6 +14,8 @@ import PlayerLeaderboard from '../components/dashboard/PlayerLeaderboard';
 import SkillDetailCard from '../components/dashboard/SkillDetailCard';
 import SetSummaries from '../components/dashboard/SetSummaries';
 import ForecastModal from '../components/dashboard/ForecastModal';
+import AdvancedWeatherStats from '../components/dashboard/AdvancedWeatherStats';
+import RotationEfficiency from '../components/dashboard/RotationEfficiency';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -53,6 +55,8 @@ const Dashboard: React.FC = () => {
           onInfoClick={() => setShowForecastModal(true)}
         />
 
+        <AdvancedWeatherStats rallies={rallies} />
+
         <EarnedGiftedComparison 
           ourEarned={metrics.ourEarned}
           ourGifted={metrics.ourGifted}
@@ -75,6 +79,8 @@ const Dashboard: React.FC = () => {
           servingByPlayer={metrics.servingByPlayer}
           passingByPlayer={metrics.passingByPlayer}
         />
+
+        <RotationEfficiency rallies={rallies} />
 
         <SetSummaries 
           setSummaries={metrics.setSummaries}

@@ -1,19 +1,23 @@
 import React, { useState } from 'react';
 import { Trophy, ArrowLeft } from 'lucide-react';
-import type { RallyEvent } from '../../types';
+import type { RallyEvent, Player, Lineup } from '../../types';
+import LineupSelection from './lineup/LineupSelection';
 
 interface NextSetScreenProps {
   rallies: RallyEvent[];
-  onStartSet: (setNumber: number) => Promise<void>;
+  players: Player[];
+  onStartSet: (setNumber: number, lineup?: Lineup) => Promise<void>;
   onBackToHome: () => void;
 }
 
 const NextSetScreen: React.FC<NextSetScreenProps> = ({
   rallies,
+  players,
   onStartSet,
   onBackToHome,
 }) => {
   const [pendingSetNumber, setPendingSetNumber] = useState(1);
+  const [showLineupSelection, setShowLineupSelection] = useState(false);
 
   const lastSetRallies = rallies.length > 0 ? (() => {
     const maxRally = rallies.reduce((prev, current) => 
@@ -28,6 +32,16 @@ const NextSetScreen: React.FC<NextSetScreenProps> = ({
     ourEarned: lastSetRallies.filter(r => r.pointWinner === 'Us' && r.classification === 'Earned').length,
     ourGifted: lastSetRallies.filter(r => r.pointWinner === 'Opponent' && r.classification === 'Gifted').length,
   } : null;
+
+  if (showLineupSelection) {
+    return (
+      <LineupSelection 
+        players={players}
+        onCancel={() => setShowLineupSelection(false)}
+        onComplete={(lineup) => onStartSet(pendingSetNumber, lineup)}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-brand-bg text-brand-text p-6 flex flex-col items-center justify-center text-center">
@@ -82,10 +96,10 @@ const NextSetScreen: React.FC<NextSetScreenProps> = ({
       </div>
 
       <button
-        onClick={() => onStartSet(pendingSetNumber)}
+        onClick={() => setShowLineupSelection(true)}
         className="bg-brand-teal text-brand-bg font-bold py-5 px-12 rounded-2xl text-xl shadow-xl active:scale-[0.98] transition-all"
       >
-        Begin Set {pendingSetNumber}
+        Set Lineup & Start
       </button>
       
       <button 
