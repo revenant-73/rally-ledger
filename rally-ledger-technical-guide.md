@@ -266,6 +266,12 @@ The app should allow quick skipping if rotation tracking is not being used.
 
 For each rally, the user records the outcome in a few taps.
 
+### Personnel Management
+During the match, coaches can manage court personnel by tapping on players in the court rotation display:
+- **Substitutions**: Replace a court player with any available bench player.
+- **Libero Swaps**: Quick-swap designated liberos in and out of any back-row position.
+- **Libero Serving**: Toggle the specific rotation where the libero is serving for the team.
+
 Recommended input flow:
 
 1. Who won the point?

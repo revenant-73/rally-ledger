@@ -17,6 +17,7 @@ import TimeoutModal from '../components/live-match/TimeoutModal';
 import MoreMenuModal from '../components/live-match/MoreMenuModal';
 import RotationDisplay from '../components/live-match/lineup/RotationDisplay';
 import LineupSelection from '../components/live-match/lineup/LineupSelection';
+import SubstitutionModal from '../components/live-match/lineup/SubstitutionModal';
 
 const LiveMatch: React.FC = () => {
   const navigate = useNavigate();
@@ -44,6 +45,11 @@ const LiveMatch: React.FC = () => {
     setReceivePlayerId,
     servingTeam, setServingTeam,
     currentRotation, setCurrentRotation,
+    currentLineup,
+    liberoServingPosition,
+    handleSubstitution,
+    handleLiberoSwap,
+    handleSetLiberoServing,
     completeRally, undoLastRallyWithLogic, resetEntry
   } = useLiveMatchLogic(activeMatch, activeSet, rallies, addRally, undoLastRally, updateSet);
 
@@ -54,6 +60,7 @@ const LiveMatch: React.FC = () => {
   const [showTimeout, setShowTimeout] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showLineupEditor, setShowLineupEditor] = useState(false);
+  const [selectedPositionIdx, setSelectedPositionIdx] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
@@ -327,13 +334,14 @@ const LiveMatch: React.FC = () => {
         onToggleServingTeam={() => setServingTeam(servingTeam === 'Us' ? 'Opponent' : 'Us')}
       />
 
-      {activeSet.metadata?.startingLineup ? (
+      {currentLineup ? (
         <div className="px-4 pb-1">
           <RotationDisplay 
-            lineup={activeSet.metadata.startingLineup}
+            lineup={currentLineup}
             players={players}
             currentRotation={currentRotation}
             servingTeam={servingTeam}
+            liberoServingPosition={liberoServingPosition}
             onManualRotate={async () => {
               const nextRotation = currentRotation === 6 ? 1 : currentRotation + 1;
               setCurrentRotation(nextRotation);
@@ -345,6 +353,7 @@ const LiveMatch: React.FC = () => {
               });
               setToast(`Rotated to ${nextRotation}`);
             }}
+            onPlayerClick={(idx) => setSelectedPositionIdx(idx)}
           />
         </div>
       ) : (
@@ -388,9 +397,35 @@ const LiveMatch: React.FC = () => {
         onSetShowPlayerSelection={setShowPlayerSelection}
         onSetOutcome={setOutcome}
         onSetServerPlayerId={setServerPlayerId}
-        currentLineup={activeSet.metadata?.startingLineup}
+        currentLineup={currentLineup}
         currentRotation={currentRotation}
       />
+
+      {selectedPositionIdx && currentLineup && (
+        <SubstitutionModal 
+          isOpen={true}
+          onClose={() => setSelectedPositionIdx(null)}
+          players={players}
+          lineup={currentLineup}
+          positionIdx={selectedPositionIdx}
+          onSubstitute={async (playerId) => {
+            await handleSubstitution(selectedPositionIdx, playerId);
+            setSelectedPositionIdx(null);
+            setToast('Substitution complete');
+          }}
+          onLiberoSwap={async (liberoId) => {
+            await handleLiberoSwap(selectedPositionIdx, liberoId);
+            setSelectedPositionIdx(null);
+            setToast(liberoId ? 'Libero swap complete' : 'Libero exited');
+          }}
+          onSetLiberoServing={async (isServing) => {
+            await handleSetLiberoServing(isServing, selectedPositionIdx);
+            setSelectedPositionIdx(null);
+            setToast(isServing ? 'Libero set as server' : 'Libero server reset');
+          }}
+          liberoServingPosition={liberoServingPosition}
+        />
+      )}
 
       {/* Action Bar */}
       <div className="grid grid-cols-2 gap-2 p-3">

@@ -19,13 +19,23 @@ export const useLiveMatchLogic = (
   const [receivePlayerId, setReceivePlayerId] = useState<string | null>(null);
   const [servingTeam, setServingTeam] = useState<'Us' | 'Opponent'>('Us');
   const [currentRotation, setCurrentRotation] = useState<number>(activeSet?.metadata?.currentRotation || 1);
+  const [currentLineup, setCurrentLineup] = useState<Lineup | null>(activeSet?.metadata?.currentLineup || activeSet?.metadata?.startingLineup || null);
+  const [liberoServingPosition, setLiberoServingPosition] = useState<number | undefined>(activeSet?.metadata?.liberoServingPosition);
 
-  // Sync rotation from activeSet
+  // Sync state from activeSet
   useEffect(() => {
     if (activeSet?.metadata?.currentRotation) {
       setCurrentRotation(activeSet.metadata.currentRotation);
     }
-  }, [activeSet?.metadata?.currentRotation]);
+    if (activeSet?.metadata?.currentLineup) {
+      setCurrentLineup(activeSet.metadata.currentLineup);
+    } else if (activeSet?.metadata?.startingLineup) {
+      setCurrentLineup(activeSet.metadata.startingLineup);
+    }
+    if (activeSet?.metadata?.liberoServingPosition) {
+      setLiberoServingPosition(activeSet.metadata.liberoServingPosition);
+    }
+  }, [activeSet?.metadata]);
 
   const resetEntry = useCallback(() => {
     setPointWinner(null);
@@ -36,6 +46,61 @@ export const useLiveMatchLogic = (
     setReceiveResult(null);
     setReceivePlayerId(null);
   }, []);
+
+  const handleSubstitution = useCallback(async (positionIdx: number, newPlayerId: string) => {
+    if (!activeSet || !currentLineup) return;
+    
+    const nextLineup = {
+      ...currentLineup,
+      [`position${positionIdx}`]: newPlayerId
+    };
+    
+    setCurrentLineup(nextLineup);
+    await updateSet(activeSet.id, {
+      metadata: {
+        ...activeSet.metadata,
+        currentLineup: nextLineup
+      }
+    });
+  }, [activeSet, currentLineup, updateSet]);
+
+  const handleLiberoSwap = useCallback(async (positionIdx: number, liberoId: string | null) => {
+    if (!activeSet || !currentLineup) return;
+    
+    let nextPlayerId = liberoId;
+    if (!liberoId) {
+      // Swapping back to the starting player for this position
+      nextPlayerId = activeSet.metadata?.startingLineup?.[`position${positionIdx}` as keyof Lineup] || '';
+    }
+    
+    if (!nextPlayerId) return;
+
+    const nextLineup = {
+      ...currentLineup,
+      [`position${positionIdx}`]: nextPlayerId
+    };
+    
+    setCurrentLineup(nextLineup);
+    await updateSet(activeSet.id, {
+      metadata: {
+        ...activeSet.metadata,
+        currentLineup: nextLineup
+      }
+    });
+  }, [activeSet, currentLineup, updateSet]);
+
+  const handleSetLiberoServing = useCallback(async (isServing: boolean, positionIdx: number) => {
+    if (!activeSet) return;
+    
+    const nextLiberoPos = isServing ? positionIdx : undefined;
+    setLiberoServingPosition(nextLiberoPos);
+    await updateSet(activeSet.id, {
+      metadata: {
+        ...activeSet.metadata,
+        liberoServingPosition: nextLiberoPos
+      }
+    });
+  }, [activeSet, updateSet]);
 
   const completeRally = useCallback(async (
     classification: Classification, 
@@ -63,6 +128,9 @@ export const useLiveMatchLogic = (
       throw new Error('Missing required rally data');
     }
 
+    // Determine if libero was serving
+    const isLiberoServing = servingTeam === 'Us' && currentRotation === liberoServingPosition;
+
     const newRally: RallyEvent = {
       id: uuidv4(),
       matchId: activeMatch.id,
@@ -84,6 +152,8 @@ export const useLiveMatchLogic = (
         receiveResult: receiveResult || undefined,
         receivePlayerId: receivePlayerId || undefined,
         rotation: currentRotation,
+        lineup: currentLineup || undefined,
+        isLiberoServing
       },
     };
 
@@ -119,12 +189,21 @@ export const useLiveMatchLogic = (
       throw error; // Re-throw so LiveMatch can show toast
     }
     return newRally;
-  }, [pointWinner, outcome, selectedPlayerId, activeSet, activeMatch, rallies.length, servingTeam, serverPlayerId, serveResult, receiveResult, receivePlayerId, addRally, resetEntry]);
+  }, [pointWinner, outcome, selectedPlayerId, activeSet, activeMatch, rallies.length, servingTeam, serverPlayerId, serveResult, receiveResult, receivePlayerId, addRally, resetEntry, currentRotation, currentLineup, liberoServingPosition, updateSet]);
 
   const undoLastRallyWithLogic = useCallback(async () => {
     if (rallies.length === 0) return null;
     const lastRally = rallies[rallies.length - 1];
     setServingTeam(lastRally.servingTeam);
+    
+    // Restore rotation and lineup from last rally if available
+    if (lastRally.metadata?.rotation) {
+      setCurrentRotation(lastRally.metadata.rotation);
+    }
+    if (lastRally.metadata?.lineup) {
+      setCurrentLineup(lastRally.metadata.lineup);
+    }
+
     await undoLastRally();
     return lastRally;
   }, [rallies, undoLastRally]);
@@ -148,6 +227,11 @@ export const useLiveMatchLogic = (
     setServingTeam,
     currentRotation,
     setCurrentRotation,
+    currentLineup,
+    liberoServingPosition,
+    handleSubstitution,
+    handleLiberoSwap,
+    handleSetLiberoServing,
     completeRally,
     undoLastRallyWithLogic,
     resetEntry
