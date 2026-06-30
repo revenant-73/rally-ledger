@@ -15,6 +15,8 @@ import NextSetScreen from '../components/live-match/NextSetScreen';
 import NoteModal from '../components/live-match/NoteModal';
 import TimeoutModal from '../components/live-match/TimeoutModal';
 import MoreMenuModal from '../components/live-match/MoreMenuModal';
+import RotationDisplay from '../components/live-match/lineup/RotationDisplay';
+import LineupSelection from '../components/live-match/lineup/LineupSelection';
 
 const LiveMatch: React.FC = () => {
   const navigate = useNavigate();
@@ -41,8 +43,9 @@ const LiveMatch: React.FC = () => {
     receiveResult, setReceiveResult,
     setReceivePlayerId,
     servingTeam, setServingTeam,
+    currentRotation, setCurrentRotation,
     completeRally, undoLastRallyWithLogic, resetEntry
-  } = useLiveMatchLogic(activeMatch, activeSet, rallies, addRally, undoLastRally);
+  } = useLiveMatchLogic(activeMatch, activeSet, rallies, addRally, undoLastRally, updateSet);
 
   const [showReceivePlayerSelection, setShowReceivePlayerSelection] = useState(false);
   const [showPlayerSelection, setShowPlayerSelection] = useState(false);
@@ -50,6 +53,7 @@ const LiveMatch: React.FC = () => {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showTimeout, setShowTimeout] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
+  const [showLineupEditor, setShowLineupEditor] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
@@ -71,13 +75,33 @@ const LiveMatch: React.FC = () => {
 
   if (!activeMatch) return null;
 
+  if (showLineupEditor) {
+    return (
+      <LineupSelection 
+        players={players}
+        onCancel={() => setShowLineupEditor(false)}
+        onComplete={async (lineup) => {
+          await updateSet(activeSet!.id, {
+            metadata: {
+              ...activeSet!.metadata,
+              startingLineup: lineup,
+            }
+          });
+          setShowLineupEditor(false);
+          setToast('Lineup updated!');
+        }}
+      />
+    );
+  }
+
   // Initialize next set if none exists
   if (!activeSet) {
     return (
       <NextSetScreen 
         rallies={rallies}
+        players={players}
         onBackToHome={() => navigate('/')}
-        onStartSet={async (setNumber) => {
+        onStartSet={async (setNumber, lineup) => {
           const newSet: Set = {
             id: uuidv4(),
             matchId: activeMatch.id,
@@ -88,6 +112,10 @@ const LiveMatch: React.FC = () => {
             startingServerTeam: 'Us',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
+            metadata: {
+              startingLineup: lineup,
+              currentRotation: 1,
+            }
           };
           await startSet(newSet);
         }}
@@ -272,6 +300,7 @@ const LiveMatch: React.FC = () => {
         opponentScore={activeSet.opponentScore}
         ourEarned={rallies.filter(r => r.setId === activeSet.id && r.pointWinner === 'Us' && r.classification === 'Earned').length}
         ourGifted={rallies.filter(r => r.setId === activeSet.id && r.pointWinner === 'Opponent' && r.classification === 'Gifted').length}
+        rallies={rallies.filter(r => r.setId === activeSet.id)}
       />
 
       <MoreMenuModal 
@@ -297,6 +326,37 @@ const LiveMatch: React.FC = () => {
         servingTeam={servingTeam}
         onToggleServingTeam={() => setServingTeam(servingTeam === 'Us' ? 'Opponent' : 'Us')}
       />
+
+      {activeSet.metadata?.startingLineup ? (
+        <div className="px-4 pb-1">
+          <RotationDisplay 
+            lineup={activeSet.metadata.startingLineup}
+            players={players}
+            currentRotation={currentRotation}
+            servingTeam={servingTeam}
+            onManualRotate={async () => {
+              const nextRotation = currentRotation === 6 ? 1 : currentRotation + 1;
+              setCurrentRotation(nextRotation);
+              await updateSet(activeSet.id, {
+                metadata: {
+                  ...activeSet.metadata,
+                  currentRotation: nextRotation
+                }
+              });
+              setToast(`Rotated to ${nextRotation}`);
+            }}
+          />
+        </div>
+      ) : (
+        <div className="px-4 pb-2">
+          <button 
+            onClick={() => setShowLineupEditor(true)}
+            className="w-full py-2 bg-brand-gray/5 border border-brand-gray/10 rounded-xl text-brand-text-secondary text-xs font-bold uppercase"
+          >
+            Set Starting Lineup
+          </button>
+        </div>
+      )}
 
       <RallyEntryArea 
         servingTeam={servingTeam}
@@ -328,23 +388,25 @@ const LiveMatch: React.FC = () => {
         onSetShowPlayerSelection={setShowPlayerSelection}
         onSetOutcome={setOutcome}
         onSetServerPlayerId={setServerPlayerId}
+        currentLineup={activeSet.metadata?.startingLineup}
+        currentRotation={currentRotation}
       />
 
       {/* Action Bar */}
-      <div className="grid grid-cols-2 gap-2 p-4">
+      <div className="grid grid-cols-2 gap-2 p-3">
         <button
           onClick={undoWithFeedback}
-          className="flex flex-col items-center gap-1 p-3 bg-brand-gray/5 rounded-xl text-brand-text-secondary active:text-brand-teal"
+          className="flex flex-col items-center gap-0.5 p-2 bg-brand-gray/5 rounded-xl text-brand-text-secondary active:text-brand-teal"
         >
-          <RotateCcw size={20} />
-          <span className="text-[10px] font-bold uppercase">Undo</span>
+          <RotateCcw size={18} />
+          <span className="text-[9px] font-bold uppercase">Undo</span>
         </button>
         <button
           onClick={() => setShowNoteModal(true)}
-          className="flex flex-col items-center gap-1 p-3 bg-brand-gray/5 rounded-xl text-brand-text-secondary active:text-brand-teal"
+          className="flex flex-col items-center gap-0.5 p-2 bg-brand-gray/5 rounded-xl text-brand-text-secondary active:text-brand-teal"
         >
-          <MessageSquare size={20} />
-          <span className="text-[10px] font-bold uppercase">Note</span>
+          <MessageSquare size={18} />
+          <span className="text-[9px] font-bold uppercase">Note</span>
         </button>
       </div>
     </div>
