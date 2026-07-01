@@ -5,8 +5,8 @@ import type { Player, OutcomeType, Classification } from '../../types';
 interface RallyEntryAreaProps {
   servingTeam: 'Us' | 'Opponent';
   serverPlayerId: string | null;
-  serveResult: string | null;
-  receiveResult: string | null;
+  serveResult: 'Ace' | 'Error' | 'In-System' | 'Out-of-System' | null;
+  receiveResult: 'Error' | 'Overpass' | 'In-System' | 'Out-of-System' | null;
   showReceivePlayerSelection: boolean;
   pointWinner: 'Us' | 'Opponent' | null;
   showPlayerSelection: boolean;
@@ -25,9 +25,9 @@ interface RallyEntryAreaProps {
   onOutcomeClick: (type: OutcomeType) => void;
   onResetEntry: () => void;
   onCompleteRally: (classification: Classification, winnerOverride?: 'Us' | 'Opponent', outcomeOverride?: OutcomeType, playerOverride?: string | null) => Promise<void>;
-  onSetServeResult: (result: string | null) => void;
+  onSetServeResult: (result: 'Ace' | 'Error' | 'In-System' | 'Out-of-System' | null) => void;
   onSetShowReceivePlayerSelection: (show: boolean) => void;
-  onSetReceiveResult: (result: string | null) => void;
+  onSetReceiveResult: (result: 'Error' | 'Overpass' | 'In-System' | 'Out-of-System' | null) => void;
   onSetPointWinner: (winner: 'Us' | 'Opponent' | null) => void;
   onSetShowPlayerSelection: (show: boolean) => void;
   onSetOutcome: (outcome: OutcomeType | null) => void;

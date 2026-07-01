@@ -91,7 +91,7 @@ export const useAddRally = () => {
       // Return a context object with the snapshotted value
       return { previousRallies, previousSet };
     },
-    onError: (err, { rally }, context) => {
+    onError: (_err, { rally }, context) => {
       // If the mutation fails, use the context returned from onMutate to roll back
       if (context) {
         queryClient.setQueryData(['rallies', rally.matchId], context.previousRallies);

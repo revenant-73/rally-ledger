@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { Player, Lineup } from '../../../types';
-import { User, CheckCircle2 } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 
 interface LineupSelectionProps {
   players: Player[];
