@@ -20,6 +20,17 @@ export const useLiveMatchLogic = (
   const [servingTeam, setServingTeam] = useState<'Us' | 'Opponent'>('Us');
   const [currentRotation, setCurrentRotation] = useState<number>(activeSet?.metadata?.currentRotation || 1);
   const [currentLineup, setCurrentLineup] = useState<Lineup | null>(activeSet?.metadata?.currentLineup || activeSet?.metadata?.startingLineup || null);
+
+  useEffect(() => {
+    console.log('useLiveMatchLogic init/update:', { 
+      hasActiveSet: !!activeSet, 
+      metadata: activeSet?.metadata,
+      currentRotation: activeSet?.metadata?.currentRotation,
+      currentLineup: activeSet?.metadata?.currentLineup,
+      startingLineup: activeSet?.metadata?.startingLineup
+    });
+  }, [activeSet]);
+
   const [liberoServingPosition, setLiberoServingPosition] = useState<number | undefined>(activeSet?.metadata?.liberoServingPosition);
 
   // Sync state from activeSet

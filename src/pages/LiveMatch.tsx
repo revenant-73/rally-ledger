@@ -53,6 +53,15 @@ const LiveMatch: React.FC = () => {
     completeRally, undoLastRallyWithLogic, resetEntry
   } = useLiveMatchLogic(activeMatch, activeSet, rallies, addRally, undoLastRally, updateSet);
 
+  useEffect(() => {
+    console.log('LiveMatch Render State:', { 
+      hasActiveSet: !!activeSet, 
+      hasCurrentLineup: !!currentLineup,
+      currentRotation,
+      servingTeam 
+    });
+  }, [activeSet, currentLineup, currentRotation, servingTeam]);
+
   const [showReceivePlayerSelection, setShowReceivePlayerSelection] = useState(false);
   const [showPlayerSelection, setShowPlayerSelection] = useState(false);
   const [showClassification, setShowClassification] = useState(false);
