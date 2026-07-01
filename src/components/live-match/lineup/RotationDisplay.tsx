@@ -21,6 +21,7 @@ const RotationDisplay: React.FC<RotationDisplayProps> = ({
   onPlayerClick,
   liberoServingPosition
 }) => {
+  console.log('RotationDisplay render:', { currentRotation, servingTeam, hasLineup: !!lineup });
   // Map positions to their current location based on rotation
   // Rotation 1: Pos 1 is back right, Pos 2 is front right, etc.
   // We want to show the current physical positions on the court.
