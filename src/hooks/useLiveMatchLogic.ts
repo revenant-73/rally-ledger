@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import type { Match, Set, RallyEvent, OutcomeType, Classification } from '../types';
+import type { Match, Set, RallyEvent, OutcomeType, Classification, Lineup } from '../types';
 
 export const useLiveMatchLogic = (
   activeMatch: Match | null,

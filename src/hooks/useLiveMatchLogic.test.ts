@@ -34,16 +34,17 @@ describe('useLiveMatchLogic', () => {
 
   const mockAddRally = vi.fn().mockResolvedValue(undefined);
   const mockUndoLastRally = vi.fn().mockResolvedValue(undefined);
+  const mockUpdateSet = vi.fn().mockResolvedValue(undefined);
 
   it('should initialize with default state', () => {
-    const { result } = renderHook(() => useLiveMatchLogic(mockMatch, mockSet, [], mockAddRally, mockUndoLastRally));
+    const { result } = renderHook(() => useLiveMatchLogic(mockMatch, mockSet, [], mockAddRally, mockUndoLastRally, mockUpdateSet));
     
     expect(result.current.pointWinner).toBeNull();
     expect(result.current.servingTeam).toBe('Us');
   });
 
   it('should complete a rally and update scores', async () => {
-    const { result } = renderHook(() => useLiveMatchLogic(mockMatch, mockSet, [], mockAddRally, mockUndoLastRally));
+    const { result } = renderHook(() => useLiveMatchLogic(mockMatch, mockSet, [], mockAddRally, mockUndoLastRally, mockUpdateSet));
 
     await act(async () => {
       result.current.setPointWinner('Us');
@@ -64,7 +65,7 @@ describe('useLiveMatchLogic', () => {
   });
 
   it('should switch serving team when opponent wins a point', async () => {
-    const { result } = renderHook(() => useLiveMatchLogic(mockMatch, mockSet, [], mockAddRally, mockUndoLastRally));
+    const { result } = renderHook(() => useLiveMatchLogic(mockMatch, mockSet, [], mockAddRally, mockUndoLastRally, mockUpdateSet));
 
     await act(async () => {
       result.current.setPointWinner('Opponent');
@@ -92,7 +93,7 @@ describe('useLiveMatchLogic', () => {
       createdAt: '2024-01-01',
     }];
 
-    const { result } = renderHook(() => useLiveMatchLogic(mockMatch, mockSet, rallies, mockAddRally, mockUndoLastRally));
+    const { result } = renderHook(() => useLiveMatchLogic(mockMatch, mockSet, rallies, mockAddRally, mockUndoLastRally, mockUpdateSet));
 
     await act(async () => {
       await result.current.undoLastRallyWithLogic();

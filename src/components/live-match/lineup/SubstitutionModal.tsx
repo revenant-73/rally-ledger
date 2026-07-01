@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, ArrowLeftRight, ShieldCheck, Zap } from 'lucide-react';
+import { X, ArrowLeftRight, Zap } from 'lucide-react';
 import type { Player, Lineup } from '../../../types';
 
 interface SubstitutionModalProps {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Zap, AlertCircle, ShieldCheck, Zap as ZapIcon } from 'lucide-react';
+import { Zap, AlertCircle } from 'lucide-react';
 import type { RallyEvent } from '../../types';
 import { calculateAdvancedStats } from '../../utils/stats';
 
