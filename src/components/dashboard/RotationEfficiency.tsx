@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { calculateRotationBreakdown } from '../../utils/stats';
 import type { RallyEvent } from '../../types';
 
@@ -30,10 +31,18 @@ const RotationEfficiency: React.FC<RotationEfficiencyProps> = ({ rallies }) => {
               </div>
             </div>
             
-            <div className="h-2 bg-brand-gray/10 rounded-full overflow-hidden flex">
-              <div 
-                className="h-full bg-brand-teal transition-all duration-500" 
-                style={{ width: `${rot.sideOutPercentage}%` }}
+            <div className="h-3 bg-brand-gray/10 rounded-full overflow-hidden flex gap-0.5">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${rot.sideOutPercentage}%` }}
+                transition={{ duration: 1, ease: "easeOut" }}
+                className="h-full bg-brand-teal rounded-l-full" 
+              />
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${rot.pointScoringPercentage}%` }}
+                transition={{ duration: 1, ease: "easeOut", delay: 0.2 }}
+                className="h-full bg-brand-amber rounded-r-full" 
               />
             </div>
           </div>

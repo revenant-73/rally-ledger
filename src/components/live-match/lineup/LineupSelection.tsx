@@ -25,7 +25,7 @@ const LineupSelection: React.FC<LineupSelectionProps> = ({ players, onComplete, 
 
   const handlePlayerSelect = (playerId: string) => {
     // Check if player is already in another position
-    const existingPos = Object.entries(lineup).find(([_, id]) => id === playerId);
+    const existingPos = Object.entries(lineup).find(([, id]) => id === playerId);
     if (existingPos) {
       const [pos] = existingPos;
       setLineup(prev => ({ ...prev, [pos]: undefined, [activePosition]: playerId }));
@@ -116,7 +116,7 @@ const LineupSelection: React.FC<LineupSelectionProps> = ({ players, onComplete, 
       <div className="flex-1 overflow-y-auto p-4">
         <div className="grid grid-cols-4 gap-2">
           {players.sort((a,b) => Number(a.jerseyNumber) - Number(b.jerseyNumber)).map(player => {
-            const currentPos = Object.entries(lineup).find(([_, id]) => id === player.id)?.[0];
+            const currentPos = Object.entries(lineup).find(([, id]) => id === player.id)?.[0];
             return (
               <button
                 key={player.id}

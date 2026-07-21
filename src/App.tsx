@@ -9,6 +9,7 @@ import NewMatch from './pages/NewMatch';
 import LiveMatch from './pages/LiveMatch';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
+import { Toaster } from 'react-hot-toast';
 import { useAuth } from './hooks/useAuth';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -32,6 +33,13 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 function App() {
   return (
     <Router>
+      <Toaster 
+        position="top-center"
+        toastOptions={{
+          className: 'font-bold rounded-2xl bg-brand-bg text-brand-text border border-brand-gray/20',
+          duration: 2000,
+        }}
+      />
       <Routes>
         <Route path="/login" element={<Login />} />
         

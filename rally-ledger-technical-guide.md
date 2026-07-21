@@ -1411,3 +1411,45 @@ This constraint protects the core purpose of the app.
 Rally Ledger is a live volleyball match app that helps coaches see whether points are being earned or gifted. Instead of overwhelming the bench with full stat sheets, it gives a simple match-weather view: what is happening right now, what trend is building, and what action the team should commit to next.
 
 The app helps teams notice, adapt, and commit while the match is still happening.
+
+---
+
+## 29. System Upgrades & Audit (July 2026)
+
+In July 2026, a comprehensive audit and system-wide upgrade was performed to elevate the app to production-grade standards for speed, visual appeal, and decision-support accuracy.
+
+### 29.1 Visual & UX Overhaul
+- **Motion System**: Integrated `framer-motion` to provide fluid, high-performance transitions. 
+  - *Rally Entry*: Multi-step forms now slide and fade, maintaining spatial orientation for the user.
+  - *Scoreboard*: Digit changes are animated with spring-physics transitions to highlight score changes.
+  - *Dashboard*: Cards and charts animate in sequence to build a cohesive match narrative.
+- **Notification System**: Replaced static alerts with `react-hot-toast`.
+  - Color-coded feedback (Teal for success/points, Red for errors/opponent points, Amber for warnings).
+  - Non-blocking notifications that allow the user to continue data entry without interruption.
+- **Responsive Layouts**: 
+  - The Dashboard was redesigned with a multi-column grid (`lg:col-span-x`) for larger devices while maintaining vertical density for mobile.
+
+### 29.2 Enhanced Live Tracking Logic
+- **Verification-First Server Entry**: 
+  - Instead of a blank selection, the app now calculates and presents a **Predicted Server** button based on rotation.
+  - Users can confirm the server with a **single tap**, or select a different player if a substitution was made outside the app's current state.
+- **Intelligent Point Assignment**:
+  - The `handleServeQualityClick` logic now understands match outcomes.
+  - Selecting "ACE" automatically assigns the point to 'Us', tags the outcome, and completes the rally.
+  - Selecting "ERR" automatically assigns the point to 'Opponent' and completes the rally.
+- **Net Awareness**:
+  - The court rotation display now includes a visual "Net" indicator to help users orient themselves physically with the live court.
+
+### 29.3 Advanced Match Weather
+- **Momentum Visuals**:
+  - `ForecastCard` now features an animated background pulse that changes color and intensity based on match momentum (Sunny, Stormy, High Pressure).
+- **Execution Analytics**:
+  - The `EarnedGiftedComparison` was upgraded with animated balance bars to show the ratio of "Execution" vs "Leaks" in real-time.
+- **Rotation Efficiency**:
+  - The rotation breakdown now displays both **Side-Out (SO%)** and **Point-Scoring (PS%)** in a single interactive bar chart to identify rotation-specific strengths and weaknesses.
+
+### 29.4 Technical Stack Evolution
+- **Dependencies**: Added `framer-motion` and `react-hot-toast`.
+- **Typing**: Hardened TypeScript interfaces for `Lineup`, `Match`, and `RallyEvent` to eliminate `any` usage.
+- **Linting**: Enforced strict `react-hooks/set-state-in-effect` rules to prevent cascading renders and ensure snappy UI performance.
+

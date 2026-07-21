@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 
 interface EarnedGiftedComparisonProps {
   ourEarned: number;
@@ -23,24 +24,33 @@ const EarnedGiftedComparison: React.FC<EarnedGiftedComparisonProps> = ({
             <p className="text-[10px] text-brand-text-secondary font-bold uppercase mt-1">Earned vs Leaks</p>
           </div>
           <div className="text-right">
-            <span className={`text-xl font-black ${ourEarned >= ourGifted ? 'text-brand-green' : 'text-brand-amber'}`}>
+            <motion.span 
+              key={ourEarned - ourGifted}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className={`text-xl font-black ${ourEarned >= ourGifted ? 'text-brand-green' : 'text-brand-amber'}`}
+            >
               {ourEarned - ourGifted > 0 ? '+' : ''}{ourEarned - ourGifted}
-            </span>
+            </motion.span>
           </div>
         </div>
         <div className="relative h-6 bg-brand-gray/10 rounded-full overflow-hidden flex">
-          <div 
-            className="h-full bg-brand-green transition-all duration-700 ease-out flex items-center justify-end px-3" 
-            style={{ width: `${(ourEarned / ((ourEarned + ourGifted) || 1)) * 100}%` }}
+          <motion.div 
+            initial={{ width: 0 }}
+            animate={{ width: `${(ourEarned / ((ourEarned + ourGifted) || 1)) * 100}%` }}
+            transition={{ duration: 1, ease: "easeOut" }}
+            className="h-full bg-brand-green flex items-center justify-end px-3" 
           >
-            {ourEarned > 0 && <span className="text-[10px] font-black text-brand-bg">+{ourEarned}</span>}
-          </div>
-          <div 
-            className="h-full bg-brand-amber transition-all duration-700 ease-out flex items-center justify-start px-3" 
-            style={{ width: `${(ourGifted / ((ourEarned + ourGifted) || 1)) * 100}%` }}
+            {ourEarned > 0 && <span className="text-[10px] font-black text-brand-bg whitespace-nowrap">+{ourEarned}</span>}
+          </motion.div>
+          <motion.div 
+            initial={{ width: 0 }}
+            animate={{ width: `${(ourGifted / ((ourEarned + ourGifted) || 1)) * 100}%` }}
+            transition={{ duration: 1, ease: "easeOut" }}
+            className="h-full bg-brand-amber flex items-center justify-start px-3" 
           >
-            {ourGifted > 0 && <span className="text-[10px] font-black text-brand-bg">-{ourGifted}</span>}
-          </div>
+            {ourGifted > 0 && <span className="text-[10px] font-black text-brand-bg whitespace-nowrap">-{ourGifted}</span>}
+          </motion.div>
         </div>
       </div>
 
@@ -52,24 +62,33 @@ const EarnedGiftedComparison: React.FC<EarnedGiftedComparisonProps> = ({
             <p className="text-[10px] text-brand-text-secondary font-bold uppercase mt-1">Earned vs Given</p>
           </div>
           <div className="text-right">
-            <span className={`text-xl font-black ${oppEarned >= oppGifted ? 'text-brand-text' : 'text-brand-gray'}`}>
+            <motion.span 
+              key={oppEarned - oppGifted}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className={`text-xl font-black ${oppEarned >= oppGifted ? 'text-brand-text' : 'text-brand-gray'}`}
+            >
               {oppEarned - oppGifted > 0 ? '+' : ''}{oppEarned - oppGifted}
-            </span>
+            </motion.span>
           </div>
         </div>
         <div className="relative h-6 bg-brand-gray/10 rounded-full overflow-hidden flex">
-          <div 
-            className="h-full bg-brand-text transition-all duration-700 ease-out flex items-center justify-end px-3" 
-            style={{ width: `${(oppEarned / ((oppEarned + oppGifted) || 1)) * 100}%` }}
+          <motion.div 
+            initial={{ width: 0 }}
+            animate={{ width: `${(oppEarned / ((oppEarned + oppGifted) || 1)) * 100}%` }}
+            transition={{ duration: 1, ease: "easeOut" }}
+            className="h-full bg-brand-text flex items-center justify-end px-3" 
           >
-            {oppEarned > 0 && <span className="text-[10px] font-black text-brand-bg">+{oppEarned}</span>}
-          </div>
-          <div 
-            className="h-full bg-brand-gray transition-all duration-700 ease-out flex items-center justify-start px-3" 
-            style={{ width: `${(oppGifted / ((oppEarned + oppGifted) || 1)) * 100}%` }}
+            {oppEarned > 0 && <span className="text-[10px] font-black text-brand-bg whitespace-nowrap">+{oppEarned}</span>}
+          </motion.div>
+          <motion.div 
+            initial={{ width: 0 }}
+            animate={{ width: `${(oppGifted / ((oppEarned + oppGifted) || 1)) * 100}%` }}
+            transition={{ duration: 1, ease: "easeOut" }}
+            className="h-full bg-brand-gray flex items-center justify-start px-3" 
           >
-            {oppGifted > 0 && <span className="text-[10px] font-black text-brand-bg">-{oppGifted}</span>}
-          </div>
+            {oppGifted > 0 && <span className="text-[10px] font-black text-brand-bg whitespace-nowrap">-{oppGifted}</span>}
+          </motion.div>
         </div>
       </div>
     </div>

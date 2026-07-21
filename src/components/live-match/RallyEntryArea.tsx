@@ -1,6 +1,7 @@
 import React from 'react';
-import { Trophy, X, Sun, CloudRain, Cloud } from 'lucide-react';
-import type { Player, OutcomeType, Classification } from '../../types';
+import { Trophy, X, Sun, CloudRain, Cloud, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import type { Player, OutcomeType, Classification, Lineup } from '../../types';
 
 interface RallyEntryAreaProps {
   servingTeam: 'Us' | 'Opponent';
@@ -12,7 +13,6 @@ interface RallyEntryAreaProps {
   showPlayerSelection: boolean;
   showClassification: boolean;
   players: Player[];
-  outcome: OutcomeType | null;
   positiveOutcomes: OutcomeType[];
   errorOutcomes: OutcomeType[];
   onServerClick: (id: string | 'none') => void;
@@ -32,7 +32,7 @@ interface RallyEntryAreaProps {
   onSetShowPlayerSelection: (show: boolean) => void;
   onSetOutcome: (outcome: OutcomeType | null) => void;
   onSetServerPlayerId: (id: string | null) => void;
-  currentLineup?: any;
+  currentLineup?: Lineup | null;
   currentRotation?: number;
 }
 
@@ -46,7 +46,6 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
   showPlayerSelection,
   showClassification,
   players,
-  outcome,
   positiveOutcomes,
   errorOutcomes,
   onServerClick,
@@ -68,7 +67,6 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
   currentLineup,
   currentRotation,
 }) => {
-  console.log('RallyEntryArea render:', { servingTeam, serveResult, receiveResult, pointWinner });
   const sortedPlayers = [...players].sort((a, b) => Number(a.jerseyNumber) - Number(b.jerseyNumber));
 
   const getPredictedServerId = () => {
@@ -79,40 +77,74 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
   };
 
   const predictedServerId = getPredictedServerId();
+  const predictedServer = players.find(p => p.id === predictedServerId);
 
-  return (
-    <div className="flex-1 bg-brand-gray/5 rounded-3xl p-3 flex flex-col min-h-0 overflow-hidden">
-      {servingTeam === 'Us' && !serverPlayerId ? (
-        <div className="flex-1 flex flex-col">
+  const containerVariants = {
+    initial: { opacity: 0, x: 20 },
+    animate: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: -20 },
+  };
+
+  const renderContent = () => {
+    if (servingTeam === 'Us' && !serverPlayerId) {
+      return (
+        <motion.div 
+          key="server-selection"
+          variants={containerVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          className="flex-1 flex flex-col"
+        >
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-base font-bold uppercase tracking-tight">Confirm Server</h3>
             <button onClick={() => onServerClick('none')} className="text-brand-teal text-xs font-bold uppercase">Skip</button>
           </div>
-          <div className="flex-1 grid grid-cols-3 gap-2 overflow-y-auto pb-2 pt-2 content-start">
-            {sortedPlayers.map((player) => {
-              const isPredicted = player.id === predictedServerId;
-              return (
-                <button
-                  key={player.id}
-                  onClick={() => onServerClick(player.id)}
-                  className={`relative border py-3 rounded-xl flex flex-col items-center justify-center active:scale-[0.95] transition-all ${
-                    isPredicted 
-                      ? 'bg-brand-teal/20 border-brand-teal ring-2 ring-brand-teal/30 shadow-lg z-10' 
-                      : 'bg-brand-gray/10 border-brand-gray/20'
-                  }`}
-                >
-                  {isPredicted && (
-                    <div className="absolute -top-2 bg-brand-teal text-brand-bg text-[7px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-tighter">Server</div>
-                  )}
-                  <span className={`text-lg font-black leading-none ${isPredicted ? 'text-brand-teal' : 'text-brand-teal'}`}>#{player.jerseyNumber}</span>
-                  <span className="text-[9px] font-bold uppercase mt-0.5 truncate w-full px-1 text-center">{player.firstName}</span>
-                </button>
-              );
-            })}
+          
+          {predictedServer && (
+            <button
+              onClick={() => onServerClick(predictedServer.id)}
+              className="mb-3 bg-brand-teal text-brand-bg p-4 rounded-2xl flex items-center justify-between shadow-lg active:scale-[0.98] transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-brand-bg/20 rounded-full flex items-center justify-center font-black text-xl">
+                  #{predictedServer.jerseyNumber}
+                </div>
+                <div className="text-left">
+                  <p className="text-[10px] font-black uppercase opacity-80 leading-none mb-0.5">Predicted Server</p>
+                  <p className="text-lg font-bold leading-none">{predictedServer.firstName} {predictedServer.lastName}</p>
+                </div>
+              </div>
+              <Check size={24} />
+            </button>
+          )}
+
+          <div className="flex-1 grid grid-cols-4 gap-2 overflow-y-auto pb-2 content-start">
+            {sortedPlayers.map((player) => (
+              <button
+                key={player.id}
+                onClick={() => onServerClick(player.id)}
+                className="bg-brand-gray/10 border border-brand-gray/20 py-2 rounded-xl flex flex-col items-center justify-center active:scale-[0.95] transition-all"
+              >
+                <span className="text-base font-black text-brand-teal leading-none">#{player.jerseyNumber}</span>
+                <span className="text-[8px] font-bold uppercase mt-0.5 truncate w-full px-1 text-center">{player.firstName}</span>
+              </button>
+            ))}
           </div>
-        </div>
-      ) : (!serveResult && !receiveResult) ? (
-        <div className="flex-1 flex flex-col">
+        </motion.div>
+      );
+    }
+
+    if (!serveResult && !receiveResult) {
+      return (
+        <motion.div 
+          key="quality-selection"
+          variants={containerVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          className="flex-1 flex flex-col"
+        >
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-base font-bold">
               {servingTeam === 'Us' ? 'How was the serve?' : 'How was the receive?'}
@@ -143,9 +175,20 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
               </>
             )}
           </div>
-        </div>
-      ) : showReceivePlayerSelection ? (
-        <div className="flex-1 flex flex-col">
+        </motion.div>
+      );
+    }
+
+    if (showReceivePlayerSelection) {
+      return (
+        <motion.div 
+          key="receive-player"
+          variants={containerVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          className="flex-1 flex flex-col"
+        >
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-base font-bold">Who received?</h3>
             <div className="flex gap-4">
@@ -153,21 +196,32 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
               <button onClick={() => { onSetShowReceivePlayerSelection(false); onSetReceiveResult(null); }} className="text-brand-text-secondary text-xs">Back</button>
             </div>
           </div>
-          <div className="flex-1 grid grid-cols-3 gap-2 overflow-y-auto pb-2 content-start">
+          <div className="flex-1 grid grid-cols-4 gap-2 overflow-y-auto pb-2 content-start">
             {sortedPlayers.map((player) => (
               <button
                 key={player.id}
                 onClick={() => onReceivePlayerClick(player.id)}
-                className="bg-brand-gray/10 border border-brand-gray/20 py-3 rounded-xl flex flex-col items-center justify-center active:scale-[0.95] transition-all"
+                className="bg-brand-gray/10 border border-brand-gray/20 py-2 rounded-xl flex flex-col items-center justify-center active:scale-[0.95] transition-all"
               >
-                <span className="text-lg font-black text-brand-teal leading-none">#{player.jerseyNumber}</span>
-                <span className="text-[9px] font-bold uppercase mt-0.5 truncate w-full px-1 text-center">{player.firstName}</span>
+                <span className="text-base font-black text-brand-teal leading-none">#{player.jerseyNumber}</span>
+                <span className="text-[8px] font-bold uppercase mt-0.5 truncate w-full px-1 text-center">{player.firstName}</span>
               </button>
             ))}
           </div>
-        </div>
-      ) : !pointWinner ? (
-        <div className="flex-1 flex flex-col">
+        </motion.div>
+      );
+    }
+
+    if (!pointWinner) {
+      return (
+        <motion.div 
+          key="winner-selection"
+          variants={containerVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          className="flex-1 flex flex-col"
+        >
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-base font-bold">Who won?</h3>
             <button onClick={() => {
@@ -191,9 +245,20 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
               THEY WON
             </button>
           </div>
-        </div>
-      ) : showPlayerSelection ? (
-        <div className="flex-1 flex flex-col">
+        </motion.div>
+      );
+    }
+
+    if (showPlayerSelection) {
+      return (
+        <motion.div 
+          key="involved-player"
+          variants={containerVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          className="flex-1 flex flex-col"
+        >
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-base font-bold">Who was involved?</h3>
             <div className="flex gap-4">
@@ -201,21 +266,32 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
               <button onClick={() => { onSetShowPlayerSelection(false); onSetOutcome(null); }} className="text-brand-text-secondary text-xs">Back</button>
             </div>
           </div>
-          <div className="flex-1 grid grid-cols-3 gap-2 overflow-y-auto pb-2 content-start">
+          <div className="flex-1 grid grid-cols-4 gap-2 overflow-y-auto pb-2 content-start">
             {sortedPlayers.map((player) => (
               <button
                 key={player.id}
                 onClick={() => onPlayerClick(player.id)}
-                className="bg-brand-gray/10 border border-brand-gray/20 py-4 rounded-xl flex flex-col items-center justify-center active:scale-[0.95] transition-all"
+                className="bg-brand-gray/10 border border-brand-gray/20 py-3 rounded-xl flex flex-col items-center justify-center active:scale-[0.95] transition-all"
               >
-                <span className="text-lg font-black text-brand-teal leading-none">#{player.jerseyNumber}</span>
-                <span className="text-[9px] font-bold uppercase mt-0.5 truncate w-full px-1 text-center">{player.firstName}</span>
+                <span className="text-base font-black text-brand-teal leading-none">#{player.jerseyNumber}</span>
+                <span className="text-[8px] font-bold uppercase mt-0.5 truncate w-full px-1 text-center">{player.firstName}</span>
               </button>
             ))}
           </div>
-        </div>
-      ) : showClassification ? (
-        <div className="flex-1 flex flex-col">
+        </motion.div>
+      );
+    }
+
+    if (showClassification) {
+      return (
+        <motion.div 
+          key="classification"
+          variants={containerVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          className="flex-1 flex flex-col"
+        >
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-bold">Classification</h3>
             <button onClick={() => { onSetShowPlayerSelection(false); if(players.length > 0) onSetShowPlayerSelection(true); else onSetOutcome(null); }} className="text-brand-text-secondary text-xs">Back</button>
@@ -243,51 +319,64 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
               NEUTRAL
             </button>
           </div>
-          <div className="mt-4 p-2 bg-brand-gray/5 rounded-xl text-center">
-            <p className="text-[10px] text-brand-text-secondary">Point won by <span className="text-brand-text font-bold uppercase">{pointWinner}</span> via <span className="text-brand-text font-bold uppercase">{outcome}</span></p>
-          </div>
-        </div>
-      ) : (
-        <div className="flex-1 flex flex-col">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-base font-bold">How did it end?</h3>
-            <button onClick={() => onSetPointWinner(null)} className="text-brand-text-secondary text-xs">Back</button>
-          </div>
-          <div className="flex-1 overflow-y-auto space-y-4">
-            <div>
-              <p className="text-[9px] font-black text-brand-teal uppercase tracking-widest mb-2 px-1">Earned Points</p>
-              <div className="grid grid-cols-2 gap-2">
-                {positiveOutcomes.map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => onOutcomeClick(type)}
-                    className="bg-brand-teal/10 border border-brand-teal/20 py-3 rounded-xl font-black text-brand-teal text-sm active:scale-[0.95] transition-all"
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
-            </div>
+        </motion.div>
+      );
+    }
 
-            <div>
-              <p className="text-[9px] font-black text-brand-red uppercase tracking-widest mb-2 px-1">Errors</p>
-              <div className="grid grid-cols-2 gap-2">
-                {errorOutcomes.map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => onOutcomeClick(type)}
-                    className="bg-brand-red/10 border border-brand-red/20 py-3 rounded-xl font-black text-brand-red text-sm active:scale-[0.95] transition-all"
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
+    return (
+      <motion.div 
+        key="outcome-selection"
+        variants={containerVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        className="flex-1 flex flex-col"
+      >
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-base font-bold">How did it end?</h3>
+          <button onClick={() => onSetPointWinner(null)} className="text-brand-text-secondary text-xs">Back</button>
+        </div>
+        <div className="flex-1 overflow-y-auto space-y-4">
+          <div>
+            <p className="text-[9px] font-black text-brand-teal uppercase tracking-widest mb-2 px-1">Earned Points</p>
+            <div className="grid grid-cols-2 gap-2">
+              {positiveOutcomes.map((type) => (
+                <button
+                  key={type}
+                  onClick={() => onOutcomeClick(type)}
+                  className="bg-brand-teal/10 border border-brand-teal/20 py-3 rounded-xl font-black text-brand-teal text-sm active:scale-[0.95] transition-all"
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-[9px] font-black text-brand-red uppercase tracking-widest mb-2 px-1">Errors</p>
+            <div className="grid grid-cols-2 gap-2">
+              {errorOutcomes.map((type) => (
+                <button
+                  key={type}
+                  onClick={() => onOutcomeClick(type)}
+                  className="bg-brand-red/10 border border-brand-red/20 py-3 rounded-xl font-black text-brand-red text-sm active:scale-[0.95] transition-all"
+                >
+                  {type}
+                </button>
+              ))}
             </div>
           </div>
         </div>
-      )}
+      </motion.div>
+    );
+  };
+
+  return (
+    <div className="flex-1 bg-brand-gray/5 rounded-3xl p-3 flex flex-col min-h-0 overflow-hidden relative">
+      <AnimatePresence mode="wait">
+        {renderContent()}
+      </AnimatePresence>
     </div>
-
   );
 };
 
