@@ -76,7 +76,14 @@ const RotationDisplay: React.FC<RotationDisplayProps> = ({
         </div>
       </div>
       
-      <div className="grid grid-cols-3 gap-1 aspect-[5/2]">
+      <div className="grid grid-cols-3 gap-1 aspect-[5/2] relative">
+        {/* Net Indicator */}
+        <div className="absolute -top-1 left-0 right-0 flex justify-center z-10">
+          <div className="bg-brand-gray/40 h-[2px] w-full rounded-full flex items-center justify-center">
+            <span className="bg-brand-gray/20 px-2 py-0.5 rounded-full text-[4px] font-black uppercase text-brand-text-secondary tracking-[0.2em]">The Net</span>
+          </div>
+        </div>
+
         {positions.map(pos => {
           const { player, playerIdx } = getPlayerInfoByPos(pos);
           // The server is ALWAYS the player physically in Position 1

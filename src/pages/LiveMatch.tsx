@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageSquare, RotateCcw } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { useMatch } from '../hooks/useMatch';
 import { useLiveMatchLogic } from '../hooks/useLiveMatchLogic';
 import type { OutcomeType, Classification, Set } from '../types';
@@ -70,14 +71,6 @@ const LiveMatch: React.FC = () => {
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showLineupEditor, setShowLineupEditor] = useState(false);
   const [selectedPositionIdx, setSelectedPositionIdx] = useState<number | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
 
   useEffect(() => {
     if (!activeMatch) {
@@ -104,7 +97,7 @@ const LiveMatch: React.FC = () => {
             }
           });
           setShowLineupEditor(false);
-          setToast('Lineup updated!');
+          toast.success('Lineup updated!');
         }}
       />
     );
@@ -239,9 +232,9 @@ const LiveMatch: React.FC = () => {
     console.log('handleCompleteRally start:', { winner, finalOutcome, classification, servingTeam });
 
     if (winner === 'Us') {
-      setToast(`Point Us! (${finalOutcome})`);
+      toast.success(`Point Us! (${finalOutcome})`);
     } else if (winner === 'Opponent') {
-      setToast(`Point ${activeMatch.opponentName} (${finalOutcome})`);
+      toast.error(`Point ${activeMatch.opponentName} (${finalOutcome})`);
     }
     
     // Reset local UI state immediately for snappiness
@@ -254,7 +247,7 @@ const LiveMatch: React.FC = () => {
       console.log('handleCompleteRally: completeRally finished');
     } catch (error) {
       console.error('Error completing rally:', error);
-      setToast('Error saving point');
+      toast.error('Error saving point');
     }
   };
 
@@ -269,25 +262,18 @@ const LiveMatch: React.FC = () => {
       : { opponentScore: Math.max(0, activeSet.opponentScore + delta) };
     
     await updateSet(activeSet.id, updates);
-    setToast(`Score adjusted for ${team}`);
+    toast.success(`Score adjusted for ${team}`);
   };
 
   const undoWithFeedback = async () => {
     const lastRally = await undoLastRallyWithLogic();
     if (lastRally) {
-      setToast(`Undid: ${lastRally.outcomeType} by ${lastRally.pointWinner === 'Us' ? 'Us' : 'Them'}`);
+      toast.success(`Undid: ${lastRally.outcomeType} by ${lastRally.pointWinner === 'Us' ? 'Us' : 'Them'}`);
     }
   };
 
   return (
     <div className="min-h-screen bg-brand-bg text-brand-text flex flex-col relative">
-      {/* Toast Notification */}
-      {toast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] bg-brand-teal text-brand-bg px-6 py-3 rounded-full font-bold shadow-2xl animate-bounce">
-          {toast}
-        </div>
-      )}
-
       <LiveMatchHeader 
         onBack={() => navigate('/')}
         setNumber={activeSet.setNumber}
@@ -305,7 +291,7 @@ const LiveMatch: React.FC = () => {
         onSave={async (text) => {
           await updateMatch(activeMatch.id, { notes: text });
           setShowNoteModal(false);
-          setToast('Note saved!');
+          toast.success('Note saved!');
         }}
       />
 
@@ -328,7 +314,7 @@ const LiveMatch: React.FC = () => {
         onEndSet={async (winner) => {
           await endSet(winner);
           setShowMoreMenu(false);
-          setToast(`Set ${activeSet.setNumber} completed!`);
+          toast.success(`Set ${activeSet.setNumber} completed!`);
         }}
         onAbandonMatch={() => navigate('/')}
       />
@@ -360,7 +346,7 @@ const LiveMatch: React.FC = () => {
                   currentRotation: nextRotation
                 }
               });
-              setToast(`Rotated to ${nextRotation}`);
+              toast.success(`Rotated to ${nextRotation}`);
             }}
             onPlayerClick={(idx) => setSelectedPositionIdx(idx)}
           />
@@ -420,17 +406,17 @@ const LiveMatch: React.FC = () => {
           onSubstitute={async (playerId) => {
             await handleSubstitution(selectedPositionIdx, playerId);
             setSelectedPositionIdx(null);
-            setToast('Substitution complete');
+            toast.success('Substitution complete');
           }}
           onLiberoSwap={async (liberoId) => {
             await handleLiberoSwap(selectedPositionIdx, liberoId);
             setSelectedPositionIdx(null);
-            setToast(liberoId ? 'Libero swap complete' : 'Libero exited');
+            toast.success(liberoId ? 'Libero swap complete' : 'Libero exited');
           }}
           onSetLiberoServing={async (isServing) => {
             await handleSetLiberoServing(isServing, selectedPositionIdx);
             setSelectedPositionIdx(null);
-            setToast(isServing ? 'Libero set as server' : 'Libero server reset');
+            toast.success(isServing ? 'Libero set as server' : 'Libero server reset');
           }}
           liberoServingPosition={liberoServingPosition}
         />

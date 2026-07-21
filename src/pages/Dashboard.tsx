@@ -27,66 +27,75 @@ const Dashboard: React.FC = () => {
   if (!activeMatch || !activeSet || !metrics) return null;
 
   return (
-    <div className="min-h-screen bg-brand-bg text-brand-text p-6 max-w-lg mx-auto pb-24">
+    <div className="min-h-screen bg-brand-bg text-brand-text p-4 md:p-8 max-w-5xl mx-auto pb-24">
       <header className="flex items-center justify-between mb-8">
-        <button onClick={() => navigate('/match/live')} className="text-brand-text-secondary hover:text-brand-text">
+        <button onClick={() => navigate('/match/live')} className="p-2 hover:bg-brand-gray/10 rounded-full transition-colors">
           <ArrowLeft size={24} />
         </button>
-        <h1 className="text-2xl font-bold">Match Weather</h1>
-        <div className="w-6" />
+        <div className="text-center">
+          <h1 className="text-2xl font-black uppercase tracking-tighter italic">Match Weather</h1>
+          <p className="text-[10px] font-bold text-brand-text-secondary uppercase tracking-widest">{activeMatch.opponentName} @ Set {activeSet.setNumber}</p>
+        </div>
+        <div className="w-10" />
       </header>
 
-      <div className="space-y-6">
-        <CommitmentCard suggestion={metrics.suggestion} />
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Column - Momentum & Forecast */}
+        <div className="lg:col-span-4 space-y-6">
+          <ForecastCard 
+            label={metrics.forecast.label}
+            icon={metrics.forecast.icon}
+            color={metrics.forecast.color}
+            interpretation={metrics.forecast.interpretation}
+            onInfoClick={() => setShowForecastModal(true)}
+          />
+          <CommitmentCard suggestion={metrics.suggestion} />
+          <AdvancedWeatherStats rallies={rallies} />
+        </div>
 
-        <MatchFlow 
-          ourScore={activeSet.ourScore}
-          opponentScore={activeSet.opponentScore}
-          setNumber={activeSet.setNumber}
-          winProb={metrics.winProb}
-          flow={metrics.flow}
-        />
+        {/* Middle Column - Match Flow & Execution */}
+        <div className="lg:col-span-5 space-y-6">
+          <MatchFlow 
+            ourScore={activeSet.ourScore}
+            opponentScore={activeSet.opponentScore}
+            setNumber={activeSet.setNumber}
+            winProb={metrics.winProb}
+            flow={metrics.flow}
+          />
+          <EarnedGiftedComparison 
+            ourEarned={metrics.ourEarned}
+            ourGifted={metrics.ourGifted}
+            oppEarned={metrics.oppEarned}
+            oppGifted={metrics.oppGifted}
+          />
+          <RotationEfficiency rallies={rallies} />
+        </div>
 
-        <ForecastCard 
-          label={metrics.forecast.label}
-          icon={metrics.forecast.icon}
-          color={metrics.forecast.color}
-          interpretation={metrics.forecast.interpretation}
-          onInfoClick={() => setShowForecastModal(true)}
-        />
+        {/* Right Column - Player Stats */}
+        <div className="lg:col-span-3 space-y-6">
+          <PlayerLeaderboard 
+            topEarners={metrics.topEarners}
+            topGifters={metrics.topGifters}
+          />
+          <ServeReceivePerformance 
+            serveStats={metrics.serveStats}
+            receiveStats={metrics.receiveStats}
+            serveMetrics={metrics.serveMetrics}
+          />
+        </div>
 
-        <AdvancedWeatherStats rallies={rallies} />
-
-        <EarnedGiftedComparison 
-          ourEarned={metrics.ourEarned}
-          ourGifted={metrics.ourGifted}
-          oppEarned={metrics.oppEarned}
-          oppGifted={metrics.oppGifted}
-        />
-
-        <ServeReceivePerformance 
-          serveStats={metrics.serveStats}
-          receiveStats={metrics.receiveStats}
-          serveMetrics={metrics.serveMetrics}
-        />
-
-        <PlayerLeaderboard 
-          topEarners={metrics.topEarners}
-          topGifters={metrics.topGifters}
-        />
-
-        <SkillDetailCard 
-          servingByPlayer={metrics.servingByPlayer}
-          passingByPlayer={metrics.passingByPlayer}
-        />
-
-        <RotationEfficiency rallies={rallies} />
-
-        <SetSummaries 
-          setSummaries={metrics.setSummaries}
-          matchTotals={metrics.matchTotals}
-          activeSetId={activeSet.id}
-        />
+        {/* Full Width Bottom */}
+        <div className="lg:col-span-12 space-y-6">
+          <SkillDetailCard 
+            servingByPlayer={metrics.servingByPlayer}
+            passingByPlayer={metrics.passingByPlayer}
+          />
+          <SetSummaries 
+            setSummaries={metrics.setSummaries}
+            matchTotals={metrics.matchTotals}
+            activeSetId={activeSet.id}
+          />
+        </div>
       </div>
 
       <ForecastModal 
