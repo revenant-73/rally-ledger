@@ -97,8 +97,9 @@ export type OutcomeType =
   | 'Attack Error' 
   | 'Ball Handling Error' 
   | 'Net / Line Violation' 
-  | 'Free Ball Error' 
-  | 'Other';
+  | 'Free Ball Error'
+  | 'Other'
+  | 'Manual Adjustment';
 
 export type Classification = 'Earned' | 'Gifted' | 'Neutral';
 

@@ -5,6 +5,7 @@ All notable changes to this project are documented here. Format loosely follows 
 ## Unreleased
 
 ### Fixed
+- Routed manual score +/- adjustments through the rally log instead of writing directly to `Set.ourScore`/`opponentScore`. They're now recorded as `RallyEvent`s with `classification: 'Neutral'` (excluded from earned/gifted stats), so the Undo button correctly undoes them and the rally history no longer silently drifts from the displayed score. Also added error handling/toast on failure, matching normal rally completion.
 - Persisted `servingTeam` to `Set.metadata` (previously only local React state), so a page reload/crash mid-match no longer loses track of who's serving. Also persists on manual toggle, on every rally completion, and restores it correctly on undo. Added a matching fix so `undoLastRallyWithLogic` also persists the restored rotation/lineup back to `Set.metadata`, instead of only updating local state.
 - Fixed the test suite's Vitest environment (`node` → `jsdom`) so `@testing-library/react`'s `renderHook` can actually run — it was failing with `document is not defined` on every hook test before this.
 

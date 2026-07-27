@@ -51,7 +51,7 @@ const LiveMatch: React.FC = () => {
     handleSubstitution,
     handleLiberoSwap,
     handleSetLiberoServing,
-    completeRally, undoLastRallyWithLogic, resetEntry
+    completeRally, handleManualScoreAdjustment, undoLastRallyWithLogic, resetEntry
   } = useLiveMatchLogic(activeMatch, activeSet, rallies, addRally, undoLastRally, updateSet);
 
   useEffect(() => {
@@ -256,13 +256,14 @@ const LiveMatch: React.FC = () => {
   };
 
   const handleManualScoreChange = async (team: 'Us' | 'Opponent', delta: number) => {
-    if (!activeSet) return;
-    const updates = team === 'Us' 
-      ? { ourScore: Math.max(0, activeSet.ourScore + delta) }
-      : { opponentScore: Math.max(0, activeSet.opponentScore + delta) };
-    
-    await updateSet(activeSet.id, updates);
-    toast.success(`Score adjusted for ${team}`);
+    if (delta !== 1 && delta !== -1) return;
+    try {
+      await handleManualScoreAdjustment(team, delta);
+      toast.success(`Score adjusted for ${team}`);
+    } catch (error) {
+      console.error('Error adjusting score:', error);
+      toast.error('Error saving score adjustment');
+    }
   };
 
   const undoWithFeedback = async () => {

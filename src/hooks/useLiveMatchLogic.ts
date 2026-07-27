@@ -217,6 +217,41 @@ export const useLiveMatchLogic = (
     return newRally;
   }, [pointWinner, outcome, selectedPlayerId, activeSet, activeMatch, rallies.length, servingTeam, serverPlayerId, serveResult, receiveResult, receivePlayerId, addRally, resetEntry, currentRotation, currentLineup, liberoServingPosition, updateSet]);
 
+  // Manual +/- score corrections go through the same rally log as normal points, tagged
+  // with classification 'Neutral' (excluded from earned/gifted stats) so the Undo button
+  // and rally history stay accurate instead of silently drifting from the score.
+  const handleManualScoreAdjustment = useCallback(async (team: 'Us' | 'Opponent', delta: 1 | -1) => {
+    if (!activeSet || !activeMatch) return;
+
+    const scoreBeforeUs = activeSet.ourScore || 0;
+    const scoreBeforeOpponent = activeSet.opponentScore || 0;
+    const scoreAfterUs = team === 'Us' ? Math.max(0, scoreBeforeUs + delta) : scoreBeforeUs;
+    const scoreAfterOpponent = team === 'Opponent' ? Math.max(0, scoreBeforeOpponent + delta) : scoreBeforeOpponent;
+
+    const newRally: RallyEvent = {
+      id: uuidv4(),
+      matchId: activeMatch.id,
+      setId: activeSet.id,
+      rallyNumber: (rallies?.length || 0) + 1,
+      scoreBeforeUs,
+      scoreBeforeOpponent,
+      scoreAfterUs,
+      scoreAfterOpponent,
+      pointWinner: team,
+      servingTeam,
+      outcomeType: 'Manual Adjustment',
+      classification: 'Neutral',
+      createdAt: new Date().toISOString(),
+      metadata: {
+        rotation: currentRotation,
+        lineup: currentLineup || undefined,
+      },
+    };
+
+    await addRally(newRally);
+    return newRally;
+  }, [activeSet, activeMatch, rallies.length, servingTeam, currentRotation, currentLineup, addRally]);
+
   const undoLastRallyWithLogic = useCallback(async () => {
     if (rallies.length === 0 || !activeSet) return null;
     const lastRally = rallies[rallies.length - 1];
@@ -268,6 +303,7 @@ export const useLiveMatchLogic = (
     handleLiberoSwap,
     handleSetLiberoServing,
     completeRally,
+    handleManualScoreAdjustment,
     undoLastRallyWithLogic,
     resetEntry
   };
