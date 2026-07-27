@@ -73,7 +73,7 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
     if (!currentLineup || !currentRotation) return null;
     let playerIdx = (1 + currentRotation - 1);
     if (playerIdx > 6) playerIdx -= 6;
-    return currentLineup[`position${playerIdx}`] as string;
+    return currentLineup[`position${playerIdx}` as keyof Lineup] as string;
   };
 
   const predictedServerId = getPredictedServerId();

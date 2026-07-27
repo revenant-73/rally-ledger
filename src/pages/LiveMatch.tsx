@@ -372,7 +372,6 @@ const LiveMatch: React.FC = () => {
         showPlayerSelection={showPlayerSelection}
         showClassification={showClassification}
         players={players}
-        outcome={outcome}
         positiveOutcomes={positiveOutcomes}
         errorOutcomes={errorOutcomes}
         onServerClick={handleServerClick}
