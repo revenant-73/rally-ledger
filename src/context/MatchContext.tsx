@@ -92,14 +92,15 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const endSet = async (result: 'Win' | 'Loss') => {
     if (!activeSetData) return;
-    await updateSetMutation.mutateAsync({ 
-      setId: activeSetData.id, 
-      updates: { status: 'completed', finalResult: result } 
+    await updateSetMutation.mutateAsync({
+      setId: activeSetData.id,
+      updates: { status: 'completed', finalResult: result },
+      matchId: activeMatch?.id
     });
   };
 
   const updateSet = async (setId: string, updates: Partial<Set>) => {
-    await updateSetMutation.mutateAsync({ setId, updates });
+    await updateSetMutation.mutateAsync({ setId, updates, matchId: activeMatch?.id });
   };
 
   const updateMatch = async (matchId: string, updates: Partial<Match>) => {
