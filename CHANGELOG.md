@@ -4,6 +4,9 @@ All notable changes to this project are documented here. Format loosely follows 
 
 ## Unreleased
 
+### Changed
+- Replaced the two `as any` casts in `useRallies.ts` (rally insert payload, optimistic set-cache update) with an explicit `typeof rallyEventsTable.$inferInsert`-typed object and a properly typed `Set | null | undefined` cache updater, so Drizzle/TypeScript can actually catch shape mismatches again.
+
 ### Removed
 - Deleted `src/utils/rotation.ts` (`rotateLineup`, `getPlayerInPosition`, `getCurrentServerPosition`) — dead code, unused anywhere in the app. `RotationDisplay.tsx` has its own working (and different) rotation math inline; having two independent implementations was a maintenance hazard.
 

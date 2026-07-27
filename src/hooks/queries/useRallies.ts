@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '../../db/client';
 import { rallyEvents as rallyEventsTable, sets as setsTable } from '../../db/schema';
 import { eq } from 'drizzle-orm';
-import type { RallyEvent } from '../../types';
+import type { RallyEvent, Set } from '../../types';
 
 export const useRallies = (matchId: string | undefined) => {
   return useQuery({
@@ -34,18 +34,29 @@ export const useAddRally = () => {
   return useMutation({
     mutationFn: async ({ rally, updatedSet }: { rally: RallyEvent; updatedSet: { id: string; ourScore: number; opponentScore: number } }) => {
       try {
-        // Strip fields that aren't in the physical DB schema
-        const cleanRally = Object.entries(rally).reduce((acc, [key, value]) => {
-          if (['serveResult', 'receiveResult', 'receivePlayerId'].includes(key)) {
-            return acc;
-          }
-          return {
-            ...acc,
-            [key]: value === undefined ? null : value
-          };
-        }, {} as Record<string, unknown>);
+        // serveResult/receiveResult/receivePlayerId live inside rally.metadata (JSON column),
+        // not as physical columns, so only the schema's own columns are inserted here.
+        const dbRally: typeof rallyEventsTable.$inferInsert = {
+          id: rally.id,
+          matchId: rally.matchId,
+          setId: rally.setId,
+          rallyNumber: rally.rallyNumber,
+          scoreBeforeUs: rally.scoreBeforeUs,
+          scoreBeforeOpponent: rally.scoreBeforeOpponent,
+          scoreAfterUs: rally.scoreAfterUs,
+          scoreAfterOpponent: rally.scoreAfterOpponent,
+          pointWinner: rally.pointWinner,
+          servingTeam: rally.servingTeam,
+          serverPlayerId: rally.serverPlayerId ?? null,
+          outcomeType: rally.outcomeType,
+          classification: rally.classification,
+          playerId: rally.playerId ?? null,
+          notes: rally.notes ?? null,
+          createdAt: rally.createdAt,
+          metadata: rally.metadata ?? null,
+        };
 
-        await db.insert(rallyEventsTable).values(cleanRally as any);
+        await db.insert(rallyEventsTable).values(dbRally);
 
         await db.update(setsTable)
           .set({ 
@@ -76,7 +87,7 @@ export const useAddRally = () => {
       });
 
       // Optimistically update the active set score
-      queryClient.setQueryData(['sets', 'active', rally.matchId], (old: any) => {
+      queryClient.setQueryData(['sets', 'active', rally.matchId], (old: Set | null | undefined) => {
         if (!old) return old;
         return {
           ...old,
