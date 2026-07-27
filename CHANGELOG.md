@@ -4,6 +4,10 @@ All notable changes to this project are documented here. Format loosely follows 
 
 ## Unreleased
 
+### Security
+- Replaced email-only "login" (anyone who knew a coach's email could sign in as them) with real password authentication. Added `users.password_hash` (bcrypt, via `bcryptjs`) and a Netlify Function (`netlify/functions/auth.ts`) that verifies credentials server-side rather than the browser querying the users table directly. Existing accounts created before this change (no password set yet) are claimed with the password given on next login rather than being locked out. `Login.tsx` now has a password field with a minimum length requirement.
+- Dropped the orphaned `rally_events.rotation_number` column from the live DB (schema drift from a June refactor to metadata-based storage - the app never read this column since then; confirmed via inspection that only 6 old rows had it set, all with null metadata, i.e. not visible in any current UI/stats path).
+
 ### Added (offline reliability)
 - Added an offline mutation queue so rally writes, score updates, and undos survive a lost gym-wifi connection or the app being killed mid-match, instead of silently rolling back with no persisted record they were ever attempted. Implementation: `PersistQueryClientProvider` (`@tanstack/react-query-persist-client`) with a custom IndexedDB persister (`src/db/queryPersister.ts`, via `idb-keyval`) persists the query/mutation cache; `addRally`/`updateSet`/`undoLastRally` mutation functions are registered as `queryClient` mutation defaults (keyed by `mutationKey`) so a paused mutation can be replayed on next launch without the original component closure; `resumePausedMutations()` runs after cache restore. Mutations also now retry (3x, exponential backoff) on transient failures instead of erroring immediately.
 

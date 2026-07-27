@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
-import { Mail, LogIn, Loader2 } from 'lucide-react';
+import { Mail, Lock, LogIn, Loader2 } from 'lucide-react';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useAuth();
@@ -13,17 +14,16 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
-    
+    if (!email || !password) return;
+
     setError('');
     setIsSubmitting(true);
-    
+
     try {
-      await login(email);
+      await login(email, password);
       navigate('/');
     } catch (err) {
-      setError('Failed to login. Please try again.');
-      console.error(err);
+      setError(err instanceof Error ? err.message : 'Failed to login. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -76,6 +76,26 @@ const Login: React.FC = () => {
             </div>
           </div>
 
+          <div className="space-y-2">
+            <label htmlFor="password" className="text-[10px] font-black text-brand-text-secondary uppercase tracking-[0.15em] ml-1">
+              Password
+            </label>
+            <div className="relative">
+              <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-brand-gray/40" size={20} />
+              <input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={8}
+                autoComplete="current-password"
+                className="w-full bg-brand-bg border border-brand-gray/10 rounded-2xl py-5 pl-14 pr-5 text-lg font-bold outline-none focus:border-brand-teal transition-all shadow-inner placeholder:text-brand-gray/30"
+              />
+            </div>
+          </div>
+
           {error && (
             <motion.p 
               initial={{ opacity: 0, x: -10 }}
@@ -103,7 +123,7 @@ const Login: React.FC = () => {
           transition={{ delay: 0.3 }}
           className="text-center text-[10px] text-brand-text-secondary font-bold leading-relaxed max-w-[280px] mx-auto uppercase tracking-widest"
         >
-          Access your rosters and match history. <br/>New accounts are created automatically.
+          Access your rosters and match history. <br/>First time here? This password creates your account.
         </motion.p>
       </motion.div>
     </div>

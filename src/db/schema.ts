@@ -4,6 +4,9 @@ export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
   email: text('email').notNull().unique(),
   name: text('name'),
+  // Nullable: accounts created before password auth existed have no hash yet;
+  // see netlify/functions/auth.ts for the claim-on-first-login migration path.
+  passwordHash: text('password_hash'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
   metadata: text('metadata', { mode: 'json' }).$type<Record<string, unknown>>(),

@@ -1,9 +1,5 @@
 import React, { useState } from 'react';
 import type { User } from '../types';
-import { db } from '../db/client';
-import { users as usersTable } from '../db/schema';
-import { eq } from 'drizzle-orm';
-import { v4 as uuidv4 } from 'uuid';
 import { AuthContext } from './AuthContext.context';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -13,32 +9,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const [loading, setLoading] = useState(false);
 
-  const login = async (email: string) => {
+  const login = async (email: string, password: string) => {
     setLoading(true);
     try {
-      // Check if user exists
-      const existingUsers = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase())).limit(1);
-      
-      let currentUser: User;
-      
-      if (existingUsers.length > 0) {
-        currentUser = existingUsers[0] as User;
-      } else {
-        // Create new user
-        currentUser = {
-          id: uuidv4(),
-          email: email.toLowerCase(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        await db.insert(usersTable).values(currentUser);
+      const response = await fetch('/.netlify/functions/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
       }
-      
+
+      const currentUser = data.user as User;
       setUser(currentUser);
       localStorage.setItem('user', JSON.stringify(currentUser));
-    } catch (error) {
-      console.error('Login failed:', error);
-      throw error;
     } finally {
       setLoading(false);
     }
