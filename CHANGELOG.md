@@ -4,6 +4,9 @@ All notable changes to this project are documented here. Format loosely follows 
 
 ## Unreleased
 
+### Removed
+- Deleted `src/utils/rotation.ts` (`rotateLineup`, `getPlayerInPosition`, `getCurrentServerPosition`) — dead code, unused anywhere in the app. `RotationDisplay.tsx` has its own working (and different) rotation math inline; having two independent implementations was a maintenance hazard.
+
 ### Changed
 - Removed ~25 leftover debug `console.log` statements (and the render/state-change `useEffect`s that existed solely to log) from `main.tsx`, `MatchContext.tsx`, `useLiveMatchLogic.ts`, `LiveMatch.tsx`, `RotationDisplay.tsx`, and `useRallies.ts`. Added a `no-console` ESLint rule (allowing `warn`/`error`) to prevent recurrence.
 
