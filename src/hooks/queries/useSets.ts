@@ -36,16 +36,21 @@ export const useStartSet = () => {
   });
 };
 
+type UpdateSetVariables = { setId: string; updates: Partial<Set>; matchId?: string };
+
+export const updateSetMutationFn = async ({ setId, updates }: UpdateSetVariables) => {
+  await db.update(setsTable)
+    .set({ ...updates, updatedAt: new Date().toISOString() })
+    .where(eq(setsTable.id, setId));
+  return { setId, updates };
+};
+
 export const useUpdateSet = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ setId, updates }: { setId: string; updates: Partial<Set>; matchId?: string }) => {
-      await db.update(setsTable)
-        .set({ ...updates, updatedAt: new Date().toISOString() })
-        .where(eq(setsTable.id, setId));
-      return { setId, updates };
-    },
+    mutationKey: ['updateSet'],
+    mutationFn: updateSetMutationFn,
     onSuccess: (_data, variables) => {
       // Only ['sets', 'active', matchId] is ever queried, so invalidate that
       // specific entry when we know the matchId instead of the whole 'sets' space.

@@ -4,6 +4,9 @@ All notable changes to this project are documented here. Format loosely follows 
 
 ## Unreleased
 
+### Added (offline reliability)
+- Added an offline mutation queue so rally writes, score updates, and undos survive a lost gym-wifi connection or the app being killed mid-match, instead of silently rolling back with no persisted record they were ever attempted. Implementation: `PersistQueryClientProvider` (`@tanstack/react-query-persist-client`) with a custom IndexedDB persister (`src/db/queryPersister.ts`, via `idb-keyval`) persists the query/mutation cache; `addRally`/`updateSet`/`undoLastRally` mutation functions are registered as `queryClient` mutation defaults (keyed by `mutationKey`) so a paused mutation can be replayed on next launch without the original component closure; `resumePausedMutations()` runs after cache restore. Mutations also now retry (3x, exponential backoff) on transient failures instead of erroring immediately.
+
 ### Fixed
 - Fixed 2 pre-existing failing tests in `useLiveMatchLogic.test.ts` caused by calling `completeRally` in the same `act()` block as the `setPointWinner`/`setOutcome` calls that fed it, so it read stale (null) state. Also wired up `src/test/setup.ts` (which imports `@testing-library/jest-dom`) into `vitest.config.ts` — it existed but was never referenced via `setupFiles`, so jest-dom matchers like `toBeInTheDocument` weren't available in any test.
 

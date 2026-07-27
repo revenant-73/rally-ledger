@@ -28,50 +28,58 @@ export const useRallies = (matchId: string | undefined) => {
   });
 };
 
+type AddRallyVariables = { rally: RallyEvent; updatedSet: { id: string; ourScore: number; opponentScore: number } };
+
+// Registered as a mutation default (see main.tsx) so a paused/persisted mutation
+// can be replayed after the app is closed and reopened, without needing the
+// original component closure that created it.
+export const addRallyMutationFn = async ({ rally, updatedSet }: AddRallyVariables) => {
+  try {
+    // serveResult/receiveResult/receivePlayerId live inside rally.metadata (JSON column),
+    // not as physical columns, so only the schema's own columns are inserted here.
+    const dbRally: typeof rallyEventsTable.$inferInsert = {
+      id: rally.id,
+      matchId: rally.matchId,
+      setId: rally.setId,
+      rallyNumber: rally.rallyNumber,
+      scoreBeforeUs: rally.scoreBeforeUs,
+      scoreBeforeOpponent: rally.scoreBeforeOpponent,
+      scoreAfterUs: rally.scoreAfterUs,
+      scoreAfterOpponent: rally.scoreAfterOpponent,
+      pointWinner: rally.pointWinner,
+      servingTeam: rally.servingTeam,
+      serverPlayerId: rally.serverPlayerId ?? null,
+      outcomeType: rally.outcomeType,
+      classification: rally.classification,
+      playerId: rally.playerId ?? null,
+      notes: rally.notes ?? null,
+      createdAt: rally.createdAt,
+      metadata: rally.metadata ?? null,
+    };
+
+    await db.insert(rallyEventsTable).values(dbRally);
+
+    await db.update(setsTable)
+      .set({
+        ourScore: updatedSet.ourScore,
+        opponentScore: updatedSet.opponentScore,
+        updatedAt: new Date().toISOString()
+      })
+      .where(eq(setsTable.id, updatedSet.id));
+
+    return { rally, updatedSet };
+  } catch (error) {
+    console.error('addRallyMutationFn: Mutation failed!', error);
+    throw error;
+  }
+};
+
 export const useAddRally = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ rally, updatedSet }: { rally: RallyEvent; updatedSet: { id: string; ourScore: number; opponentScore: number } }) => {
-      try {
-        // serveResult/receiveResult/receivePlayerId live inside rally.metadata (JSON column),
-        // not as physical columns, so only the schema's own columns are inserted here.
-        const dbRally: typeof rallyEventsTable.$inferInsert = {
-          id: rally.id,
-          matchId: rally.matchId,
-          setId: rally.setId,
-          rallyNumber: rally.rallyNumber,
-          scoreBeforeUs: rally.scoreBeforeUs,
-          scoreBeforeOpponent: rally.scoreBeforeOpponent,
-          scoreAfterUs: rally.scoreAfterUs,
-          scoreAfterOpponent: rally.scoreAfterOpponent,
-          pointWinner: rally.pointWinner,
-          servingTeam: rally.servingTeam,
-          serverPlayerId: rally.serverPlayerId ?? null,
-          outcomeType: rally.outcomeType,
-          classification: rally.classification,
-          playerId: rally.playerId ?? null,
-          notes: rally.notes ?? null,
-          createdAt: rally.createdAt,
-          metadata: rally.metadata ?? null,
-        };
-
-        await db.insert(rallyEventsTable).values(dbRally);
-
-        await db.update(setsTable)
-          .set({ 
-            ourScore: updatedSet.ourScore, 
-            opponentScore: updatedSet.opponentScore,
-            updatedAt: new Date().toISOString()
-          })
-          .where(eq(setsTable.id, updatedSet.id));
-          
-        return { rally, updatedSet };
-      } catch (error) {
-        console.error('useAddRally: Mutation failed!', error);
-        throw error;
-      }
-    },
+    mutationKey: ['addRally'],
+    mutationFn: addRallyMutationFn,
     onMutate: async ({ rally, updatedSet }) => {
       // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
       await queryClient.cancelQueries({ queryKey: ['rallies', rally.matchId] });
@@ -117,17 +125,22 @@ export const useAddRally = () => {
   });
 };
 
+type UndoLastRallyVariables = { rallyId: string; matchId: string; setId: string; restoredScores: { ourScore: number; opponentScore: number } };
+
+export const undoLastRallyMutationFn = async ({ rallyId, setId, restoredScores, matchId }: UndoLastRallyVariables) => {
+  await db.delete(rallyEventsTable).where(eq(rallyEventsTable.id, rallyId));
+  await db.update(setsTable)
+    .set({ ourScore: restoredScores.ourScore, opponentScore: restoredScores.opponentScore })
+    .where(eq(setsTable.id, setId));
+  return { matchId };
+};
+
 export const useUndoLastRally = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ rallyId, matchId, setId, restoredScores }: { rallyId: string; matchId: string; setId: string; restoredScores: { ourScore: number; opponentScore: number } }) => {
-      await db.delete(rallyEventsTable).where(eq(rallyEventsTable.id, rallyId));
-      await db.update(setsTable)
-        .set({ ourScore: restoredScores.ourScore, opponentScore: restoredScores.opponentScore })
-        .where(eq(setsTable.id, setId));
-      return { matchId };
-    },
+    mutationKey: ['undoLastRally'],
+    mutationFn: undoLastRallyMutationFn,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['rallies', data.matchId] });
       queryClient.invalidateQueries({ queryKey: ['sets', 'active', data.matchId] });
