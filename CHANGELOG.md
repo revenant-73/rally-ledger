@@ -5,6 +5,7 @@ All notable changes to this project are documented here. Format loosely follows 
 ## Unreleased
 
 ### Changed
+- Enabled `"strict": true` in `tsconfig.app.json`. The codebase already compiled clean under it — no null-safety bugs were surfaced, but strict mode now guards against them going forward given how much of the live-match state (`activeSet`, `currentLineup`, etc.) is nullable.
 - Replaced the two `as any` casts in `useRallies.ts` (rally insert payload, optimistic set-cache update) with an explicit `typeof rallyEventsTable.$inferInsert`-typed object and a properly typed `Set | null | undefined` cache updater, so Drizzle/TypeScript can actually catch shape mismatches again.
 
 ### Removed
