@@ -47,14 +47,16 @@ const LiveMatchScoreboard: React.FC<LiveMatchScoreboardProps> = ({
             )}
           </div>
           <div className="flex gap-1.5">
-            <button 
+            <button
               onClick={() => onManualScoreChange('Us', -1)}
+              aria-label="Decrease our score"
               className="flex-1 bg-brand-gray/5 h-10 rounded-xl flex items-center justify-center text-brand-text-secondary active:bg-brand-red/20 active:text-brand-red transition-all border border-brand-gray/10"
             >
               <Minus size={18} />
             </button>
-            <button 
+            <button
               onClick={() => onManualScoreChange('Us', 1)}
+              aria-label="Increase our score"
               className="flex-1 bg-brand-gray/5 h-10 rounded-xl flex items-center justify-center text-brand-text-secondary active:bg-brand-teal/20 active:text-brand-teal transition-all border border-brand-gray/10"
             >
               <Plus size={18} />
@@ -85,14 +87,16 @@ const LiveMatchScoreboard: React.FC<LiveMatchScoreboardProps> = ({
             )}
           </div>
           <div className="flex gap-1.5">
-            <button 
+            <button
               onClick={() => onManualScoreChange('Opponent', -1)}
+              aria-label="Decrease their score"
               className="flex-1 bg-brand-gray/5 h-10 rounded-xl flex items-center justify-center text-brand-text-secondary active:bg-brand-red/20 active:text-brand-red transition-all border border-brand-gray/10"
             >
               <Minus size={18} />
             </button>
-            <button 
+            <button
               onClick={() => onManualScoreChange('Opponent', 1)}
+              aria-label="Increase their score"
               className="flex-1 bg-brand-gray/5 h-10 rounded-xl flex items-center justify-center text-brand-text-secondary active:bg-brand-teal/20 active:text-brand-teal transition-all border border-brand-gray/10"
             >
               <Plus size={18} />

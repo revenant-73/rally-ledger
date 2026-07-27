@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, ArrowLeftRight, Zap } from 'lucide-react';
 import type { Player, Lineup } from '../../../types';
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 
 interface SubstitutionModalProps {
   isOpen: boolean;
@@ -25,6 +26,8 @@ const SubstitutionModal: React.FC<SubstitutionModalProps> = ({
   onSetLiberoServing,
   liberoServingPosition
 }) => {
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen, onClose);
+
   if (!isOpen) return null;
 
   const currentPlayerId = lineup[`position${positionIdx}` as keyof Lineup] as string;
@@ -43,13 +46,20 @@ const SubstitutionModal: React.FC<SubstitutionModalProps> = ({
     <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-brand-bg/80 backdrop-blur-sm" onClick={onClose} />
       
-      <div className="relative w-full max-w-lg bg-brand-bg border-t sm:border border-brand-gray/20 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="substitution-modal-title"
+        tabIndex={-1}
+        className="relative w-full max-w-lg bg-brand-bg border-t sm:border border-brand-gray/20 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+      >
         <div className="p-4 border-b border-brand-gray/10 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ArrowLeftRight size={20} className="text-brand-teal" />
-            <h2 className="text-lg font-black uppercase tracking-tight">Position {positionIdx} Management</h2>
+            <h2 id="substitution-modal-title" className="text-lg font-black uppercase tracking-tight">Position {positionIdx} Management</h2>
           </div>
-          <button onClick={onClose} className="p-2 text-brand-text-secondary">
+          <button onClick={onClose} className="p-2 text-brand-text-secondary" aria-label="Close">
             <X size={24} />
           </button>
         </div>

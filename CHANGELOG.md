@@ -4,6 +4,9 @@ All notable changes to this project are documented here. Format loosely follows 
 
 ## Unreleased
 
+### Added
+- Added a reusable `useFocusTrap` hook (`src/hooks/useFocusTrap.ts`) and wired it into all four live-match modals (`SubstitutionModal`, `NoteModal`, `TimeoutModal`, `MoreMenuModal`): traps Tab focus inside the modal while open, closes on Escape, restores focus to the triggering element on close, and adds `role="dialog"`/`aria-modal`/`aria-labelledby`. Also added `aria-label`s to icon-only buttons that previously had none (rotation position buttons, manual-rotate button, scoreboard +/- buttons, header back button, modal close buttons).
+
 ### Changed
 - Narrowed `useUpdateSet`'s cache invalidation from the entire `['sets']` query key space down to the specific `['sets', 'active', matchId]` entry (the only `sets` query that exists), avoiding wider-than-necessary refetches on every lineup/rotation/score update during a live match. Falls back to the broad invalidation only if `matchId` isn't known.
 - Enabled `"strict": true` in `tsconfig.app.json`. The codebase already compiled clean under it — no null-safety bugs were surfaced, but strict mode now guards against them going forward given how much of the live-match state (`activeSet`, `currentLineup`, etc.) is nullable.

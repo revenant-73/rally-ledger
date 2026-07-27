@@ -20,7 +20,7 @@ const LiveMatchHeader: React.FC<LiveMatchHeaderProps> = ({
 }) => {
   return (
     <header className="p-4 flex items-center justify-between border-b border-brand-gray/10">
-      <button onClick={onBack} className="text-brand-text-secondary">
+      <button onClick={onBack} aria-label="Back" className="text-brand-text-secondary">
         <ArrowLeft size={24} />
       </button>
       <div className="text-center">

@@ -2,6 +2,7 @@ import React from 'react';
 import { Zap, AlertCircle } from 'lucide-react';
 import type { RallyEvent } from '../../types';
 import { calculateAdvancedStats } from '../../utils/stats';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface TimeoutModalProps {
   isOpen: boolean;
@@ -22,15 +23,24 @@ const TimeoutModal: React.FC<TimeoutModalProps> = ({
   ourGifted,
   rallies,
 }) => {
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen, onClose);
+
   if (!isOpen) return null;
 
   const stats = calculateAdvancedStats(rallies);
 
   return (
-    <div className="fixed inset-0 z-[120] bg-brand-bg/95 backdrop-blur-md p-6 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-300">
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="timeout-modal-title"
+      tabIndex={-1}
+      className="fixed inset-0 z-[120] bg-brand-bg/95 backdrop-blur-md p-6 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-300"
+    >
       <div className="w-full max-sm space-y-8">
         <header className="text-center">
-          <h2 className="text-4xl font-black text-brand-teal mb-2">TIMEOUT</h2>
+          <h2 id="timeout-modal-title" className="text-4xl font-black text-brand-teal mb-2">TIMEOUT</h2>
           <p className="text-brand-text-secondary uppercase tracking-widest font-bold">Match Weather Update</p>
         </header>
 

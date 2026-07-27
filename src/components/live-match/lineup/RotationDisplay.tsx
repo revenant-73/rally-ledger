@@ -64,10 +64,11 @@ const RotationDisplay: React.FC<RotationDisplayProps> = ({
             ))}
           </div>
           {onManualRotate && (
-            <button 
+            <button
               onClick={onManualRotate}
               className="text-brand-text-secondary active:text-brand-teal transition-colors"
               title="Manual Rotate"
+              aria-label="Manually advance rotation"
             >
               <RotateCw size={12} />
             </button>
@@ -90,11 +91,14 @@ const RotationDisplay: React.FC<RotationDisplayProps> = ({
           const isLibero = player?.position === 'L' || player?.position === 'DS'; // Simplification for UI
           const isLiberoServing = isServer && playerIdx === liberoServingPosition;
           
+          const playerLabel = player ? `#${player.jerseyNumber} ${player.firstName} ${player.lastName}` : 'empty';
+
           return (
-            <button 
-              key={pos} 
+            <button
+              key={pos}
               onClick={() => onPlayerClick?.(playerIdx)}
               disabled={!onPlayerClick}
+              aria-label={`Position ${pos}: ${playerLabel}${isServer ? ', serving' : ''}${isLiberoServing ? ', libero serving' : ''}`}
               className={`relative rounded flex flex-col items-center justify-center border transition-all ${
                 isServer 
                   ? 'bg-brand-teal/20 border-brand-teal shadow-inner' 

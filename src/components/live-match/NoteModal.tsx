@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface NoteModalProps {
   isOpen: boolean;
@@ -15,15 +16,23 @@ const NoteModal: React.FC<NoteModalProps> = ({
   onSave,
 }) => {
   const [noteText, setNoteText] = useState(initialNote);
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen, onClose);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[130] bg-brand-bg/95 backdrop-blur-md p-6 flex flex-col animate-in fade-in slide-in-from-bottom-8 duration-300">
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="note-modal-title"
+      tabIndex={-1}
+      className="fixed inset-0 z-[130] bg-brand-bg/95 backdrop-blur-md p-6 flex flex-col animate-in fade-in slide-in-from-bottom-8 duration-300"
+    >
       <div className="flex-1 flex flex-col max-w-sm mx-auto w-full pt-12">
         <header className="flex items-center justify-between mb-8">
-          <h2 className="text-3xl font-black text-brand-teal">MATCH NOTE</h2>
-          <button onClick={onClose} className="text-brand-text-secondary"><X size={28} /></button>
+          <h2 id="note-modal-title" className="text-3xl font-black text-brand-teal">MATCH NOTE</h2>
+          <button onClick={onClose} className="text-brand-text-secondary" aria-label="Close"><X size={28} /></button>
         </header>
         
         <p className="text-brand-text-secondary text-sm mb-4">Add a coaching note, commitment, or observation for this match.</p>

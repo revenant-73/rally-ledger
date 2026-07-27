@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Trophy, AlertCircle } from 'lucide-react';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface MoreMenuModalProps {
   isOpen: boolean;
@@ -20,14 +21,23 @@ const MoreMenuModal: React.FC<MoreMenuModalProps> = ({
   onEndSet,
   onAbandonMatch,
 }) => {
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen, onClose);
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[110] bg-brand-bg/90 backdrop-blur-sm p-6 flex flex-col justify-end animate-in fade-in duration-300">
-      <div className="bg-brand-gray/5 border border-brand-gray/20 rounded-3xl p-6 space-y-4 max-w-sm mx-auto w-full mb-20">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="more-menu-modal-title"
+        tabIndex={-1}
+        className="bg-brand-gray/5 border border-brand-gray/20 rounded-3xl p-6 space-y-4 max-w-sm mx-auto w-full mb-20"
+      >
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-xl font-bold">Match Actions</h3>
-          <button onClick={onClose} className="text-brand-text-secondary"><X size={24} /></button>
+          <h3 id="more-menu-modal-title" className="text-xl font-bold">Match Actions</h3>
+          <button onClick={onClose} className="text-brand-text-secondary" aria-label="Close"><X size={24} /></button>
         </div>
         
         <button 
