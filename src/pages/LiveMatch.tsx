@@ -54,15 +54,6 @@ const LiveMatch: React.FC = () => {
     completeRally, handleManualScoreAdjustment, undoLastRallyWithLogic, resetEntry
   } = useLiveMatchLogic(activeMatch, activeSet, rallies, addRally, undoLastRally, updateSet);
 
-  useEffect(() => {
-    console.log('LiveMatch Render State:', { 
-      hasActiveSet: !!activeSet, 
-      hasCurrentLineup: !!currentLineup,
-      currentRotation,
-      servingTeam 
-    });
-  }, [activeSet, currentLineup, currentRotation, servingTeam]);
-
   const [showReceivePlayerSelection, setShowReceivePlayerSelection] = useState(false);
   const [showPlayerSelection, setShowPlayerSelection] = useState(false);
   const [showClassification, setShowClassification] = useState(false);
@@ -77,10 +68,6 @@ const LiveMatch: React.FC = () => {
       navigate('/');
     }
   }, [activeMatch, navigate]);
-
-  useEffect(() => {
-    console.log('LiveMatch State Change:', { servingTeam, serveResult, receiveResult, pointWinner, showReceivePlayerSelection, showPlayerSelection, showClassification });
-  }, [servingTeam, serveResult, receiveResult, pointWinner, showReceivePlayerSelection, showPlayerSelection, showClassification]);
 
   if (!activeMatch) return null;
 
@@ -228,8 +215,6 @@ const LiveMatch: React.FC = () => {
   ) => {
     const winner = winnerOverride || pointWinner;
     const finalOutcome = outcomeOverride || outcome;
-    
-    console.log('handleCompleteRally start:', { winner, finalOutcome, classification, servingTeam });
 
     if (winner === 'Us') {
       toast.success(`Point Us! (${finalOutcome})`);
@@ -244,7 +229,6 @@ const LiveMatch: React.FC = () => {
     
     try {
       await completeRally(classification, winnerOverride, outcomeOverride, playerOverride);
-      console.log('handleCompleteRally: completeRally finished');
     } catch (error) {
       console.error('Error completing rally:', error);
       toast.error('Error saving point');

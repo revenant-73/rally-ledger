@@ -41,14 +41,6 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const { data: activeSetData } = useActiveSet(activeMatch?.id);
   const { data: ralliesData = [] } = useRallies(activeMatch?.id);
 
-  useEffect(() => {
-    console.log('MatchContext: activeSetData updated', activeSetData);
-  }, [activeSetData]);
-
-  useEffect(() => {
-    console.log('MatchContext: ralliesData updated', ralliesData.length);
-  }, [ralliesData]);
-
   // Mutations
   const addTeamMutation = useAddTeam();
   const updateTeamMutation = useUpdateTeam();
@@ -138,17 +130,14 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const addRally = async (rally: RallyEvent) => {
-    console.log('MatchContext: addRally called', rally);
     if (activeSetData) {
       const updatedSet = {
         id: activeSetData.id,
         ourScore: rally.scoreAfterUs,
         opponentScore: rally.scoreAfterOpponent,
       };
-      console.log('MatchContext: updating set', updatedSet);
       try {
         await addRallyMutation.mutateAsync({ rally, updatedSet });
-        console.log('MatchContext: addRally mutation finished');
       } catch (error) {
         console.error('MatchContext: Mutation failed with error:', error);
         // Ensure the error is re-thrown so hooks can handle it

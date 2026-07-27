@@ -45,10 +45,8 @@ export const useAddRally = () => {
           };
         }, {} as Record<string, unknown>);
 
-        console.log('useAddRally: Inserting rally', cleanRally);
         await db.insert(rallyEventsTable).values(cleanRally as any);
-        
-        console.log('useAddRally: Updating set', updatedSet);
+
         await db.update(setsTable)
           .set({ 
             ourScore: updatedSet.ourScore, 

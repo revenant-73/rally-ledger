@@ -4,6 +4,9 @@ All notable changes to this project are documented here. Format loosely follows 
 
 ## Unreleased
 
+### Changed
+- Removed ~25 leftover debug `console.log` statements (and the render/state-change `useEffect`s that existed solely to log) from `main.tsx`, `MatchContext.tsx`, `useLiveMatchLogic.ts`, `LiveMatch.tsx`, `RotationDisplay.tsx`, and `useRallies.ts`. Added a `no-console` ESLint rule (allowing `warn`/`error`) to prevent recurrence.
+
 ### Fixed
 - Added error handling to substitution/libero handlers (`handleSubstitution`, `handleLiberoSwap`, `handleSetLiberoServing`): failed saves now roll back the optimistic local lineup/libero state and surface an error toast, instead of silently leaving the UI showing a lineup change that was never persisted.
 - Routed manual score +/- adjustments through the rally log instead of writing directly to `Set.ourScore`/`opponentScore`. They're now recorded as `RallyEvent`s with `classification: 'Neutral'` (excluded from earned/gifted stats), so the Undo button correctly undoes them and the rally history no longer silently drifts from the displayed score. Also added error handling/toast on failure, matching normal rally completion.

@@ -8,8 +8,6 @@ import { MatchProvider } from './context/MatchContext'
 
 const queryClient = new QueryClient()
 
-console.log('App is starting...');
-
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>

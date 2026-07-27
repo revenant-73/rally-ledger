@@ -22,17 +22,6 @@ export const useLiveMatchLogic = (
   );
   const [currentRotation, setCurrentRotation] = useState<number>(activeSet?.metadata?.currentRotation || 1);
   const [currentLineup, setCurrentLineup] = useState<Lineup | null>(activeSet?.metadata?.currentLineup || activeSet?.metadata?.startingLineup || null);
-
-  useEffect(() => {
-    console.log('useLiveMatchLogic init/update:', { 
-      hasActiveSet: !!activeSet, 
-      metadata: activeSet?.metadata,
-      currentRotation: activeSet?.metadata?.currentRotation,
-      currentLineup: activeSet?.metadata?.currentLineup,
-      startingLineup: activeSet?.metadata?.startingLineup
-    });
-  }, [activeSet]);
-
   const [liberoServingPosition, setLiberoServingPosition] = useState<number | undefined>(activeSet?.metadata?.liberoServingPosition);
 
   // Sync state from activeSet
@@ -158,8 +147,6 @@ export const useLiveMatchLogic = (
     const finalOutcome = outcomeOverride || outcome;
     const finalPlayerId = playerOverride !== undefined ? playerOverride : selectedPlayerId;
 
-    console.log('Completing rally:', { winner, finalOutcome, classification, finalPlayerId });
-
     if (!winner || !finalOutcome || !activeSet || !activeMatch) {
       console.warn('Aborting rally completion - missing data:', { 
         winner, 
@@ -203,8 +190,6 @@ export const useLiveMatchLogic = (
       },
     };
 
-    console.log('New rally object:', newRally);
-
     // Rotation Logic: if we win a point and were NOT serving, we rotate
     const nextRotation = (winner === 'Us' && servingTeam === 'Opponent')
       ? (currentRotation === 6 ? 1 : currentRotation + 1)
@@ -225,9 +210,7 @@ export const useLiveMatchLogic = (
     resetEntry();
 
     try {
-      console.log('Calling addRally...');
       await addRally(newRally);
-      console.log('addRally completed successfully');
     } catch (error) {
       console.error('Failed to add rally:', error);
       throw error; // Re-throw so LiveMatch can show toast
