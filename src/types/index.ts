@@ -65,6 +65,7 @@ export interface SetMetadata extends Record<string, unknown> {
   currentLineup?: Lineup;
   currentRotation?: number; // 1-6
   liberoServingPosition?: number; // 1-6 (The position in the rotation where the libero is allowed to serve)
+  servingTeam?: 'Us' | 'Opponent';
 }
 
 export interface RallyMetadata extends Record<string, unknown> {

@@ -44,7 +44,7 @@ const LiveMatch: React.FC = () => {
     serveResult, setServeResult,
     receiveResult, setReceiveResult,
     setReceivePlayerId,
-    servingTeam, setServingTeam,
+    servingTeam, toggleServingTeam,
     currentRotation, setCurrentRotation,
     currentLineup,
     liberoServingPosition,
@@ -326,7 +326,7 @@ const LiveMatch: React.FC = () => {
         opponentName={activeMatch.opponentName}
         onManualScoreChange={handleManualScoreChange}
         servingTeam={servingTeam}
-        onToggleServingTeam={() => setServingTeam(servingTeam === 'Us' ? 'Opponent' : 'Us')}
+        onToggleServingTeam={toggleServingTeam}
       />
 
       {currentLineup ? (

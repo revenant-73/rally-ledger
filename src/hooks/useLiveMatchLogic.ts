@@ -17,7 +17,9 @@ export const useLiveMatchLogic = (
   const [serveResult, setServeResult] = useState<'Ace' | 'Error' | 'In-System' | 'Out-of-System' | null>(null);
   const [receiveResult, setReceiveResult] = useState<'Error' | 'Overpass' | 'In-System' | 'Out-of-System' | null>(null);
   const [receivePlayerId, setReceivePlayerId] = useState<string | null>(null);
-  const [servingTeam, setServingTeam] = useState<'Us' | 'Opponent'>('Us');
+  const [servingTeam, setServingTeam] = useState<'Us' | 'Opponent'>(
+    activeSet?.metadata?.servingTeam || activeSet?.startingServerTeam || 'Us'
+  );
   const [currentRotation, setCurrentRotation] = useState<number>(activeSet?.metadata?.currentRotation || 1);
   const [currentLineup, setCurrentLineup] = useState<Lineup | null>(activeSet?.metadata?.currentLineup || activeSet?.metadata?.startingLineup || null);
 
@@ -46,7 +48,22 @@ export const useLiveMatchLogic = (
     if (activeSet?.metadata?.liberoServingPosition) {
       setLiberoServingPosition(activeSet.metadata.liberoServingPosition);
     }
+    if (activeSet?.metadata?.servingTeam) {
+      setServingTeam(activeSet.metadata.servingTeam);
+    }
   }, [activeSet?.metadata]);
+
+  const toggleServingTeam = useCallback(async () => {
+    if (!activeSet) return;
+    const nextServingTeam = servingTeam === 'Us' ? 'Opponent' : 'Us';
+    setServingTeam(nextServingTeam);
+    await updateSet(activeSet.id, {
+      metadata: {
+        ...activeSet.metadata,
+        servingTeam: nextServingTeam
+      }
+    });
+  }, [activeSet, servingTeam, updateSet]);
 
   const resetEntry = useCallback(() => {
     setPointWinner(null);
@@ -171,22 +188,20 @@ export const useLiveMatchLogic = (
     console.log('New rally object:', newRally);
 
     // Rotation Logic: if we win a point and were NOT serving, we rotate
-    if (winner === 'Us' && servingTeam === 'Opponent') {
-      const nextRotation = currentRotation === 6 ? 1 : currentRotation + 1;
-      setCurrentRotation(nextRotation);
-      setServingTeam('Us');
-      // Update set metadata with current rotation
-      await updateSet(activeSet.id, {
-        metadata: {
-          ...activeSet.metadata,
-          currentRotation: nextRotation
-        }
-      });
-    } else if (winner === 'Us') {
-      setServingTeam('Us');
-    } else {
-      setServingTeam('Opponent');
-    }
+    const nextRotation = (winner === 'Us' && servingTeam === 'Opponent')
+      ? (currentRotation === 6 ? 1 : currentRotation + 1)
+      : currentRotation;
+    const nextServingTeam = winner === 'Us' ? 'Us' : 'Opponent';
+
+    setCurrentRotation(nextRotation);
+    setServingTeam(nextServingTeam);
+    await updateSet(activeSet.id, {
+      metadata: {
+        ...activeSet.metadata,
+        currentRotation: nextRotation,
+        servingTeam: nextServingTeam
+      }
+    });
 
     // Reset entry immediately for a snappier UI, but keep data for the call
     resetEntry();
@@ -203,21 +218,29 @@ export const useLiveMatchLogic = (
   }, [pointWinner, outcome, selectedPlayerId, activeSet, activeMatch, rallies.length, servingTeam, serverPlayerId, serveResult, receiveResult, receivePlayerId, addRally, resetEntry, currentRotation, currentLineup, liberoServingPosition, updateSet]);
 
   const undoLastRallyWithLogic = useCallback(async () => {
-    if (rallies.length === 0) return null;
+    if (rallies.length === 0 || !activeSet) return null;
     const lastRally = rallies[rallies.length - 1];
+    const restoredRotation = lastRally.metadata?.rotation ?? currentRotation;
+    const restoredLineup = lastRally.metadata?.lineup ?? currentLineup;
+
     setServingTeam(lastRally.servingTeam);
-    
-    // Restore rotation and lineup from last rally if available
-    if (lastRally.metadata?.rotation) {
-      setCurrentRotation(lastRally.metadata.rotation);
-    }
+    setCurrentRotation(restoredRotation);
     if (lastRally.metadata?.lineup) {
       setCurrentLineup(lastRally.metadata.lineup);
     }
 
+    await updateSet(activeSet.id, {
+      metadata: {
+        ...activeSet.metadata,
+        servingTeam: lastRally.servingTeam,
+        currentRotation: restoredRotation,
+        currentLineup: restoredLineup ?? undefined
+      }
+    });
+
     await undoLastRally();
     return lastRally;
-  }, [rallies, undoLastRally]);
+  }, [rallies, undoLastRally, activeSet, currentRotation, currentLineup, updateSet]);
 
   return {
     pointWinner,
@@ -236,6 +259,7 @@ export const useLiveMatchLogic = (
     setReceivePlayerId,
     servingTeam,
     setServingTeam,
+    toggleServingTeam,
     currentRotation,
     setCurrentRotation,
     currentLineup,
