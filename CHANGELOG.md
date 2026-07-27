@@ -4,6 +4,9 @@ All notable changes to this project are documented here. Format loosely follows 
 
 ## Unreleased
 
+### Fixed
+- Fixed the `react-hooks/set-state-in-effect` lint warning in `useLiveMatchLogic` by moving the activeSet-metadata sync out of a `useEffect` and into the render body, guarded by a `prevMetadata` comparison - React's documented pattern for "adjusting state when a prop changes," which avoids the extra commit-then-effect render pass.
+
 ### Security
 - Replaced email-only "login" (anyone who knew a coach's email could sign in as them) with real password authentication. Added `users.password_hash` (bcrypt, via `bcryptjs`) and a Netlify Function (`netlify/functions/auth.ts`) that verifies credentials server-side rather than the browser querying the users table directly. Existing accounts created before this change (no password set yet) are claimed with the password given on next login rather than being locked out. `Login.tsx` now has a password field with a minimum length requirement.
 - Dropped the orphaned `rally_events.rotation_number` column from the live DB (schema drift from a June refactor to metadata-based storage - the app never read this column since then; confirmed via inspection that only 6 old rows had it set, all with null metadata, i.e. not visible in any current UI/stats path).

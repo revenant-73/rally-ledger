@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { Match, Set, RallyEvent, OutcomeType, Classification, Lineup } from '../types';
 
@@ -24,8 +24,14 @@ export const useLiveMatchLogic = (
   const [currentLineup, setCurrentLineup] = useState<Lineup | null>(activeSet?.metadata?.currentLineup || activeSet?.metadata?.startingLineup || null);
   const [liberoServingPosition, setLiberoServingPosition] = useState<number | undefined>(activeSet?.metadata?.liberoServingPosition);
 
-  // Sync state from activeSet
-  useEffect(() => {
+  // Sync state from activeSet.metadata when it changes (e.g. a refetch from
+  // another device). Adjusted during render, not in an effect, per React's
+  // guidance for "adjusting state when a prop changes" - this avoids an
+  // extra commit-then-effect render pass and the react-hooks/set-state-in-effect
+  // lint rule it triggers.
+  const [prevMetadata, setPrevMetadata] = useState(activeSet?.metadata);
+  if (activeSet?.metadata !== prevMetadata) {
+    setPrevMetadata(activeSet?.metadata);
     if (activeSet?.metadata?.currentRotation) {
       setCurrentRotation(activeSet.metadata.currentRotation);
     }
@@ -40,7 +46,7 @@ export const useLiveMatchLogic = (
     if (activeSet?.metadata?.servingTeam) {
       setServingTeam(activeSet.metadata.servingTeam);
     }
-  }, [activeSet?.metadata]);
+  }
 
   const toggleServingTeam = useCallback(async () => {
     if (!activeSet) return;
