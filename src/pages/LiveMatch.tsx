@@ -404,19 +404,34 @@ const LiveMatch: React.FC = () => {
           lineup={currentLineup}
           positionIdx={selectedPositionIdx}
           onSubstitute={async (playerId) => {
-            await handleSubstitution(selectedPositionIdx, playerId);
-            setSelectedPositionIdx(null);
-            toast.success('Substitution complete');
+            try {
+              await handleSubstitution(selectedPositionIdx, playerId);
+              setSelectedPositionIdx(null);
+              toast.success('Substitution complete');
+            } catch (error) {
+              console.error('Error saving substitution:', error);
+              toast.error('Error saving substitution');
+            }
           }}
           onLiberoSwap={async (liberoId) => {
-            await handleLiberoSwap(selectedPositionIdx, liberoId);
-            setSelectedPositionIdx(null);
-            toast.success(liberoId ? 'Libero swap complete' : 'Libero exited');
+            try {
+              await handleLiberoSwap(selectedPositionIdx, liberoId);
+              setSelectedPositionIdx(null);
+              toast.success(liberoId ? 'Libero swap complete' : 'Libero exited');
+            } catch (error) {
+              console.error('Error saving libero swap:', error);
+              toast.error('Error saving libero swap');
+            }
           }}
           onSetLiberoServing={async (isServing) => {
-            await handleSetLiberoServing(isServing, selectedPositionIdx);
-            setSelectedPositionIdx(null);
-            toast.success(isServing ? 'Libero set as server' : 'Libero server reset');
+            try {
+              await handleSetLiberoServing(isServing, selectedPositionIdx);
+              setSelectedPositionIdx(null);
+              toast.success(isServing ? 'Libero set as server' : 'Libero server reset');
+            } catch (error) {
+              console.error('Error updating libero server:', error);
+              toast.error('Error updating libero server');
+            }
           }}
           liberoServingPosition={liberoServingPosition}
         />

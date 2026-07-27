@@ -77,58 +77,76 @@ export const useLiveMatchLogic = (
 
   const handleSubstitution = useCallback(async (positionIdx: number, newPlayerId: string) => {
     if (!activeSet || !currentLineup) return;
-    
+
+    const previousLineup = currentLineup;
     const nextLineup = {
       ...currentLineup,
       [`position${positionIdx}`]: newPlayerId
     };
-    
+
     setCurrentLineup(nextLineup);
-    await updateSet(activeSet.id, {
-      metadata: {
-        ...activeSet.metadata,
-        currentLineup: nextLineup
-      }
-    });
+    try {
+      await updateSet(activeSet.id, {
+        metadata: {
+          ...activeSet.metadata,
+          currentLineup: nextLineup
+        }
+      });
+    } catch (error) {
+      setCurrentLineup(previousLineup);
+      throw error;
+    }
   }, [activeSet, currentLineup, updateSet]);
 
   const handleLiberoSwap = useCallback(async (positionIdx: number, liberoId: string | null) => {
     if (!activeSet || !currentLineup) return;
-    
+
     let nextPlayerId = liberoId;
     if (!liberoId) {
       // Swapping back to the starting player for this position
       nextPlayerId = activeSet.metadata?.startingLineup?.[`position${positionIdx}` as keyof Lineup] || '';
     }
-    
+
     if (!nextPlayerId) return;
 
+    const previousLineup = currentLineup;
     const nextLineup = {
       ...currentLineup,
       [`position${positionIdx}`]: nextPlayerId
     };
-    
+
     setCurrentLineup(nextLineup);
-    await updateSet(activeSet.id, {
-      metadata: {
-        ...activeSet.metadata,
-        currentLineup: nextLineup
-      }
-    });
+    try {
+      await updateSet(activeSet.id, {
+        metadata: {
+          ...activeSet.metadata,
+          currentLineup: nextLineup
+        }
+      });
+    } catch (error) {
+      setCurrentLineup(previousLineup);
+      throw error;
+    }
   }, [activeSet, currentLineup, updateSet]);
 
   const handleSetLiberoServing = useCallback(async (isServing: boolean, positionIdx: number) => {
     if (!activeSet) return;
-    
+
+    const previousLiberoServingPosition = liberoServingPosition;
     const nextLiberoPos = isServing ? positionIdx : undefined;
     setLiberoServingPosition(nextLiberoPos);
-    await updateSet(activeSet.id, {
-      metadata: {
-        ...activeSet.metadata,
-        liberoServingPosition: nextLiberoPos
-      }
-    });
-  }, [activeSet, updateSet]);
+    try {
+      await updateSet(activeSet.id, {
+        metadata: {
+          ...activeSet.metadata,
+          liberoServingPosition: nextLiberoPos
+        }
+      });
+    } catch (error) {
+      setLiberoServingPosition(previousLiberoServingPosition);
+      throw error;
+    }
+  }, [activeSet, liberoServingPosition, updateSet]);
 
   const completeRally = useCallback(async (
     classification: Classification, 
