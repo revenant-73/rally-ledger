@@ -4,7 +4,11 @@ All notable changes to this project are documented here. Format loosely follows 
 
 ## Unreleased
 
+### Fixed
+- Fixed 2 pre-existing failing tests in `useLiveMatchLogic.test.ts` caused by calling `completeRally` in the same `act()` block as the `setPointWinner`/`setOutcome` calls that fed it, so it read stale (null) state. Also wired up `src/test/setup.ts` (which imports `@testing-library/jest-dom`) into `vitest.config.ts` — it existed but was never referenced via `setupFiles`, so jest-dom matchers like `toBeInTheDocument` weren't available in any test.
+
 ### Added
+- Added test coverage for previously-untested logic: substitution/libero-swap/libero-serving (including error-rollback paths), manual score adjustment (including zero-clamping), undo's metadata persistence, and `RotationDisplay`'s physical-zone-to-player rotation math (including the server-indicator logic).
 - Added a reusable `useFocusTrap` hook (`src/hooks/useFocusTrap.ts`) and wired it into all four live-match modals (`SubstitutionModal`, `NoteModal`, `TimeoutModal`, `MoreMenuModal`): traps Tab focus inside the modal while open, closes on Escape, restores focus to the triggering element on close, and adds `role="dialog"`/`aria-modal`/`aria-labelledby`. Also added `aria-label`s to icon-only buttons that previously had none (rotation position buttons, manual-rotate button, scoreboard +/- buttons, header back button, modal close buttons).
 
 ### Changed
