@@ -6,8 +6,8 @@ export const useLiveMatchLogic = (
   activeMatch: Match | null,
   activeSet: Set | null,
   rallies: RallyEvent[],
-  addRally: (rally: RallyEvent) => Promise<void>,
-  undoLastRally: () => Promise<void>,
+  addRally: (rally: RallyEvent, setMetadataUpdates?: Set['metadata']) => Promise<void>,
+  undoLastRally: (setMetadataUpdates?: Set['metadata']) => Promise<void>,
   updateSet: (setId: string, updates: Partial<Set>) => Promise<void>
 ) => {
   const [pointWinner, setPointWinner] = useState<'Us' | 'Opponent' | null>(null);
@@ -202,27 +202,24 @@ export const useLiveMatchLogic = (
       : currentRotation;
     const nextServingTeam = winner === 'Us' ? 'Us' : 'Opponent';
 
+    const previousRotation = currentRotation;
+    const previousServingTeam = servingTeam;
     setCurrentRotation(nextRotation);
     setServingTeam(nextServingTeam);
-    await updateSet(activeSet.id, {
-      metadata: {
-        ...activeSet.metadata,
-        currentRotation: nextRotation,
-        servingTeam: nextServingTeam
-      }
-    });
-
-    // Reset entry immediately for a snappier UI, but keep data for the call
-    resetEntry();
-
     try {
-      await addRally(newRally);
+      await addRally(newRally, {
+        currentRotation: nextRotation,
+        servingTeam: nextServingTeam,
+      });
+      resetEntry();
     } catch (error) {
+      setCurrentRotation(previousRotation);
+      setServingTeam(previousServingTeam);
       console.error('Failed to add rally:', error);
       throw error; // Re-throw so LiveMatch can show toast
     }
     return newRally;
-  }, [pointWinner, outcome, selectedPlayerId, activeSet, activeMatch, rallies.length, servingTeam, serverPlayerId, serveResult, receiveResult, receivePlayerId, addRally, resetEntry, currentRotation, currentLineup, liberoServingPosition, updateSet]);
+  }, [pointWinner, outcome, selectedPlayerId, activeSet, activeMatch, rallies.length, servingTeam, serverPlayerId, serveResult, receiveResult, receivePlayerId, addRally, resetEntry, currentRotation, currentLineup, liberoServingPosition]);
 
   // Manual +/- score corrections go through the same rally log as normal points, tagged
   // with classification 'Neutral' (excluded from earned/gifted stats) so the Undo button
@@ -261,9 +258,14 @@ export const useLiveMatchLogic = (
 
   const undoLastRallyWithLogic = useCallback(async () => {
     if (rallies.length === 0 || !activeSet) return null;
-    const lastRally = rallies[rallies.length - 1];
+    const activeSetRallies = rallies.filter(rally => rally.setId === activeSet.id);
+    if (activeSetRallies.length === 0) return null;
+    const lastRally = activeSetRallies[activeSetRallies.length - 1];
     const restoredRotation = lastRally.metadata?.rotation ?? currentRotation;
     const restoredLineup = lastRally.metadata?.lineup ?? currentLineup;
+    const previousServingTeam = servingTeam;
+    const previousRotation = currentRotation;
+    const previousLineup = currentLineup;
 
     setServingTeam(lastRally.servingTeam);
     setCurrentRotation(restoredRotation);
@@ -271,18 +273,20 @@ export const useLiveMatchLogic = (
       setCurrentLineup(lastRally.metadata.lineup);
     }
 
-    await updateSet(activeSet.id, {
-      metadata: {
-        ...activeSet.metadata,
+    try {
+      await undoLastRally({
         servingTeam: lastRally.servingTeam,
         currentRotation: restoredRotation,
-        currentLineup: restoredLineup ?? undefined
-      }
-    });
-
-    await undoLastRally();
+        currentLineup: restoredLineup ?? undefined,
+      });
+    } catch (error) {
+      setServingTeam(previousServingTeam);
+      setCurrentRotation(previousRotation);
+      setCurrentLineup(previousLineup);
+      throw error;
+    }
     return lastRally;
-  }, [rallies, undoLastRally, activeSet, currentRotation, currentLineup, updateSet]);
+  }, [rallies, undoLastRally, activeSet, currentRotation, currentLineup, servingTeam]);
 
   return {
     pointWinner,

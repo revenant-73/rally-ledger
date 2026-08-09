@@ -1,8 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { db } from '../../db/client';
-import { rallyEvents as rallyEventsTable, sets as setsTable } from '../../db/schema';
-import { eq } from 'drizzle-orm';
+import { client, db } from '../../db/client';
+import { rallyEvents as rallyEventsTable } from '../../db/schema';
+import { asc, eq } from 'drizzle-orm';
 import type { RallyEvent, Set } from '../../types';
+import { normalizeRallies, sortRallies } from '../../utils/rallies';
 
 export const useRallies = (matchId: string | undefined) => {
   return useQuery({
@@ -11,24 +12,24 @@ export const useRallies = (matchId: string | undefined) => {
       if (!matchId) return [];
       const dbRallies = await db.select()
         .from(rallyEventsTable)
-        .where(eq(rallyEventsTable.matchId, matchId));
-      
-      // Map metadata fields back to top-level for application use
-      return dbRallies.map((r) => {
-        const metadata = r.metadata as Record<string, unknown> | null;
-        return {
-          ...r,
-          serveResult: metadata?.serveResult,
-          receiveResult: metadata?.receiveResult,
-          receivePlayerId: metadata?.receivePlayerId,
-        } as RallyEvent;
-      });
+        .where(eq(rallyEventsTable.matchId, matchId))
+        .orderBy(asc(rallyEventsTable.rallyNumber), asc(rallyEventsTable.createdAt));
+
+      return normalizeRallies(dbRallies);
     },
     enabled: !!matchId,
   });
 };
 
-type AddRallyVariables = { rally: RallyEvent; updatedSet: { id: string; ourScore: number; opponentScore: number } };
+type AddRallyVariables = {
+  rally: RallyEvent;
+  updatedSet: {
+    id: string;
+    ourScore: number;
+    opponentScore: number;
+    metadata?: Set['metadata'];
+  };
+};
 
 // Registered as a mutation default (see main.tsx) so a paused/persisted mutation
 // can be replayed after the app is closed and reopened, without needing the
@@ -57,15 +58,63 @@ export const addRallyMutationFn = async ({ rally, updatedSet }: AddRallyVariable
       metadata: rally.metadata ?? null,
     };
 
-    await db.insert(rallyEventsTable).values(dbRally);
-
-    await db.update(setsTable)
-      .set({
-        ourScore: updatedSet.ourScore,
-        opponentScore: updatedSet.opponentScore,
-        updatedAt: new Date().toISOString()
-      })
-      .where(eq(setsTable.id, updatedSet.id));
+    await client.batch([
+      {
+        sql: `insert into rally_events (
+          id,
+          match_id,
+          set_id,
+          rally_number,
+          score_before_us,
+          score_before_opponent,
+          score_after_us,
+          score_after_opponent,
+          point_winner,
+          serving_team,
+          server_player_id,
+          outcome_type,
+          classification,
+          player_id,
+          notes,
+          created_at,
+          metadata
+        ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [
+          dbRally.id,
+          dbRally.matchId,
+          dbRally.setId,
+          dbRally.rallyNumber,
+          dbRally.scoreBeforeUs,
+          dbRally.scoreBeforeOpponent,
+          dbRally.scoreAfterUs,
+          dbRally.scoreAfterOpponent,
+          dbRally.pointWinner,
+          dbRally.servingTeam,
+          dbRally.serverPlayerId ?? null,
+          dbRally.outcomeType,
+          dbRally.classification,
+          dbRally.playerId ?? null,
+          dbRally.notes ?? null,
+          dbRally.createdAt,
+          dbRally.metadata ? JSON.stringify(dbRally.metadata) : null,
+        ],
+      },
+      {
+        sql: `update sets
+          set our_score = ?,
+            opponent_score = ?,
+            metadata = coalesce(?, metadata),
+            updated_at = ?
+          where id = ?`,
+        args: [
+          updatedSet.ourScore,
+          updatedSet.opponentScore,
+          updatedSet.metadata ? JSON.stringify(updatedSet.metadata) : null,
+          new Date().toISOString(),
+          updatedSet.id,
+        ],
+      },
+    ], 'write');
 
     return { rally, updatedSet };
   } catch (error) {
@@ -91,7 +140,7 @@ export const useAddRally = () => {
 
       // Optimistically update the rallies list
       queryClient.setQueryData(['rallies', rally.matchId], (old: RallyEvent[] | undefined) => {
-        return [...(old || []), rally];
+        return sortRallies([...(old || []), rally]);
       });
 
       // Optimistically update the active set score
@@ -101,6 +150,7 @@ export const useAddRally = () => {
           ...old,
           ourScore: updatedSet.ourScore,
           opponentScore: updatedSet.opponentScore,
+          metadata: updatedSet.metadata ?? old.metadata,
           updatedAt: new Date().toISOString()
         };
       });
@@ -125,13 +175,39 @@ export const useAddRally = () => {
   });
 };
 
-type UndoLastRallyVariables = { rallyId: string; matchId: string; setId: string; restoredScores: { ourScore: number; opponentScore: number } };
+type UndoLastRallyVariables = {
+  rallyId: string;
+  matchId: string;
+  setId: string;
+  restoredScores: {
+    ourScore: number;
+    opponentScore: number;
+  };
+  restoredMetadata?: Set['metadata'];
+};
 
-export const undoLastRallyMutationFn = async ({ rallyId, setId, restoredScores, matchId }: UndoLastRallyVariables) => {
-  await db.delete(rallyEventsTable).where(eq(rallyEventsTable.id, rallyId));
-  await db.update(setsTable)
-    .set({ ourScore: restoredScores.ourScore, opponentScore: restoredScores.opponentScore })
-    .where(eq(setsTable.id, setId));
+export const undoLastRallyMutationFn = async ({ rallyId, setId, restoredScores, restoredMetadata, matchId }: UndoLastRallyVariables) => {
+  await client.batch([
+    {
+      sql: 'delete from rally_events where id = ?',
+      args: [rallyId],
+    },
+    {
+      sql: `update sets
+        set our_score = ?,
+          opponent_score = ?,
+          metadata = coalesce(?, metadata),
+          updated_at = ?
+        where id = ?`,
+      args: [
+        restoredScores.ourScore,
+        restoredScores.opponentScore,
+        restoredMetadata ? JSON.stringify(restoredMetadata) : null,
+        new Date().toISOString(),
+        setId,
+      ],
+    },
+  ], 'write');
   return { matchId };
 };
 

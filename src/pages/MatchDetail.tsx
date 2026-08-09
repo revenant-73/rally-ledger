@@ -3,10 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Zap, Calendar, MapPin, Trophy } from 'lucide-react';
 import { db } from '../db/client';
 import { matches as matchesTable, sets as setsTable, rallyEvents as rallyEventsTable, players as playersTable } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import type { Match, Set, RallyEvent, Player } from '../types';
 import { useMatch } from '../hooks/useMatch';
 import { useMatchDetailMetrics } from '../hooks/useMatchDetailMetrics';
+import { normalizeRallies } from '../utils/rallies';
 
 const MatchDetail: React.FC = () => {
   const { matchId } = useParams<{ matchId: string }>();
@@ -47,13 +48,16 @@ const MatchDetail: React.FC = () => {
         setMatch(currentMatch);
         
         const [setsData, ralliesData, playersData] = await Promise.all([
-          db.select().from(setsTable).where(eq(setsTable.matchId, matchId)),
-          db.select().from(rallyEventsTable).where(eq(rallyEventsTable.matchId, matchId)),
+          db.select().from(setsTable).where(eq(setsTable.matchId, matchId)).orderBy(asc(setsTable.setNumber)),
+          db.select()
+            .from(rallyEventsTable)
+            .where(eq(rallyEventsTable.matchId, matchId))
+            .orderBy(asc(rallyEventsTable.rallyNumber), asc(rallyEventsTable.createdAt)),
           db.select().from(playersTable).where(eq(playersTable.teamId, currentMatch.teamId))
         ]);
         
         setSets(setsData as Set[]);
-        setRallies(ralliesData as RallyEvent[]);
+        setRallies(normalizeRallies(ralliesData));
         setPlayers(playersData as Player[]);
       } catch (error) {
         console.error('Failed to fetch match details:', error);

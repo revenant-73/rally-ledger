@@ -76,13 +76,19 @@ describe('useLiveMatchLogic', () => {
       await result.current.completeRally('Earned');
     });
 
-    expect(mockAddRally).toHaveBeenCalledWith(expect.objectContaining({
-      pointWinner: 'Us',
-      scoreAfterUs: 11,
-      scoreAfterOpponent: 10,
-      classification: 'Earned',
-      outcomeType: 'Kill',
-    }));
+    expect(mockAddRally).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pointWinner: 'Us',
+        scoreAfterUs: 11,
+        scoreAfterOpponent: 10,
+        classification: 'Earned',
+        outcomeType: 'Kill',
+      }),
+      expect.objectContaining({
+        currentRotation: 1,
+        servingTeam: 'Us',
+      })
+    );
     
     expect(result.current.servingTeam).toBe('Us');
     expect(result.current.pointWinner).toBeNull();
@@ -154,14 +160,40 @@ describe('useLiveMatchLogic', () => {
       await result.current.undoLastRallyWithLogic();
     });
 
-    expect(mockUpdateSet).toHaveBeenCalledWith('s1', expect.objectContaining({
-      metadata: expect.objectContaining({
+    expect(mockUndoLastRally).toHaveBeenCalledWith(
+      expect.objectContaining({
         servingTeam: 'Opponent',
         currentRotation: 3,
         currentLineup: mockLineup,
-      }),
-    }));
+      })
+    );
     expect(result.current.currentRotation).toBe(3);
+  });
+
+  it('does not undo a rally from another set', async () => {
+    const rallies: RallyEvent[] = [{
+      id: 'r1',
+      matchId: 'm1',
+      setId: 'previous-set',
+      rallyNumber: 1,
+      scoreBeforeUs: 0,
+      scoreBeforeOpponent: 0,
+      scoreAfterUs: 0,
+      scoreAfterOpponent: 1,
+      pointWinner: 'Opponent',
+      servingTeam: 'Us',
+      outcomeType: 'Serve Error',
+      classification: 'Gifted',
+      createdAt: '2024-01-01',
+    }];
+
+    const { result } = renderHook(() => useLiveMatchLogic(mockMatch, mockSet, rallies, mockAddRally, mockUndoLastRally, mockUpdateSet));
+
+    await act(async () => {
+      await result.current.undoLastRallyWithLogic();
+    });
+
+    expect(mockUndoLastRally).not.toHaveBeenCalled();
   });
 
   it('substitutes a player into the lineup and persists it', async () => {

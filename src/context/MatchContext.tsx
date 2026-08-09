@@ -130,12 +130,16 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await startSetMutation.mutateAsync(set);
   };
 
-  const addRally = async (rally: RallyEvent) => {
+  const addRally = async (rally: RallyEvent, setMetadataUpdates?: Set['metadata']) => {
     if (activeSetData) {
       const updatedSet = {
         id: activeSetData.id,
         ourScore: rally.scoreAfterUs,
         opponentScore: rally.scoreAfterOpponent,
+        metadata: setMetadataUpdates ? {
+          ...activeSetData.metadata,
+          ...setMetadataUpdates,
+        } : undefined,
       };
       try {
         await addRallyMutation.mutateAsync({ rally, updatedSet });
@@ -150,9 +154,11 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const undoLastRally = async () => {
+  const undoLastRally = async (setMetadataUpdates?: Set['metadata']) => {
     if (ralliesData.length === 0 || !activeSetData) return;
-    const lastRally = ralliesData[ralliesData.length - 1];
+    const activeSetRallies = ralliesData.filter(rally => rally.setId === activeSetData.id);
+    if (activeSetRallies.length === 0) return;
+    const lastRally = activeSetRallies[activeSetRallies.length - 1];
     
     await undoLastRallyMutation.mutateAsync({
       rallyId: lastRally.id,
@@ -161,7 +167,11 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       restoredScores: {
         ourScore: lastRally.scoreBeforeUs,
         opponentScore: lastRally.scoreBeforeOpponent,
-      }
+      },
+      restoredMetadata: setMetadataUpdates ? {
+        ...activeSetData.metadata,
+        ...setMetadataUpdates,
+      } : undefined,
     });
   };
 

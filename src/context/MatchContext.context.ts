@@ -12,8 +12,8 @@ export interface MatchContextType {
   isSyncing: boolean;
   startMatch: (match: Match) => Promise<void>;
   startSet: (set: Set) => Promise<void>;
-  addRally: (rally: RallyEvent) => Promise<void>;
-  undoLastRally: () => Promise<void>;
+  addRally: (rally: RallyEvent, setMetadataUpdates?: Set['metadata']) => Promise<void>;
+  undoLastRally: (setMetadataUpdates?: Set['metadata']) => Promise<void>;
   addPlayer: (player: Player) => Promise<void>;
   removePlayer: (playerId: string) => Promise<void>;
   addTeam: (team: Team) => Promise<void>;
