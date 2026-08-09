@@ -2,6 +2,7 @@ import type { Handler } from '@netlify/functions';
 import { createClient, type Client } from '@libsql/client';
 import type { Team } from '../../src/types';
 import { requireSession } from './_session';
+import { canCreateTeam, canManageTeam, canViewProgram, ensureTeamAccessTable } from './_access';
 
 let cachedClient: Client | null = null;
 
@@ -24,17 +25,20 @@ const json = (statusCode: number, body: unknown) => ({
 type AddTeamPayload = {
   action: 'add';
   userId: string;
+  email?: string;
   team: Team;
 };
 
 type ListTeamsPayload = {
   action: 'list';
   userId: string;
+  email?: string;
 };
 
 type UpdateTeamPayload = {
   action: 'update';
   userId: string;
+  email?: string;
   teamId: string;
   updates: Partial<Team>;
 };
@@ -57,15 +61,6 @@ const parsePayload = (body: string | null): TeamPayload | null => {
   }
 };
 
-const assertOwnsTeam = async (userId: string, teamId: string) => {
-  const result = await getClient().execute({
-    sql: 'select id from teams where id = ? and owner_id = ? limit 1',
-    args: [teamId, userId],
-  });
-
-  return result.rows.length > 0;
-};
-
 const parseMetadata = (value: unknown) => {
   if (typeof value !== 'string') return value ?? undefined;
   try {
@@ -76,7 +71,14 @@ const parseMetadata = (value: unknown) => {
 };
 
 const handleList = async (payload: ListTeamsPayload) => {
-  const result = await getClient().execute({
+  const client = getClient();
+  await ensureTeamAccessTable(client);
+
+  if (!await canViewProgram(client, { userId: payload.userId, email: payload.email || '' })) {
+    return json(200, { teams: [] });
+  }
+
+  const result = await client.execute({
     sql: `select
       id,
       owner_id as ownerId,
@@ -87,9 +89,8 @@ const handleList = async (payload: ListTeamsPayload) => {
       updated_at as updatedAt,
       metadata
     from teams
-    where owner_id = ?
     order by name`,
-    args: [payload.userId],
+    args: [],
   });
 
   return json(200, {
@@ -105,6 +106,9 @@ const handleAdd = async (payload: AddTeamPayload) => {
 
   if (!team?.id || !team.name || !team.level || !team.season) {
     return json(400, { error: 'Invalid team payload' });
+  }
+  if (!canCreateTeam({ userId, email: payload.email || '' })) {
+    return json(403, { error: 'Only admins can create teams' });
   }
 
   await getClient().execute({
@@ -146,7 +150,7 @@ const handleUpdate = async (payload: UpdateTeamPayload) => {
   if (!teamId || !isRecord(updates)) {
     return json(400, { error: 'Invalid team update payload' });
   }
-  if (!await assertOwnsTeam(userId, teamId)) {
+  if (!await canManageTeam(getClient(), { userId, email: payload.email }, teamId)) {
     return json(403, { error: 'Not authorized for this team' });
   }
 
@@ -189,6 +193,7 @@ export const handler: Handler = async (event) => {
     return auth.response;
   }
   payload.userId = auth.session.userId;
+  payload.email = auth.session.email;
 
   try {
     if (payload.action === 'list') {

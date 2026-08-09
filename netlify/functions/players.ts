@@ -2,6 +2,7 @@ import type { Handler } from '@netlify/functions';
 import { createClient, type Client } from '@libsql/client';
 import type { Player } from '../../src/types';
 import { requireSession } from './_session';
+import { canManagePlayer, canManageTeam, canViewProgram, ensureTeamAccessTable } from './_access';
 
 let cachedClient: Client | null = null;
 
@@ -24,18 +25,21 @@ const json = (statusCode: number, body: unknown) => ({
 type AddPlayerPayload = {
   action: 'add';
   userId: string;
+  email?: string;
   player: Player;
 };
 
 type ListPlayersPayload = {
   action: 'list';
   userId: string;
+  email?: string;
   teamIds: string[];
 };
 
 type DeletePlayerPayload = {
   action: 'delete';
   userId: string;
+  email?: string;
   playerId: string;
 };
 
@@ -57,28 +61,6 @@ const parsePayload = (body: string | null): PlayerPayload | null => {
   }
 };
 
-const assertOwnsTeam = async (userId: string, teamId: string) => {
-  const result = await getClient().execute({
-    sql: 'select id from teams where id = ? and owner_id = ? limit 1',
-    args: [teamId, userId],
-  });
-
-  return result.rows.length > 0;
-};
-
-const assertOwnsPlayer = async (userId: string, playerId: string) => {
-  const result = await getClient().execute({
-    sql: `select players.id
-      from players
-      inner join teams on teams.id = players.team_id
-      where players.id = ? and teams.owner_id = ?
-      limit 1`,
-    args: [playerId, userId],
-  });
-
-  return result.rows.length > 0;
-};
-
 const parseMetadata = (value: unknown) => {
   if (typeof value !== 'string') return value ?? undefined;
   try {
@@ -97,9 +79,14 @@ const handleList = async (payload: ListPlayersPayload) => {
   if (teamIds.length === 0) {
     return json(200, { players: [] });
   }
+  const client = getClient();
+  await ensureTeamAccessTable(client);
+  if (!await canViewProgram(client, { userId, email: payload.email || '' })) {
+    return json(200, { players: [] });
+  }
 
   const placeholders = teamIds.map(() => '?').join(', ');
-  const result = await getClient().execute({
+  const result = await client.execute({
     sql: `select
       players.id,
       players.team_id as teamId,
@@ -113,10 +100,9 @@ const handleList = async (payload: ListPlayersPayload) => {
       players.updated_at as updatedAt,
       players.metadata
     from players
-    inner join teams on teams.id = players.team_id
-    where teams.owner_id = ? and players.team_id in (${placeholders})
+    where players.team_id in (${placeholders})
     order by cast(players.jersey_number as integer), players.jersey_number`,
-    args: [userId, ...teamIds],
+    args: teamIds,
   });
 
   return json(200, {
@@ -134,7 +120,7 @@ const handleAdd = async (payload: AddPlayerPayload) => {
   if (!player?.id || !player.teamId || !player.firstName || !player.lastName || !player.jerseyNumber || !player.position) {
     return json(400, { error: 'Invalid player payload' });
   }
-  if (!await assertOwnsTeam(userId, player.teamId)) {
+  if (!await canManageTeam(getClient(), { userId, email: payload.email || '' }, player.teamId)) {
     return json(403, { error: 'Not authorized for this team' });
   }
 
@@ -176,7 +162,7 @@ const handleDelete = async (payload: DeletePlayerPayload) => {
   if (!playerId) {
     return json(400, { error: 'Invalid player delete payload' });
   }
-  if (!await assertOwnsPlayer(userId, playerId)) {
+  if (!await canManagePlayer(getClient(), { userId, email: payload.email || '' }, playerId)) {
     return json(403, { error: 'Not authorized for this player' });
   }
 
@@ -202,6 +188,7 @@ export const handler: Handler = async (event) => {
     return auth.response;
   }
   payload.userId = auth.session.userId;
+  payload.email = auth.session.email;
 
   try {
     if (payload.action === 'list') {

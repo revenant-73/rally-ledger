@@ -79,4 +79,5 @@ Last updated: 2026-08-09
 - Done: team, player, match, active-set, and rally reads are moved behind Netlify functions.
 - Done: auth issues signed session tokens, and functions reject missing or invalid sessions.
 - Done: auth has basic rate limiting and configurable signup controls.
+- In progress: multi-coach access model supports global admins, assigned team coaches, and program-wide roster/report visibility.
 - Remaining: consider cookie-backed sessions and durable/distributed rate limiting before public launch.

@@ -2,6 +2,7 @@ import type { Handler } from '@netlify/functions';
 import { createClient, type Client } from '@libsql/client';
 import type { Set } from '../../src/types';
 import { requireSession } from './_session';
+import { canManageMatch, canManageSet, canViewMatch } from './_access';
 
 let cachedClient: Client | null = null;
 
@@ -24,18 +25,21 @@ const json = (statusCode: number, body: unknown) => ({
 type StartSetPayload = {
   action: 'start';
   userId: string;
+  email?: string;
   set: Set;
 };
 
 type ActiveSetPayload = {
   action: 'active';
   userId: string;
+  email?: string;
   matchId: string;
 };
 
 type UpdateSetPayload = {
   action: 'update';
   userId: string;
+  email?: string;
   setId: string;
   matchId: string;
   updates: Partial<Set>;
@@ -59,28 +63,6 @@ const parsePayload = (body: string | null): SetPayload | null => {
   }
 };
 
-const assertOwnsMatch = async (userId: string, matchId: string) => {
-  const result = await getClient().execute({
-    sql: `select matches.id
-      from matches
-      inner join teams on teams.id = matches.team_id
-      where matches.id = ? and teams.owner_id = ?
-      limit 1`,
-    args: [matchId, userId],
-  });
-
-  return result.rows.length > 0;
-};
-
-const assertSetBelongsToMatch = async (setId: string, matchId: string) => {
-  const result = await getClient().execute({
-    sql: 'select id from sets where id = ? and match_id = ? limit 1',
-    args: [setId, matchId],
-  });
-
-  return result.rows.length > 0;
-};
-
 const parseMetadata = (value: unknown) => {
   if (typeof value !== 'string') return value ?? undefined;
   try {
@@ -96,7 +78,7 @@ const handleActive = async (payload: ActiveSetPayload) => {
   if (!matchId) {
     return json(400, { error: 'Invalid active set payload' });
   }
-  if (!await assertOwnsMatch(userId, matchId)) {
+  if (!await canViewMatch(getClient(), { userId, email: payload.email || '' }, matchId)) {
     return json(403, { error: 'Not authorized for this match' });
   }
 
@@ -135,7 +117,7 @@ const handleStart = async (payload: StartSetPayload) => {
   if (!set?.id || !set.matchId || !set.setNumber) {
     return json(400, { error: 'Invalid set payload' });
   }
-  if (!await assertOwnsMatch(userId, set.matchId)) {
+  if (!await canManageMatch(getClient(), { userId, email: payload.email || '' }, set.matchId)) {
     return json(403, { error: 'Not authorized for this match' });
   }
 
@@ -187,7 +169,7 @@ const handleUpdate = async (payload: UpdateSetPayload) => {
   if (!setId || !matchId || !isRecord(updates)) {
     return json(400, { error: 'Invalid set update payload' });
   }
-  if (!await assertOwnsMatch(userId, matchId) || !await assertSetBelongsToMatch(setId, matchId)) {
+  if (!await canManageSet(getClient(), { userId, email: payload.email || '' }, setId, matchId)) {
     return json(403, { error: 'Not authorized for this match' });
   }
 
@@ -230,6 +212,7 @@ export const handler: Handler = async (event) => {
     return auth.response;
   }
   payload.userId = auth.session.userId;
+  payload.email = auth.session.email;
 
   try {
     if (payload.action === 'active') {

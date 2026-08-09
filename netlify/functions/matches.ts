@@ -2,6 +2,7 @@ import type { Handler } from '@netlify/functions';
 import { createClient, type Client } from '@libsql/client';
 import type { Match } from '../../src/types';
 import { requireSession } from './_session';
+import { canManageMatch, canManageTeam, canViewMatch, canViewProgram, ensureTeamAccessTable } from './_access';
 
 let cachedClient: Client | null = null;
 
@@ -24,24 +25,28 @@ const json = (statusCode: number, body: unknown) => ({
 type StartMatchPayload = {
   action: 'start';
   userId: string;
+  email?: string;
   match: Match;
 };
 
 type ListMatchesPayload = {
   action: 'list';
   userId: string;
+  email?: string;
   teamIds: string[];
 };
 
 type DetailMatchPayload = {
   action: 'detail';
   userId: string;
+  email?: string;
   matchId: string;
 };
 
 type UpdateMatchPayload = {
   action: 'update';
   userId: string;
+  email?: string;
   matchId: string;
   updates: Partial<Match>;
 };
@@ -64,28 +69,6 @@ const parsePayload = (body: string | null): MatchPayload | null => {
   }
 };
 
-const assertOwnsTeam = async (userId: string, teamId: string) => {
-  const result = await getClient().execute({
-    sql: 'select id from teams where id = ? and owner_id = ? limit 1',
-    args: [teamId, userId],
-  });
-
-  return result.rows.length > 0;
-};
-
-const assertOwnsMatch = async (userId: string, matchId: string) => {
-  const result = await getClient().execute({
-    sql: `select matches.id
-      from matches
-      inner join teams on teams.id = matches.team_id
-      where matches.id = ? and teams.owner_id = ?
-      limit 1`,
-    args: [matchId, userId],
-  });
-
-  return result.rows.length > 0;
-};
-
 const parseMetadata = (value: unknown) => {
   if (typeof value !== 'string') return value ?? undefined;
   try {
@@ -104,9 +87,14 @@ const handleList = async (payload: ListMatchesPayload) => {
   if (teamIds.length === 0) {
     return json(200, { matches: [] });
   }
+  const client = getClient();
+  await ensureTeamAccessTable(client);
+  if (!await canViewProgram(client, { userId, email: payload.email || '' })) {
+    return json(200, { matches: [] });
+  }
 
   const placeholders = teamIds.map(() => '?').join(', ');
-  const result = await getClient().execute({
+  const result = await client.execute({
     sql: `select
       matches.id,
       matches.team_id as teamId,
@@ -121,10 +109,9 @@ const handleList = async (payload: ListMatchesPayload) => {
       matches.updated_at as updatedAt,
       matches.metadata
     from matches
-    inner join teams on teams.id = matches.team_id
-    where teams.owner_id = ? and matches.team_id in (${placeholders})
+    where matches.team_id in (${placeholders})
     order by matches.match_date desc, matches.created_at desc`,
-    args: [userId, ...teamIds],
+    args: teamIds,
   });
 
   return json(200, {
@@ -141,7 +128,7 @@ const handleDetail = async (payload: DetailMatchPayload) => {
   if (!matchId) {
     return json(400, { error: 'Invalid match detail payload' });
   }
-  if (!await assertOwnsMatch(userId, matchId)) {
+  if (!await canViewMatch(getClient(), { userId, email: payload.email || '' }, matchId)) {
     return json(403, { error: 'Not authorized for this match' });
   }
 
@@ -260,7 +247,7 @@ const handleStart = async (payload: StartMatchPayload) => {
   if (!match?.id || !match.teamId || !match.opponentName) {
     return json(400, { error: 'Invalid match payload' });
   }
-  if (!await assertOwnsTeam(userId, match.teamId)) {
+  if (!await canManageTeam(getClient(), { userId, email: payload.email || '' }, match.teamId)) {
     return json(403, { error: 'Not authorized for this team' });
   }
 
@@ -315,7 +302,7 @@ const handleUpdate = async (payload: UpdateMatchPayload) => {
   if (!matchId || !isRecord(updates)) {
     return json(400, { error: 'Invalid match update payload' });
   }
-  if (!await assertOwnsMatch(userId, matchId)) {
+  if (!await canManageMatch(getClient(), { userId, email: payload.email || '' }, matchId)) {
     return json(403, { error: 'Not authorized for this match' });
   }
 
@@ -358,6 +345,7 @@ export const handler: Handler = async (event) => {
     return auth.response;
   }
   payload.userId = auth.session.userId;
+  payload.email = auth.session.email;
 
   try {
     if (payload.action === 'list') {

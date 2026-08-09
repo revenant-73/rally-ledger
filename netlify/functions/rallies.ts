@@ -2,6 +2,7 @@ import type { Handler } from '@netlify/functions';
 import { createClient, type Client } from '@libsql/client';
 import type { RallyEvent, Set } from '../../src/types';
 import { requireSession } from './_session';
+import { canManageMatch, canViewMatch } from './_access';
 
 let cachedClient: Client | null = null;
 
@@ -24,6 +25,7 @@ const json = (statusCode: number, body: unknown) => ({
 type AddRallyPayload = {
   action: 'add';
   userId: string;
+  email?: string;
   rally: RallyEvent;
   updatedSet: {
     id: string;
@@ -36,12 +38,14 @@ type AddRallyPayload = {
 type ListRalliesPayload = {
   action: 'list';
   userId: string;
+  email?: string;
   matchId: string;
 };
 
 type UndoRallyPayload = {
   action: 'undo';
   userId: string;
+  email?: string;
   rallyId: string;
   matchId: string;
   setId: string;
@@ -70,19 +74,6 @@ const parsePayload = (body: string | null): RallyPayload | null => {
   }
 };
 
-const assertOwnsMatch = async (userId: string, matchId: string) => {
-  const result = await getClient().execute({
-    sql: `select matches.id
-      from matches
-      inner join teams on teams.id = matches.team_id
-      where matches.id = ? and teams.owner_id = ?
-      limit 1`,
-    args: [matchId, userId],
-  });
-
-  return result.rows.length > 0;
-};
-
 const assertSetBelongsToMatch = async (setId: string, matchId: string) => {
   const result = await getClient().execute({
     sql: 'select id from sets where id = ? and match_id = ? limit 1',
@@ -107,7 +98,7 @@ const handleList = async (payload: ListRalliesPayload) => {
   if (!matchId) {
     return json(400, { error: 'Invalid rally list payload' });
   }
-  if (!await assertOwnsMatch(userId, matchId)) {
+  if (!await canViewMatch(getClient(), { userId, email: payload.email || '' }, matchId)) {
     return json(403, { error: 'Not authorized for this match' });
   }
 
@@ -150,7 +141,7 @@ const handleAdd = async (payload: AddRallyPayload) => {
   if (!rally?.id || !rally.matchId || !rally.setId || updatedSet.id !== rally.setId) {
     return json(400, { error: 'Invalid rally payload' });
   }
-  if (!await assertOwnsMatch(userId, rally.matchId) || !await assertSetBelongsToMatch(rally.setId, rally.matchId)) {
+  if (!await canManageMatch(getClient(), { userId, email: payload.email || '' }, rally.matchId) || !await assertSetBelongsToMatch(rally.setId, rally.matchId)) {
     return json(403, { error: 'Not authorized for this match' });
   }
 
@@ -221,7 +212,7 @@ const handleUndo = async (payload: UndoRallyPayload) => {
   if (!rallyId || !matchId || !setId || !restoredScores) {
     return json(400, { error: 'Invalid undo payload' });
   }
-  if (!await assertOwnsMatch(userId, matchId) || !await assertSetBelongsToMatch(setId, matchId)) {
+  if (!await canManageMatch(getClient(), { userId, email: payload.email || '' }, matchId) || !await assertSetBelongsToMatch(setId, matchId)) {
     return json(403, { error: 'Not authorized for this match' });
   }
 
@@ -264,6 +255,7 @@ export const handler: Handler = async (event) => {
     return auth.response;
   }
   payload.userId = auth.session.userId;
+  payload.email = auth.session.email;
 
   try {
     if (payload.action === 'list') {

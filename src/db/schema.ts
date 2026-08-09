@@ -23,6 +23,16 @@ export const teams = sqliteTable('teams', {
   metadata: text('metadata', { mode: 'json' }).$type<Record<string, unknown>>(), // Flexible JSON storage
 });
 
+export const teamAccess = sqliteTable('team_access', {
+  id: text('id').primaryKey(),
+  teamId: text('team_id').notNull().references(() => teams.id),
+  userId: text('user_id').notNull().references(() => users.id),
+  role: text('role').notNull(), // 'coach' | 'viewer'
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+  metadata: text('metadata', { mode: 'json' }).$type<Record<string, unknown>>(),
+});
+
 export const players = sqliteTable('players', {
   id: text('id').primaryKey(),
   teamId: text('team_id').notNull().references(() => teams.id),

@@ -26,6 +26,7 @@ const localNetlifyFunctions = (env: Record<string, string>): Plugin => ({
         process.env.SESSION_SECRET ||= env.SESSION_SECRET
         process.env.AUTH_ALLOW_SIGNUP ||= env.AUTH_ALLOW_SIGNUP
         process.env.AUTH_ALLOWED_EMAILS ||= env.AUTH_ALLOWED_EMAILS
+        process.env.AUTH_ADMIN_EMAILS ||= env.AUTH_ADMIN_EMAILS
         const { handler } = await server.ssrLoadModule(`/netlify/functions/${functionName}.ts`)
         const result = await handler({
           httpMethod: req.method || 'GET',
