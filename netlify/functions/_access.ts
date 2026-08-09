@@ -1,4 +1,4 @@
-import type { Client } from '@libsql/client';
+import type { Client } from '@libsql/client/web';
 
 export type SessionUser = {
   userId: string;

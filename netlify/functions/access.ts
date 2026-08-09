@@ -1,6 +1,6 @@
 import type { Handler } from '@netlify/functions';
 import { randomUUID } from 'node:crypto';
-import { createClient, type Client } from '@libsql/client';
+import { createClient, type Client } from '@libsql/client/web';
 import type { Team } from '../../src/types';
 import { requireSession } from './_session';
 import { ensureTeamAccessTable, isAdmin } from './_access';

@@ -81,5 +81,6 @@ Last updated: 2026-08-09
 - Done: Settings includes an admin-only Coach Access panel for assigning and removing roster-specific coach permissions.
 - Done: Settings reset is admin-only and no longer appears for normal coach accounts.
 - Done: local and example Turso config use server-only `TURSO_*` env names instead of browser-exposed `VITE_*` names.
+- Done: Netlify functions use the LibSQL web transport to avoid native optional package failures in production.
 - Remaining: consider cookie-backed sessions and durable/distributed rate limiting before public launch.
 

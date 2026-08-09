@@ -1,5 +1,5 @@
 import type { Handler } from '@netlify/functions';
-import { createClient, type Client } from '@libsql/client';
+import { createClient, type Client } from '@libsql/client/web';
 import type { Match } from '../../src/types';
 import { requireSession } from './_session';
 import { canManageMatch, canManageTeam, canViewMatch, canViewProgram, ensureTeamAccessTable } from './_access';
