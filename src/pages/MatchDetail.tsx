@@ -1,17 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Zap, Calendar, MapPin, Trophy } from 'lucide-react';
-import { db } from '../db/client';
-import { matches as matchesTable, sets as setsTable, rallyEvents as rallyEventsTable, players as playersTable } from '../db/schema';
-import { asc, eq } from 'drizzle-orm';
 import type { Match, Set, RallyEvent, Player } from '../types';
 import { useMatch } from '../hooks/useMatch';
+import { useAuth } from '../hooks/useAuth';
 import { useMatchDetailMetrics } from '../hooks/useMatchDetailMetrics';
 import { normalizeRallies } from '../utils/rallies';
 
 const MatchDetail: React.FC = () => {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { teams, isSyncing } = useMatch();
   
   const [match, setMatch] = useState<Match | null>(null);
@@ -25,6 +24,10 @@ const MatchDetail: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       if (!matchId) return;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
       if (teams.length === 0 && !isSyncing) {
         setLoading(false);
         return;
@@ -32,13 +35,30 @@ const MatchDetail: React.FC = () => {
       if (teams.length === 0) return;
       
       try {
-        const matchData = await db.select().from(matchesTable).where(eq(matchesTable.id, matchId)).limit(1);
-        if (matchData.length === 0) {
+        const response = await fetch('/.netlify/functions/matches', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'detail', userId: user.id, matchId }),
+        });
+
+        if (response.status === 404 || response.status === 403) {
           setLoading(false);
           return;
         }
-        
-        const currentMatch = matchData[0] as Match;
+
+        if (!response.ok) {
+          const body = await response.json().catch(() => null) as { error?: string } | null;
+          throw new Error(body?.error || 'Failed to fetch match details');
+        }
+
+        const detail = await response.json() as {
+          match: Match;
+          sets: Set[];
+          rallies: RallyEvent[];
+          players: Player[];
+        };
+
+        const currentMatch = detail.match;
         
         if (!teams.some(t => t.id === currentMatch.teamId)) {
           setLoading(false);
@@ -46,19 +66,9 @@ const MatchDetail: React.FC = () => {
         }
         
         setMatch(currentMatch);
-        
-        const [setsData, ralliesData, playersData] = await Promise.all([
-          db.select().from(setsTable).where(eq(setsTable.matchId, matchId)).orderBy(asc(setsTable.setNumber)),
-          db.select()
-            .from(rallyEventsTable)
-            .where(eq(rallyEventsTable.matchId, matchId))
-            .orderBy(asc(rallyEventsTable.rallyNumber), asc(rallyEventsTable.createdAt)),
-          db.select().from(playersTable).where(eq(playersTable.teamId, currentMatch.teamId))
-        ]);
-        
-        setSets(setsData as Set[]);
-        setRallies(normalizeRallies(ralliesData));
-        setPlayers(playersData as Player[]);
+        setSets(detail.sets);
+        setRallies(normalizeRallies(detail.rallies));
+        setPlayers(detail.players);
       } catch (error) {
         console.error('Failed to fetch match details:', error);
       } finally {
@@ -67,7 +77,7 @@ const MatchDetail: React.FC = () => {
     };
 
     fetchData();
-  }, [matchId, teams, isSyncing]);
+  }, [matchId, teams, isSyncing, user]);
 
   if (loading) {
     return (

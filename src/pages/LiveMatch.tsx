@@ -26,6 +26,7 @@ const LiveMatch: React.FC = () => {
     activeMatch, 
     activeSet, 
     activeTeam, 
+    teams,
     rallies, 
     addRally, 
     undoLastRally, 
@@ -71,10 +72,13 @@ const LiveMatch: React.FC = () => {
 
   if (!activeMatch) return null;
 
+  const matchPlayers = players.filter(player => player.teamId === activeMatch.teamId);
+  const matchTeam = teams.find(team => team.id === activeMatch.teamId) || (activeTeam?.id === activeMatch.teamId ? activeTeam : null);
+
   if (showLineupEditor) {
     return (
       <LineupSelection 
-        players={players}
+        players={matchPlayers}
         onCancel={() => setShowLineupEditor(false)}
         onComplete={async (lineup) => {
           await updateSet(activeSet!.id, {
@@ -95,7 +99,7 @@ const LiveMatch: React.FC = () => {
     return (
       <NextSetScreen 
         rallies={rallies}
-        players={players}
+        players={matchPlayers}
         onBackToHome={() => navigate('/')}
         onStartSet={async (setNumber, lineup) => {
           const newSet: Set = {
@@ -129,7 +133,7 @@ const LiveMatch: React.FC = () => {
       setOutcome('Ace');
       if (serverPlayerId) {
         handleCompleteRally('Earned', 'Us', 'Ace', serverPlayerId);
-      } else if (players.length > 0) {
+    } else if (matchPlayers.length > 0) {
         setShowPlayerSelection(true);
       } else {
         handleCompleteRally('Earned', 'Us', 'Ace');
@@ -139,7 +143,7 @@ const LiveMatch: React.FC = () => {
       setOutcome('Serve Error');
       if (serverPlayerId) {
         handleCompleteRally('Gifted', 'Opponent', 'Serve Error', serverPlayerId);
-      } else if (players.length > 0) {
+    } else if (matchPlayers.length > 0) {
         setShowPlayerSelection(true);
       } else {
         handleCompleteRally('Gifted', 'Opponent', 'Serve Error');
@@ -152,7 +156,7 @@ const LiveMatch: React.FC = () => {
 
   const handleReceiveQualityClick = (quality: 'Error' | 'Overpass' | 'In-System' | 'Out-of-System') => {
     setReceiveResult(quality);
-    if (players.length > 0) {
+    if (matchPlayers.length > 0) {
       setShowReceivePlayerSelection(true);
     } else if (quality === 'Error') {
       setPointWinner('Opponent');
@@ -189,7 +193,7 @@ const LiveMatch: React.FC = () => {
     const classification = isPositive ? 'Earned' : 'Gifted';
     const shouldSelectPlayer = (pointWinner === 'Us' && isPositive) || (pointWinner === 'Opponent' && !isPositive);
 
-    if (players.length > 0 && shouldSelectPlayer) {
+    if (matchPlayers.length > 0 && shouldSelectPlayer) {
       setShowPlayerSelection(true);
     } else {
       handleCompleteRally(classification, undefined, type, null);
@@ -307,7 +311,7 @@ const LiveMatch: React.FC = () => {
       <LiveMatchScoreboard 
         ourScore={activeSet.ourScore}
         opponentScore={activeSet.opponentScore}
-        ourName={activeTeam?.name || 'WE ARE'}
+        ourName={matchTeam?.name || 'WE ARE'}
         opponentName={activeMatch.opponentName}
         onManualScoreChange={handleManualScoreChange}
         servingTeam={servingTeam}
@@ -318,7 +322,7 @@ const LiveMatch: React.FC = () => {
         <div className="px-4 pb-1">
           <RotationDisplay 
             lineup={currentLineup}
-            players={players}
+            players={matchPlayers}
             currentRotation={currentRotation}
             servingTeam={servingTeam}
             liberoServingPosition={liberoServingPosition}
@@ -356,7 +360,7 @@ const LiveMatch: React.FC = () => {
         pointWinner={pointWinner}
         showPlayerSelection={showPlayerSelection}
         showClassification={showClassification}
-        players={players}
+        players={matchPlayers}
         positiveOutcomes={positiveOutcomes}
         errorOutcomes={errorOutcomes}
         onServerClick={handleServerClick}
@@ -384,7 +388,7 @@ const LiveMatch: React.FC = () => {
         <SubstitutionModal 
           isOpen={true}
           onClose={() => setSelectedPositionIdx(null)}
-          players={players}
+          players={matchPlayers}
           lineup={currentLineup}
           positionIdx={selectedPositionIdx}
           onSubstitute={async (playerId) => {

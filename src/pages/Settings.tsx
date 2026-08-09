@@ -1,16 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Trash2, Database, ShieldAlert, Info, LogOut, User as UserIcon } from 'lucide-react';
-import { db } from '../db/client';
-import { matches as matchesTable, sets as setsTable, rallyEvents as rallyEventsTable, players as playersTable, teams as teamsTable } from '../db/schema';
 import { useAuth } from '../hooks/useAuth';
-import { useMatch } from '../hooks/useMatch';
-import { inArray, eq } from 'drizzle-orm';
 
 const Settings: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout: authLogout } = useAuth();
-  const { teams, matches } = useMatch();
 
   const handleLogout = () => {
     authLogout();
@@ -21,18 +16,15 @@ const Settings: React.FC = () => {
     if (!user) return;
     if (window.confirm('CRITICAL: This will delete YOUR matches, rosters, and stats. This cannot be undone. Are you absolutely sure?')) {
       try {
-        const teamIds = teams.map(t => t.id);
-        const matchIds = matches.map(m => m.id);
+        const response = await fetch('/.netlify/functions/reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'reset', userId: user.id }),
+        });
 
-        if (matchIds.length > 0) {
-          await db.delete(rallyEventsTable).where(inArray(rallyEventsTable.matchId, matchIds));
-          await db.delete(setsTable).where(inArray(setsTable.matchId, matchIds));
-          await db.delete(matchesTable).where(inArray(matchesTable.id, matchIds));
-        }
-
-        if (teamIds.length > 0) {
-          await db.delete(playersTable).where(inArray(playersTable.teamId, teamIds));
-          await db.delete(teamsTable).where(eq(teamsTable.ownerId, user.id));
+        if (!response.ok) {
+          const body = await response.json().catch(() => null) as { error?: string } | null;
+          throw new Error(body?.error || 'Failed to reset data');
         }
         
         localStorage.removeItem('activeMatch');

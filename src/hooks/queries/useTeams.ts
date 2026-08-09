@@ -1,7 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { db } from '../../db/client';
-import { teams as teamsTable } from '../../db/schema';
-import { eq } from 'drizzle-orm';
 import type { Team } from '../../types';
 
 export const useTeams = (userId: string | undefined) => {
@@ -9,8 +6,19 @@ export const useTeams = (userId: string | undefined) => {
     queryKey: ['teams', userId],
     queryFn: async () => {
       if (!userId) return [];
-      const dbTeams = await db.select().from(teamsTable).where(eq(teamsTable.ownerId, userId));
-      return dbTeams as Team[];
+      const response = await fetch('/.netlify/functions/teams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'list', userId }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => null) as { error?: string } | null;
+        throw new Error(body?.error || 'Failed to load teams');
+      }
+
+      const body = await response.json() as { teams: Team[] };
+      return body.teams;
     },
     enabled: !!userId,
   });

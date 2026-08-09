@@ -76,4 +76,5 @@ Last updated: 2026-08-09
 - Done: scoring and undo are moved behind a Netlify function.
 - Done: match creation, match updates, set creation, and set updates are moved behind Netlify functions.
 - Done: roster creation/update and player add/delete writes are moved behind Netlify functions.
-- Remaining: full credential hardening still requires moving remaining client-side database reads and replacing localStorage-only auth with a real session.
+- Done: team, player, match, active-set, and rally reads are moved behind Netlify functions.
+- Remaining: full credential hardening still requires replacing localStorage-only auth with a real session.

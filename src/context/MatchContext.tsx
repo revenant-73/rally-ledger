@@ -36,10 +36,10 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   
   const teamIds = useMemo(() => teams.map(t => t.id), [teams]);
   
-  const { data: playersData = [] } = usePlayers(teamIds);
-  const { data: matchesData = [] } = useMatches(teamIds);
-  const { data: activeSetData } = useActiveSet(activeMatch?.id);
-  const { data: ralliesData = [] } = useRallies(activeMatch?.id);
+  const { data: playersData = [] } = usePlayers(user?.id, teamIds);
+  const { data: matchesData = [] } = useMatches(user?.id, teamIds);
+  const { data: activeSetData } = useActiveSet(user?.id, activeMatch?.id);
+  const { data: ralliesData = [] } = useRallies(user?.id, activeMatch?.id);
 
   // Mutations
   const addTeamMutation = useAddTeam();
@@ -197,14 +197,6 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await deletePlayerMutation.mutateAsync({ userId: user.id, playerId });
   };
 
-  // Filter players by active team if one is selected
-  const filteredPlayers = useMemo(() => {
-    if (activeTeam) {
-      return playersData.filter(p => p.teamId === activeTeam.id);
-    }
-    return playersData;
-  }, [playersData, activeTeam]);
-
   return (
     <MatchContext.Provider value={{ 
       activeMatch, 
@@ -212,7 +204,7 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       activeTeam,
       rallies: ralliesData, 
       teams, 
-      players: filteredPlayers,
+      players: playersData,
       matches: matchesData,
       isSyncing,
       startMatch,

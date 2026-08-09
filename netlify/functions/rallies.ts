@@ -32,6 +32,12 @@ type AddRallyPayload = {
   };
 };
 
+type ListRalliesPayload = {
+  action: 'list';
+  userId: string;
+  matchId: string;
+};
+
 type UndoRallyPayload = {
   action: 'undo';
   userId: string;
@@ -45,7 +51,7 @@ type UndoRallyPayload = {
   restoredMetadata?: Set['metadata'];
 };
 
-type RallyPayload = AddRallyPayload | UndoRallyPayload;
+type RallyPayload = AddRallyPayload | ListRalliesPayload | UndoRallyPayload;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null;
@@ -83,6 +89,58 @@ const assertSetBelongsToMatch = async (setId: string, matchId: string) => {
   });
 
   return result.rows.length > 0;
+};
+
+const parseMetadata = (value: unknown) => {
+  if (typeof value !== 'string') return value ?? undefined;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return undefined;
+  }
+};
+
+const handleList = async (payload: ListRalliesPayload) => {
+  const { matchId, userId } = payload;
+
+  if (!matchId) {
+    return json(400, { error: 'Invalid rally list payload' });
+  }
+  if (!await assertOwnsMatch(userId, matchId)) {
+    return json(403, { error: 'Not authorized for this match' });
+  }
+
+  const result = await getClient().execute({
+    sql: `select
+      id,
+      match_id as matchId,
+      set_id as setId,
+      rally_number as rallyNumber,
+      score_before_us as scoreBeforeUs,
+      score_before_opponent as scoreBeforeOpponent,
+      score_after_us as scoreAfterUs,
+      score_after_opponent as scoreAfterOpponent,
+      point_winner as pointWinner,
+      serving_team as servingTeam,
+      server_player_id as serverPlayerId,
+      outcome_type as outcomeType,
+      classification,
+      player_id as playerId,
+      notes,
+      created_at as createdAt,
+      metadata
+    from rally_events
+    where match_id = ?
+    order by rally_number asc, created_at asc`,
+    args: [matchId],
+  });
+
+  return json(200, {
+    rallies: result.rows.map((row) => ({
+      ...row,
+      metadata: parseMetadata(row.metadata),
+    })),
+  });
 };
 
 const handleAdd = async (payload: AddRallyPayload) => {
@@ -202,6 +260,9 @@ export const handler: Handler = async (event) => {
   }
 
   try {
+    if (payload.action === 'list') {
+      return await handleList(payload);
+    }
     if (payload.action === 'add') {
       return await handleAdd(payload);
     }

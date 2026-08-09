@@ -21,8 +21,9 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { activeMatch, activeSet, rallies, players } = useMatch();
   const [showForecastModal, setShowForecastModal] = useState(false);
+  const matchPlayers = activeMatch ? players.filter(player => player.teamId === activeMatch.teamId) : [];
   
-  const metrics = useDashboardMetrics(rallies, players, activeSet);
+  const metrics = useDashboardMetrics(rallies, matchPlayers, activeSet);
 
   if (!activeMatch || !activeSet || !metrics) return null;
 

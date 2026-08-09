@@ -26,6 +26,18 @@ type StartMatchPayload = {
   match: Match;
 };
 
+type ListMatchesPayload = {
+  action: 'list';
+  userId: string;
+  teamIds: string[];
+};
+
+type DetailMatchPayload = {
+  action: 'detail';
+  userId: string;
+  matchId: string;
+};
+
 type UpdateMatchPayload = {
   action: 'update';
   userId: string;
@@ -33,7 +45,7 @@ type UpdateMatchPayload = {
   updates: Partial<Match>;
 };
 
-type MatchPayload = StartMatchPayload | UpdateMatchPayload;
+type MatchPayload = StartMatchPayload | ListMatchesPayload | DetailMatchPayload | UpdateMatchPayload;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null;
@@ -71,6 +83,174 @@ const assertOwnsMatch = async (userId: string, matchId: string) => {
   });
 
   return result.rows.length > 0;
+};
+
+const parseMetadata = (value: unknown) => {
+  if (typeof value !== 'string') return value ?? undefined;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return undefined;
+  }
+};
+
+const handleList = async (payload: ListMatchesPayload) => {
+  const { userId, teamIds } = payload;
+
+  if (!Array.isArray(teamIds)) {
+    return json(400, { error: 'Invalid match list payload' });
+  }
+  if (teamIds.length === 0) {
+    return json(200, { matches: [] });
+  }
+
+  const placeholders = teamIds.map(() => '?').join(', ');
+  const result = await getClient().execute({
+    sql: `select
+      matches.id,
+      matches.team_id as teamId,
+      matches.opponent_name as opponentName,
+      matches.match_date as matchDate,
+      matches.location,
+      matches.match_type as matchType,
+      matches.status,
+      matches.result,
+      matches.notes,
+      matches.created_at as createdAt,
+      matches.updated_at as updatedAt,
+      matches.metadata
+    from matches
+    inner join teams on teams.id = matches.team_id
+    where teams.owner_id = ? and matches.team_id in (${placeholders})
+    order by matches.match_date desc, matches.created_at desc`,
+    args: [userId, ...teamIds],
+  });
+
+  return json(200, {
+    matches: result.rows.map((row) => ({
+      ...row,
+      metadata: parseMetadata(row.metadata),
+    })),
+  });
+};
+
+const handleDetail = async (payload: DetailMatchPayload) => {
+  const { userId, matchId } = payload;
+
+  if (!matchId) {
+    return json(400, { error: 'Invalid match detail payload' });
+  }
+  if (!await assertOwnsMatch(userId, matchId)) {
+    return json(403, { error: 'Not authorized for this match' });
+  }
+
+  const matchResult = await getClient().execute({
+    sql: `select
+      matches.id,
+      matches.team_id as teamId,
+      matches.opponent_name as opponentName,
+      matches.match_date as matchDate,
+      matches.location,
+      matches.match_type as matchType,
+      matches.status,
+      matches.result,
+      matches.notes,
+      matches.created_at as createdAt,
+      matches.updated_at as updatedAt,
+      matches.metadata
+    from matches
+    where matches.id = ?
+    limit 1`,
+    args: [matchId],
+  });
+
+  const match = matchResult.rows[0];
+  if (!match) {
+    return json(404, { error: 'Match not found' });
+  }
+
+  const [setsResult, ralliesResult, playersResult] = await Promise.all([
+    getClient().execute({
+      sql: `select
+        id,
+        match_id as matchId,
+        set_number as setNumber,
+        our_score as ourScore,
+        opponent_score as opponentScore,
+        status,
+        starting_server_team as startingServerTeam,
+        final_result as finalResult,
+        created_at as createdAt,
+        updated_at as updatedAt,
+        metadata
+      from sets
+      where match_id = ?
+      order by set_number asc`,
+      args: [matchId],
+    }),
+    getClient().execute({
+      sql: `select
+        id,
+        match_id as matchId,
+        set_id as setId,
+        rally_number as rallyNumber,
+        score_before_us as scoreBeforeUs,
+        score_before_opponent as scoreBeforeOpponent,
+        score_after_us as scoreAfterUs,
+        score_after_opponent as scoreAfterOpponent,
+        point_winner as pointWinner,
+        serving_team as servingTeam,
+        server_player_id as serverPlayerId,
+        outcome_type as outcomeType,
+        classification,
+        player_id as playerId,
+        notes,
+        created_at as createdAt,
+        metadata
+      from rally_events
+      where match_id = ?
+      order by rally_number asc, created_at asc`,
+      args: [matchId],
+    }),
+    getClient().execute({
+      sql: `select
+        players.id,
+        players.team_id as teamId,
+        players.first_name as firstName,
+        players.last_name as lastName,
+        players.jersey_number as jerseyNumber,
+        players.position,
+        players.active,
+        players.photo_url as photoUrl,
+        players.created_at as createdAt,
+        players.updated_at as updatedAt,
+        players.metadata
+      from players
+      where players.team_id = ?
+      order by cast(players.jersey_number as integer), players.jersey_number`,
+      args: [String(match.teamId)],
+    }),
+  ]);
+
+  return json(200, {
+    match: {
+      ...match,
+      metadata: parseMetadata(match.metadata),
+    },
+    sets: setsResult.rows.map((row) => ({
+      ...row,
+      metadata: parseMetadata(row.metadata),
+    })),
+    rallies: ralliesResult.rows.map((row) => ({
+      ...row,
+      metadata: parseMetadata(row.metadata),
+    })),
+    players: playersResult.rows.map((row) => ({
+      ...row,
+      active: Boolean(row.active),
+      metadata: parseMetadata(row.metadata),
+    })),
+  });
 };
 
 const handleStart = async (payload: StartMatchPayload) => {
@@ -174,6 +354,12 @@ export const handler: Handler = async (event) => {
   }
 
   try {
+    if (payload.action === 'list') {
+      return await handleList(payload);
+    }
+    if (payload.action === 'detail') {
+      return await handleDetail(payload);
+    }
     if (payload.action === 'start') {
       return await handleStart(payload);
     }

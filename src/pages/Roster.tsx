@@ -80,6 +80,7 @@ const Roster: React.FC = () => {
   };
 
   const positions: PlayerPosition[] = ['OH', 'OPP', 'MB', 'S', 'L', 'DS', 'Other'];
+  const rosterPlayers = activeTeam ? players.filter(player => player.teamId === activeTeam.id) : [];
 
   return (
     <div className="p-6 max-w-lg mx-auto">
@@ -278,7 +279,7 @@ const Roster: React.FC = () => {
           <div className="text-center py-12 bg-brand-gray/5 rounded-3xl border border-dashed border-brand-gray/20">
             <p className="text-brand-text-secondary italic">Select a roster to view players.</p>
           </div>
-        ) : players.length === 0 ? (
+        ) : rosterPlayers.length === 0 ? (
           <div className="text-center py-12 bg-brand-gray/5 rounded-3xl border border-dashed border-brand-gray/20">
             <p className="text-brand-text-secondary">No players in this roster yet.</p>
             <button 
@@ -289,7 +290,7 @@ const Roster: React.FC = () => {
             </button>
           </div>
         ) : (
-          players.sort((a, b) => Number(a.jerseyNumber) - Number(b.jerseyNumber)).map((player) => (
+          [...rosterPlayers].sort((a, b) => Number(a.jerseyNumber) - Number(b.jerseyNumber)).map((player) => (
             <div 
               key={player.id}
               className="flex items-center justify-between bg-brand-gray/5 border border-brand-gray/10 p-4 rounded-2xl hover:border-brand-teal/30 transition-all"

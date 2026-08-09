@@ -1,18 +1,26 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { db } from '../../db/client';
-import { players as playersTable } from '../../db/schema';
-import { inArray } from 'drizzle-orm';
 import type { Player } from '../../types';
 
-export const usePlayers = (teamIds: string[]) => {
+export const usePlayers = (userId: string | undefined, teamIds: string[]) => {
   return useQuery({
-    queryKey: ['players', teamIds],
+    queryKey: ['players', userId, teamIds],
     queryFn: async () => {
       if (teamIds.length === 0) return [];
-      const dbPlayers = await db.select().from(playersTable).where(inArray(playersTable.teamId, teamIds));
-      return dbPlayers as Player[];
+      const response = await fetch('/.netlify/functions/players', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'list', userId, teamIds }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => null) as { error?: string } | null;
+        throw new Error(body?.error || 'Failed to load players');
+      }
+
+      const body = await response.json() as { players: Player[] };
+      return body.players;
     },
-    enabled: teamIds.length > 0,
+    enabled: !!userId && teamIds.length > 0,
   });
 };
 

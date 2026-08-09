@@ -26,6 +26,11 @@ type AddTeamPayload = {
   team: Team;
 };
 
+type ListTeamsPayload = {
+  action: 'list';
+  userId: string;
+};
+
 type UpdateTeamPayload = {
   action: 'update';
   userId: string;
@@ -33,7 +38,7 @@ type UpdateTeamPayload = {
   updates: Partial<Team>;
 };
 
-type TeamPayload = AddTeamPayload | UpdateTeamPayload;
+type TeamPayload = AddTeamPayload | ListTeamsPayload | UpdateTeamPayload;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null;
@@ -58,6 +63,40 @@ const assertOwnsTeam = async (userId: string, teamId: string) => {
   });
 
   return result.rows.length > 0;
+};
+
+const parseMetadata = (value: unknown) => {
+  if (typeof value !== 'string') return value ?? undefined;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return undefined;
+  }
+};
+
+const handleList = async (payload: ListTeamsPayload) => {
+  const result = await getClient().execute({
+    sql: `select
+      id,
+      owner_id as ownerId,
+      name,
+      level,
+      season,
+      created_at as createdAt,
+      updated_at as updatedAt,
+      metadata
+    from teams
+    where owner_id = ?
+    order by name`,
+    args: [payload.userId],
+  });
+
+  return json(200, {
+    teams: result.rows.map((row) => ({
+      ...row,
+      metadata: parseMetadata(row.metadata),
+    })),
+  });
 };
 
 const handleAdd = async (payload: AddTeamPayload) => {
@@ -146,6 +185,9 @@ export const handler: Handler = async (event) => {
   }
 
   try {
+    if (payload.action === 'list') {
+      return await handleList(payload);
+    }
     if (payload.action === 'add') {
       return await handleAdd(payload);
     }

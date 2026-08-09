@@ -1,23 +1,27 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { db } from '../../db/client';
-import { rallyEvents as rallyEventsTable } from '../../db/schema';
-import { asc, eq } from 'drizzle-orm';
 import type { RallyEvent, Set } from '../../types';
 import { normalizeRallies, sortRallies } from '../../utils/rallies';
 
-export const useRallies = (matchId: string | undefined) => {
+export const useRallies = (userId: string | undefined, matchId: string | undefined) => {
   return useQuery({
-    queryKey: ['rallies', matchId],
+    queryKey: ['rallies', userId, matchId],
     queryFn: async () => {
       if (!matchId) return [];
-      const dbRallies = await db.select()
-        .from(rallyEventsTable)
-        .where(eq(rallyEventsTable.matchId, matchId))
-        .orderBy(asc(rallyEventsTable.rallyNumber), asc(rallyEventsTable.createdAt));
+      const response = await fetch('/.netlify/functions/rallies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'list', userId, matchId }),
+      });
 
-      return normalizeRallies(dbRallies);
+      if (!response.ok) {
+        const body = await response.json().catch(() => null) as { error?: string } | null;
+        throw new Error(body?.error || 'Failed to load rallies');
+      }
+
+      const body = await response.json() as { rallies: RallyEvent[] };
+      return normalizeRallies(body.rallies);
     },
-    enabled: !!matchId,
+    enabled: !!userId && !!matchId,
   });
 };
 
@@ -61,22 +65,22 @@ export const useAddRally = () => {
   return useMutation({
     mutationKey: ['addRally'],
     mutationFn: addRallyMutationFn,
-    onMutate: async ({ rally, updatedSet }) => {
+    onMutate: async ({ userId, rally, updatedSet }) => {
       // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
-      await queryClient.cancelQueries({ queryKey: ['rallies', rally.matchId] });
-      await queryClient.cancelQueries({ queryKey: ['sets', 'active', rally.matchId] });
+      await queryClient.cancelQueries({ queryKey: ['rallies', userId, rally.matchId] });
+      await queryClient.cancelQueries({ queryKey: ['sets', 'active', userId, rally.matchId] });
 
       // Snapshot the previous values
-      const previousRallies = queryClient.getQueryData(['rallies', rally.matchId]);
-      const previousSet = queryClient.getQueryData(['sets', 'active', rally.matchId]);
+      const previousRallies = queryClient.getQueryData(['rallies', userId, rally.matchId]);
+      const previousSet = queryClient.getQueryData(['sets', 'active', userId, rally.matchId]);
 
       // Optimistically update the rallies list
-      queryClient.setQueryData(['rallies', rally.matchId], (old: RallyEvent[] | undefined) => {
+      queryClient.setQueryData(['rallies', userId, rally.matchId], (old: RallyEvent[] | undefined) => {
         return sortRallies([...(old || []), rally]);
       });
 
       // Optimistically update the active set score
-      queryClient.setQueryData(['sets', 'active', rally.matchId], (old: Set | null | undefined) => {
+      queryClient.setQueryData(['sets', 'active', userId, rally.matchId], (old: Set | null | undefined) => {
         if (!old) return old;
         return {
           ...old,
@@ -90,18 +94,18 @@ export const useAddRally = () => {
       // Return a context object with the snapshotted value
       return { previousRallies, previousSet };
     },
-    onError: (_err, { rally }, context) => {
+    onError: (_err, { userId, rally }, context) => {
       // If the mutation fails, use the context returned from onMutate to roll back
       if (context) {
-        queryClient.setQueryData(['rallies', rally.matchId], context.previousRallies);
-        queryClient.setQueryData(['sets', 'active', rally.matchId], context.previousSet);
+        queryClient.setQueryData(['rallies', userId, rally.matchId], context.previousRallies);
+        queryClient.setQueryData(['sets', 'active', userId, rally.matchId], context.previousSet);
       }
     },
-    onSettled: (data) => {
+    onSettled: (data, _error, variables) => {
       // Always refetch after error or success to ensure we are in sync with the server
       if (data) {
-        queryClient.invalidateQueries({ queryKey: ['rallies', data.rally.matchId] });
-        queryClient.invalidateQueries({ queryKey: ['sets', 'active', data.rally.matchId] });
+        queryClient.invalidateQueries({ queryKey: ['rallies', variables.userId, data.rally.matchId] });
+        queryClient.invalidateQueries({ queryKey: ['sets', 'active', variables.userId, data.rally.matchId] });
       }
     },
   });
@@ -148,9 +152,9 @@ export const useUndoLastRally = () => {
   return useMutation({
     mutationKey: ['undoLastRally'],
     mutationFn: undoLastRallyMutationFn,
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['rallies', data.matchId] });
-      queryClient.invalidateQueries({ queryKey: ['sets', 'active', data.matchId] });
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['rallies', variables.userId, data.matchId] });
+      queryClient.invalidateQueries({ queryKey: ['sets', 'active', variables.userId, data.matchId] });
     },
   });
 };

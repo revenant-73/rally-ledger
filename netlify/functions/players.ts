@@ -26,13 +26,19 @@ type AddPlayerPayload = {
   player: Player;
 };
 
+type ListPlayersPayload = {
+  action: 'list';
+  userId: string;
+  teamIds: string[];
+};
+
 type DeletePlayerPayload = {
   action: 'delete';
   userId: string;
   playerId: string;
 };
 
-type PlayerPayload = AddPlayerPayload | DeletePlayerPayload;
+type PlayerPayload = AddPlayerPayload | ListPlayersPayload | DeletePlayerPayload;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null;
@@ -70,6 +76,55 @@ const assertOwnsPlayer = async (userId: string, playerId: string) => {
   });
 
   return result.rows.length > 0;
+};
+
+const parseMetadata = (value: unknown) => {
+  if (typeof value !== 'string') return value ?? undefined;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return undefined;
+  }
+};
+
+const handleList = async (payload: ListPlayersPayload) => {
+  const { userId, teamIds } = payload;
+
+  if (!Array.isArray(teamIds)) {
+    return json(400, { error: 'Invalid player list payload' });
+  }
+  if (teamIds.length === 0) {
+    return json(200, { players: [] });
+  }
+
+  const placeholders = teamIds.map(() => '?').join(', ');
+  const result = await getClient().execute({
+    sql: `select
+      players.id,
+      players.team_id as teamId,
+      players.first_name as firstName,
+      players.last_name as lastName,
+      players.jersey_number as jerseyNumber,
+      players.position,
+      players.active,
+      players.photo_url as photoUrl,
+      players.created_at as createdAt,
+      players.updated_at as updatedAt,
+      players.metadata
+    from players
+    inner join teams on teams.id = players.team_id
+    where teams.owner_id = ? and players.team_id in (${placeholders})
+    order by cast(players.jersey_number as integer), players.jersey_number`,
+    args: [userId, ...teamIds],
+  });
+
+  return json(200, {
+    players: result.rows.map((row) => ({
+      ...row,
+      active: Boolean(row.active),
+      metadata: parseMetadata(row.metadata),
+    })),
+  });
 };
 
 const handleAdd = async (payload: AddPlayerPayload) => {
@@ -143,6 +198,9 @@ export const handler: Handler = async (event) => {
   }
 
   try {
+    if (payload.action === 'list') {
+      return await handleList(payload);
+    }
     if (payload.action === 'add') {
       return await handleAdd(payload);
     }

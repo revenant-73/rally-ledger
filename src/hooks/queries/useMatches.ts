@@ -1,18 +1,26 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { db } from '../../db/client';
-import { matches as matchesTable } from '../../db/schema';
-import { inArray } from 'drizzle-orm';
 import type { Match } from '../../types';
 
-export const useMatches = (teamIds: string[]) => {
+export const useMatches = (userId: string | undefined, teamIds: string[]) => {
   return useQuery({
-    queryKey: ['matches', teamIds],
+    queryKey: ['matches', userId, teamIds],
     queryFn: async () => {
       if (teamIds.length === 0) return [];
-      const dbMatches = await db.select().from(matchesTable).where(inArray(matchesTable.teamId, teamIds));
-      return dbMatches as Match[];
+      const response = await fetch('/.netlify/functions/matches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'list', userId, teamIds }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => null) as { error?: string } | null;
+        throw new Error(body?.error || 'Failed to load matches');
+      }
+
+      const body = await response.json() as { matches: Match[] };
+      return body.matches;
     },
-    enabled: teamIds.length > 0,
+    enabled: !!userId && teamIds.length > 0,
   });
 };
 
