@@ -12,10 +12,8 @@ Last updated: 2026-08-09
 ## Highest Priority Changes
 
 1. Move database writes behind server APIs.
-   - The browser currently imports the LibSQL client and uses `VITE_TURSO_AUTH_TOKEN`.
-   - Turso credentials should be server-only.
-   - Netlify functions should enforce ownership and team/match authorization for reads and writes.
-   - Settings reset, roster management, match creation, set updates, and rally entry should eventually go through server functions.
+   - Done for core roster, match, set, and rally workflows.
+   - Remaining work: move Settings reset behind the same admin/team access model and remove any obsolete browser database imports.
 
 2. Make rally + score + live-state writes atomic.
    - Rally creation, set score update, and serving/rotation metadata should not be able to partially succeed.
@@ -79,6 +77,7 @@ Last updated: 2026-08-09
 - Done: team, player, match, active-set, and rally reads are moved behind Netlify functions.
 - Done: auth issues signed session tokens, and functions reject missing or invalid sessions.
 - Done: auth has basic rate limiting and configurable signup controls.
-- In progress: multi-coach access model supports global admins, assigned team coaches, and program-wide roster/report visibility.
+- Done: multi-coach access model supports global admins, assigned team coaches, and program-wide roster/report visibility.
+- Done: Settings includes an admin-only Coach Access panel for assigning and removing roster-specific coach permissions.
 - Remaining: consider cookie-backed sessions and durable/distributed rate limiting before public launch.
 

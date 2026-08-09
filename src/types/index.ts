@@ -20,6 +20,20 @@ export interface Team {
   metadata?: Record<string, unknown>;
 }
 
+export interface TeamAccessAssignment {
+  id: string;
+  teamId: string;
+  teamName: string;
+  teamLevel: string;
+  teamSeason: string;
+  userId: string;
+  email: string;
+  name?: string | null;
+  role: 'coach';
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Player {
   id: string;
   teamId: string;

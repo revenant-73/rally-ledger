@@ -18,7 +18,7 @@ const localNetlifyFunctions = (env: Record<string, string>): Plugin => ({
     const runFunction = async (
       req: IncomingMessage,
       res: ServerResponse,
-      functionName: 'auth' | 'teams' | 'players' | 'matches' | 'sets' | 'rallies' | 'reset',
+      functionName: 'access' | 'auth' | 'teams' | 'players' | 'matches' | 'sets' | 'rallies' | 'reset',
     ) => {
       try {
         process.env.VITE_TURSO_DATABASE_URL ||= env.VITE_TURSO_DATABASE_URL
@@ -55,6 +55,10 @@ const localNetlifyFunctions = (env: Record<string, string>): Plugin => ({
         res.end(JSON.stringify({ error: 'Local function failed' }))
       }
     }
+
+    server.middlewares.use('/.netlify/functions/access', async (req, res) => {
+      await runFunction(req, res, 'access')
+    })
 
     server.middlewares.use('/.netlify/functions/auth', async (req, res) => {
       await runFunction(req, res, 'auth')

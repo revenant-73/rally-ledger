@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Trash2, Database, ShieldAlert, Info, LogOut, User as UserIcon } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { apiPost } from '../utils/api';
+import CoachAccessPanel from '../components/settings/CoachAccessPanel';
 
 const Settings: React.FC = () => {
   const navigate = useNavigate();
@@ -76,6 +77,8 @@ const Settings: React.FC = () => {
             </button>
           </div>
         </section>
+
+        <CoachAccessPanel />
 
         <section>
           <h3 className="text-[10px] font-black text-brand-text-secondary uppercase tracking-widest mb-4 ml-2">Data Management</h3>
