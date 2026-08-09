@@ -1,7 +1,6 @@
 import type { Handler } from '@netlify/functions';
 import { createClient, type Client } from '@libsql/client/web';
-import { drizzle } from 'drizzle-orm/libsql';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import { construct as drizzle, type LibSQLDatabase } from 'drizzle-orm/libsql/driver-core';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
@@ -18,7 +17,7 @@ const getDb = () => {
       url: process.env.TURSO_DATABASE_URL || process.env.VITE_TURSO_DATABASE_URL || '',
       authToken: process.env.TURSO_AUTH_TOKEN || process.env.VITE_TURSO_AUTH_TOKEN || '',
     });
-    cachedDb = drizzle({ client: cachedClient, schema: { users } });
+    cachedDb = drizzle(cachedClient, { schema: { users } });
   }
   return cachedDb!;
 };
