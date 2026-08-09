@@ -1,16 +1,25 @@
 import type { Handler } from '@netlify/functions';
-import { createClient } from '@libsql/client';
+import { createClient, type Client } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
+import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { users } from '../../src/db/schema';
 
-const client = createClient({
-  url: process.env.VITE_TURSO_DATABASE_URL || '',
-  authToken: process.env.VITE_TURSO_AUTH_TOKEN || '',
-});
-const db = drizzle({ client, schema: { users } });
+let cachedClient: Client | null = null;
+let cachedDb: LibSQLDatabase<{ users: typeof users }> | null = null;
+
+const getDb = () => {
+  if (!cachedClient) {
+    cachedClient = createClient({
+      url: process.env.TURSO_DATABASE_URL || process.env.VITE_TURSO_DATABASE_URL || '',
+      authToken: process.env.TURSO_AUTH_TOKEN || process.env.VITE_TURSO_AUTH_TOKEN || '',
+    });
+    cachedDb = drizzle({ client: cachedClient, schema: { users } });
+  }
+  return cachedDb!;
+};
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -59,6 +68,7 @@ export const handler: Handler = async (event) => {
   const normalizedEmail = email.toLowerCase().trim();
 
   try {
+    const db = getDb();
     const existing = await db.select().from(users).where(eq(users.email, normalizedEmail)).limit(1);
 
     if (existing.length === 0) {

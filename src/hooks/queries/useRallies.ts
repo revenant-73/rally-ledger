@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { client, db } from '../../db/client';
+import { db } from '../../db/client';
 import { rallyEvents as rallyEventsTable } from '../../db/schema';
 import { asc, eq } from 'drizzle-orm';
 import type { RallyEvent, Set } from '../../types';
@@ -22,6 +22,7 @@ export const useRallies = (matchId: string | undefined) => {
 };
 
 type AddRallyVariables = {
+  userId: string;
   rally: RallyEvent;
   updatedSet: {
     id: string;
@@ -34,87 +35,18 @@ type AddRallyVariables = {
 // Registered as a mutation default (see main.tsx) so a paused/persisted mutation
 // can be replayed after the app is closed and reopened, without needing the
 // original component closure that created it.
-export const addRallyMutationFn = async ({ rally, updatedSet }: AddRallyVariables) => {
+export const addRallyMutationFn = async ({ userId, rally, updatedSet }: AddRallyVariables) => {
   try {
-    // serveResult/receiveResult/receivePlayerId live inside rally.metadata (JSON column),
-    // not as physical columns, so only the schema's own columns are inserted here.
-    const dbRally: typeof rallyEventsTable.$inferInsert = {
-      id: rally.id,
-      matchId: rally.matchId,
-      setId: rally.setId,
-      rallyNumber: rally.rallyNumber,
-      scoreBeforeUs: rally.scoreBeforeUs,
-      scoreBeforeOpponent: rally.scoreBeforeOpponent,
-      scoreAfterUs: rally.scoreAfterUs,
-      scoreAfterOpponent: rally.scoreAfterOpponent,
-      pointWinner: rally.pointWinner,
-      servingTeam: rally.servingTeam,
-      serverPlayerId: rally.serverPlayerId ?? null,
-      outcomeType: rally.outcomeType,
-      classification: rally.classification,
-      playerId: rally.playerId ?? null,
-      notes: rally.notes ?? null,
-      createdAt: rally.createdAt,
-      metadata: rally.metadata ?? null,
-    };
+    const response = await fetch('/.netlify/functions/rallies', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'add', userId, rally, updatedSet }),
+    });
 
-    await client.batch([
-      {
-        sql: `insert into rally_events (
-          id,
-          match_id,
-          set_id,
-          rally_number,
-          score_before_us,
-          score_before_opponent,
-          score_after_us,
-          score_after_opponent,
-          point_winner,
-          serving_team,
-          server_player_id,
-          outcome_type,
-          classification,
-          player_id,
-          notes,
-          created_at,
-          metadata
-        ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        args: [
-          dbRally.id,
-          dbRally.matchId,
-          dbRally.setId,
-          dbRally.rallyNumber,
-          dbRally.scoreBeforeUs,
-          dbRally.scoreBeforeOpponent,
-          dbRally.scoreAfterUs,
-          dbRally.scoreAfterOpponent,
-          dbRally.pointWinner,
-          dbRally.servingTeam,
-          dbRally.serverPlayerId ?? null,
-          dbRally.outcomeType,
-          dbRally.classification,
-          dbRally.playerId ?? null,
-          dbRally.notes ?? null,
-          dbRally.createdAt,
-          dbRally.metadata ? JSON.stringify(dbRally.metadata) : null,
-        ],
-      },
-      {
-        sql: `update sets
-          set our_score = ?,
-            opponent_score = ?,
-            metadata = coalesce(?, metadata),
-            updated_at = ?
-          where id = ?`,
-        args: [
-          updatedSet.ourScore,
-          updatedSet.opponentScore,
-          updatedSet.metadata ? JSON.stringify(updatedSet.metadata) : null,
-          new Date().toISOString(),
-          updatedSet.id,
-        ],
-      },
-    ], 'write');
+    if (!response.ok) {
+      const body = await response.json().catch(() => null) as { error?: string } | null;
+      throw new Error(body?.error || 'Failed to save rally');
+    }
 
     return { rally, updatedSet };
   } catch (error) {
@@ -176,6 +108,7 @@ export const useAddRally = () => {
 };
 
 type UndoLastRallyVariables = {
+  userId: string;
   rallyId: string;
   matchId: string;
   setId: string;
@@ -186,28 +119,26 @@ type UndoLastRallyVariables = {
   restoredMetadata?: Set['metadata'];
 };
 
-export const undoLastRallyMutationFn = async ({ rallyId, setId, restoredScores, restoredMetadata, matchId }: UndoLastRallyVariables) => {
-  await client.batch([
-    {
-      sql: 'delete from rally_events where id = ?',
-      args: [rallyId],
-    },
-    {
-      sql: `update sets
-        set our_score = ?,
-          opponent_score = ?,
-          metadata = coalesce(?, metadata),
-          updated_at = ?
-        where id = ?`,
-      args: [
-        restoredScores.ourScore,
-        restoredScores.opponentScore,
-        restoredMetadata ? JSON.stringify(restoredMetadata) : null,
-        new Date().toISOString(),
-        setId,
-      ],
-    },
-  ], 'write');
+export const undoLastRallyMutationFn = async ({ userId, rallyId, setId, restoredScores, restoredMetadata, matchId }: UndoLastRallyVariables) => {
+  const response = await fetch('/.netlify/functions/rallies', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'undo',
+      userId,
+      rallyId,
+      matchId,
+      setId,
+      restoredScores,
+      restoredMetadata,
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => null) as { error?: string } | null;
+    throw new Error(body?.error || 'Failed to undo rally');
+  }
+
   return { matchId };
 };
 

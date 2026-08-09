@@ -131,6 +131,7 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const addRally = async (rally: RallyEvent, setMetadataUpdates?: Set['metadata']) => {
+    if (!user) throw new Error('User missing');
     if (activeSetData) {
       const updatedSet = {
         id: activeSetData.id,
@@ -142,7 +143,7 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         } : undefined,
       };
       try {
-        await addRallyMutation.mutateAsync({ rally, updatedSet });
+        await addRallyMutation.mutateAsync({ userId: user.id, rally, updatedSet });
       } catch (error) {
         console.error('MatchContext: Mutation failed with error:', error);
         // Ensure the error is re-thrown so hooks can handle it
@@ -155,12 +156,14 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const undoLastRally = async (setMetadataUpdates?: Set['metadata']) => {
+    if (!user) throw new Error('User missing');
     if (ralliesData.length === 0 || !activeSetData) return;
     const activeSetRallies = ralliesData.filter(rally => rally.setId === activeSetData.id);
     if (activeSetRallies.length === 0) return;
     const lastRally = activeSetRallies[activeSetRallies.length - 1];
     
     await undoLastRallyMutation.mutateAsync({
+      userId: user.id,
       rallyId: lastRally.id,
       matchId: activeMatch!.id,
       setId: activeSetData.id,

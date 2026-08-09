@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { useMatch } from '../hooks/useMatch';
 import type { Match } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import toast from 'react-hot-toast';
 
 const NewMatch: React.FC = () => {
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ const NewMatch: React.FC = () => {
     level: activeTeam?.level || 'High School'
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const newMatch: Match = {
@@ -33,12 +34,17 @@ const NewMatch: React.FC = () => {
       updatedAt: new Date().toISOString(),
     };
 
-    if (formData.teamId) {
-      selectTeam(formData.teamId);
+    try {
+      if (formData.teamId) {
+        selectTeam(formData.teamId);
+      }
+
+      await startMatch(newMatch);
+      navigate('/match/live');
+    } catch (error) {
+      console.error('Failed to create match:', error);
+      toast.error('Could not create match. Please try again.');
     }
-    
-    startMatch(newMatch);
-    navigate('/match/live');
   };
 
   const handleTeamChange = (teamId: string) => {

@@ -67,3 +67,10 @@ Last updated: 2026-08-09
 5. Auth/session hardening.
 6. Analytics cleanup and report upgrades.
 7. Bundle/code-splitting pass.
+
+## Implementation Notes
+
+- Done: deterministic rally ordering and shared rally normalization.
+- Done: live and historical rally reads hydrate metadata consistently.
+- Done: live rally save and undo use one atomic write batch.
+- In progress: scoring and undo are being moved behind a Netlify function. This reduces the live-match write surface, but full credential hardening still requires moving remaining client-side database reads/writes and replacing localStorage-only auth with a real session.
