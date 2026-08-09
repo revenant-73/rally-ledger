@@ -1,6 +1,7 @@
 import type { Handler } from '@netlify/functions';
 import { createClient, type Client } from '@libsql/client';
 import { requireSession } from './_session';
+import { isAdmin } from './_access';
 
 let cachedClient: Client | null = null;
 
@@ -23,6 +24,7 @@ const json = (statusCode: number, body: unknown) => ({
 type ResetPayload = {
   action: 'reset';
   userId: string;
+  email?: string;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
@@ -55,8 +57,13 @@ export const handler: Handler = async (event) => {
     return auth.response;
   }
   payload.userId = auth.session.userId;
+  payload.email = auth.session.email;
 
   try {
+    if (!isAdmin({ userId: payload.userId, email: payload.email })) {
+      return json(403, { error: 'Admins only' });
+    }
+
     const client = getClient();
     await client.batch([
       {

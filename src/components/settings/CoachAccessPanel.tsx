@@ -1,80 +1,37 @@
 import React, { useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ShieldCheck, Trash2, UserPlus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../hooks/useAuth';
 import { useMatch } from '../../hooks/useMatch';
-import type { Team, TeamAccessAssignment } from '../../types';
-import { apiPost } from '../../utils/api';
-
-type AccessResponse = {
-  isAdmin: boolean;
-  teams: Team[];
-  assignments: TeamAccessAssignment[];
-};
+import type { TeamAccessAssignment } from '../../types';
+import { useAccess, useGrantAccess, useRevokeAccess } from '../../hooks/queries/useAccess';
 
 const CoachAccessPanel: React.FC = () => {
   const { user } = useAuth();
   const { teams: matchTeams } = useMatch();
   const [coachEmail, setCoachEmail] = useState('');
   const [teamId, setTeamId] = useState('');
-  const queryClient = useQueryClient();
-
-  const accessQuery = useQuery({
-    queryKey: ['access', user?.id],
-    queryFn: async () => {
-      if (!user) throw new Error('Authentication required');
-      return apiPost<AccessResponse>('/.netlify/functions/access', {
-        action: 'list',
-        userId: user.id,
-      });
-    },
-    enabled: Boolean(user),
-    retry: false,
-  });
+  const accessQuery = useAccess(user?.id);
 
   const access = accessQuery.data ?? null;
   const teams = useMemo(() => access?.teams.length ? access.teams : matchTeams, [access, matchTeams]);
   const selectedTeamId = teamId || teams[0]?.id || '';
 
-  const grantMutation = useMutation({
-    mutationFn: async () => {
-      if (!user) throw new Error('Authentication required');
-      return apiPost<AccessResponse>('/.netlify/functions/access', {
-        action: 'grant',
-        userId: user.id,
-        coachEmail,
-        teamId: selectedTeamId,
-        role: 'coach',
-      });
-    },
-    onSuccess: (data) => {
-      queryClient.setQueryData(['access', user?.id], data);
+  const grantMutation = useGrantAccess(user?.id);
+  const revokeMutation = useRevokeAccess(user?.id);
+
+  const handleGrantSuccess = () => {
       setCoachEmail('');
       toast.success('Coach access saved');
-    },
-    onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Unable to save coach access');
-    },
-  });
+  };
 
-  const revokeMutation = useMutation({
-    mutationFn: async (assignment: TeamAccessAssignment) => {
-      if (!user) throw new Error('Authentication required');
-      return apiPost<AccessResponse>('/.netlify/functions/access', {
-        action: 'revoke',
-        userId: user.id,
-        accessId: assignment.id,
-      });
-    },
-    onSuccess: (data) => {
-      queryClient.setQueryData(['access', user?.id], data);
+  const handleMutationError = (error: Error, fallback: string) => {
+    toast.error(error instanceof Error ? error.message : fallback);
+  };
+
+  const handleRevokeSuccess = () => {
       toast.success('Coach access removed');
-    },
-    onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Unable to remove coach access');
-    },
-  });
+  };
 
   const isSaving = grantMutation.isPending || revokeMutation.isPending;
 
@@ -89,11 +46,20 @@ const CoachAccessPanel: React.FC = () => {
   const handleGrant = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!coachEmail || !selectedTeamId) return;
-    grantMutation.mutate();
+    grantMutation.mutate(
+      { coachEmail, teamId: selectedTeamId },
+      {
+        onSuccess: handleGrantSuccess,
+        onError: (error) => handleMutationError(error, 'Unable to save coach access'),
+      },
+    );
   };
 
   const handleRevoke = async (assignment: TeamAccessAssignment) => {
-    revokeMutation.mutate(assignment);
+    revokeMutation.mutate(assignment, {
+      onSuccess: handleRevokeSuccess,
+      onError: (error) => handleMutationError(error, 'Unable to remove coach access'),
+    });
   };
 
   return (

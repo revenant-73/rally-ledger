@@ -13,7 +13,7 @@ Last updated: 2026-08-09
 
 1. Move database writes behind server APIs.
    - Done for core roster, match, set, and rally workflows.
-   - Remaining work: move Settings reset behind the same admin/team access model and remove any obsolete browser database imports.
+   - Remaining work: remove any obsolete browser database imports.
 
 2. Make rally + score + live-state writes atomic.
    - Rally creation, set score update, and serving/rotation metadata should not be able to partially succeed.
@@ -79,5 +79,6 @@ Last updated: 2026-08-09
 - Done: auth has basic rate limiting and configurable signup controls.
 - Done: multi-coach access model supports global admins, assigned team coaches, and program-wide roster/report visibility.
 - Done: Settings includes an admin-only Coach Access panel for assigning and removing roster-specific coach permissions.
+- Done: Settings reset is admin-only and no longer appears for normal coach accounts.
 - Remaining: consider cookie-backed sessions and durable/distributed rate limiting before public launch.
 

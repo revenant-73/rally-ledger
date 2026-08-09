@@ -4,10 +4,13 @@ import { ArrowLeft, Trash2, Database, ShieldAlert, Info, LogOut, User as UserIco
 import { useAuth } from '../hooks/useAuth';
 import { apiPost } from '../utils/api';
 import CoachAccessPanel from '../components/settings/CoachAccessPanel';
+import { useAccess } from '../hooks/queries/useAccess';
 
 const Settings: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout: authLogout } = useAuth();
+  const { data: access } = useAccess(user?.id);
+  const isAdmin = access?.isAdmin === true;
 
   const handleLogout = () => {
     authLogout();
@@ -80,38 +83,40 @@ const Settings: React.FC = () => {
 
         <CoachAccessPanel />
 
-        <section>
-          <h3 className="text-[10px] font-black text-brand-text-secondary uppercase tracking-widest mb-4 ml-2">Data Management</h3>
-          <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl overflow-hidden">
-            <button 
-              onClick={handleResetDatabase}
-              className="w-full flex items-center justify-between p-6 hover:bg-brand-red/5 transition-colors group"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-brand-red/10 rounded-2xl flex items-center justify-center text-brand-red">
-                  <Trash2 size={24} />
+        {isAdmin && (
+          <section>
+            <h3 className="text-[10px] font-black text-brand-text-secondary uppercase tracking-widest mb-4 ml-2">Data Management</h3>
+            <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl overflow-hidden">
+              <button 
+                onClick={handleResetDatabase}
+                className="w-full flex items-center justify-between p-6 hover:bg-brand-red/5 transition-colors group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-brand-red/10 rounded-2xl flex items-center justify-center text-brand-red">
+                    <Trash2 size={24} />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-bold text-brand-red">Reset My Data</p>
+                    <p className="text-xs text-brand-text-secondary">Delete rosters, matches, and players owned by this account</p>
+                  </div>
                 </div>
-                <div className="text-left">
-                  <p className="font-bold text-brand-red">Reset My Data</p>
-                  <p className="text-xs text-brand-text-secondary">Delete your matches, teams, and players</p>
+                <ShieldAlert size={20} className="text-brand-gray/20 group-hover:text-brand-red transition-colors" />
+              </button>
+              
+              <div className="h-px bg-brand-gray/10 mx-6" />
+              
+              <div className="p-6 flex items-center gap-4">
+                <div className="w-12 h-12 bg-brand-teal/10 rounded-2xl flex items-center justify-center text-brand-teal">
+                  <Database size={24} />
                 </div>
-              </div>
-              <ShieldAlert size={20} className="text-brand-gray/20 group-hover:text-brand-red transition-colors" />
-            </button>
-            
-            <div className="h-px bg-brand-gray/10 mx-6" />
-            
-            <div className="p-6 flex items-center gap-4">
-              <div className="w-12 h-12 bg-brand-teal/10 rounded-2xl flex items-center justify-center text-brand-teal">
-                <Database size={24} />
-              </div>
-              <div>
-                <p className="font-bold">Database Status</p>
-                <p className="text-xs text-brand-text-secondary">Connected to Turso (SQLite/LibSQL)</p>
+                <div>
+                  <p className="font-bold">Database Status</p>
+                  <p className="text-xs text-brand-text-secondary">Connected to Turso (SQLite/LibSQL)</p>
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         <section>
           <h3 className="text-[10px] font-black text-brand-text-secondary uppercase tracking-widest mb-4 ml-2">App Info</h3>
