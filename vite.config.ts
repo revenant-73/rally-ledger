@@ -21,8 +21,8 @@ const localNetlifyFunctions = (env: Record<string, string>): Plugin => ({
       functionName: 'access' | 'auth' | 'teams' | 'players' | 'matches' | 'sets' | 'rallies' | 'reset',
     ) => {
       try {
-        process.env.VITE_TURSO_DATABASE_URL ||= env.VITE_TURSO_DATABASE_URL
-        process.env.VITE_TURSO_AUTH_TOKEN ||= env.VITE_TURSO_AUTH_TOKEN
+        process.env.TURSO_DATABASE_URL ||= env.TURSO_DATABASE_URL || env.VITE_TURSO_DATABASE_URL
+        process.env.TURSO_AUTH_TOKEN ||= env.TURSO_AUTH_TOKEN || env.VITE_TURSO_AUTH_TOKEN
         process.env.SESSION_SECRET ||= env.SESSION_SECRET
         process.env.AUTH_ALLOW_SIGNUP ||= env.AUTH_ALLOW_SIGNUP
         process.env.AUTH_ALLOWED_EMAILS ||= env.AUTH_ALLOWED_EMAILS
