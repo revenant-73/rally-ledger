@@ -1,4 +1,4 @@
-# Rally Ledger App Audit Roadmap
+# Century Matchbook App Audit Roadmap
 
 Last updated: 2026-08-09
 
@@ -81,3 +81,4 @@ Last updated: 2026-08-09
 - Done: auth has basic rate limiting and configurable signup controls.
 - In progress: multi-coach access model supports global admins, assigned team coaches, and program-wide roster/report visibility.
 - Remaining: consider cookie-backed sessions and durable/distributed rate limiting before public launch.
+

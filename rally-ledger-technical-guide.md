@@ -1,8 +1,8 @@
-# Rally Ledger — Product & Technical Specification
+# Century Matchbook — Product & Technical Specification
 
 ## 1. Product Purpose
 
-**Rally Ledger** is a match-tracking app designed to help volleyball coaches and teams understand the live “weather” of a match.
+**Century Matchbook** is a match-tracking app designed to help volleyball coaches and teams understand the live “weather” of a match.
 
 The app does not try to record everything. It focuses on one practical question:
 
@@ -10,13 +10,13 @@ The app does not try to record everything. It focuses on one practical question:
 
 The purpose is to help coaches, players, and teams **notice trends, adapt on the fly, and commit to useful next actions** during matches.
 
-Rally Ledger should be fast enough to use live, simple enough for an assistant coach or manager to operate, and meaningful enough to guide decisions between points, during timeouts, between sets, and after matches.
+Century Matchbook should be fast enough to use live, simple enough for an assistant coach or manager to operate, and meaningful enough to guide decisions between points, during timeouts, between sets, and after matches.
 
 ---
 
 ## 2. Core Philosophy
 
-Rally Ledger is built around three ideas:
+Century Matchbook is built around three ideas:
 
 ### Notice
 
@@ -101,7 +101,7 @@ May use app summaries to:
 
 ### App Name
 
-**Rally Ledger**
+**Century Matchbook**
 
 ### Possible Taglines
 
@@ -125,7 +125,7 @@ Live volleyball match tracking and decision-support app.
 
 ## 5. Core Concept: Match Weather
 
-Rally Ledger should feel less like a spreadsheet and more like a **live weather dashboard for the match**.
+Century Matchbook should feel less like a spreadsheet and more like a **live weather dashboard for the match**.
 
 Instead of weather conditions like rain, wind, and pressure, the app displays volleyball match conditions:
 
@@ -1232,7 +1232,7 @@ Recommended:
 ## Match Summary Example
 
 ```text
-Rally Ledger Match Report
+Century Matchbook Match Report
 
 Team: Century Varsity
 Opponent: Example HS
@@ -1341,7 +1341,7 @@ Do not let the app become a full stat program too early.
 
 The app should not try to replace DataVolley, Hudl, Balltime, or advanced stat systems.
 
-Rally Ledger should stay focused on:
+Century Matchbook should stay focused on:
 
 > What is happening, what does it mean, and what should we do next?
 
@@ -1408,7 +1408,7 @@ This constraint protects the core purpose of the app.
 
 ## 28. Plain-English Product Summary
 
-Rally Ledger is a live volleyball match app that helps coaches see whether points are being earned or gifted. Instead of overwhelming the bench with full stat sheets, it gives a simple match-weather view: what is happening right now, what trend is building, and what action the team should commit to next.
+Century Matchbook is a live volleyball match app that helps coaches see whether points are being earned or gifted. Instead of overwhelming the bench with full stat sheets, it gives a simple match-weather view: what is happening right now, what trend is building, and what action the team should commit to next.
 
 The app helps teams notice, adapt, and commit while the match is still happening.
 
@@ -1452,4 +1452,5 @@ In July 2026, a comprehensive audit and system-wide upgrade was performed to ele
 - **Dependencies**: Added `framer-motion` and `react-hot-toast`.
 - **Typing**: Hardened TypeScript interfaces for `Lineup`, `Match`, and `RallyEvent` to eliminate `any` usage.
 - **Linting**: Enforced strict `react-hooks/set-state-in-effect` rules to prevent cascading renders and ensure snappy UI performance.
+
 

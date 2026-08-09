@@ -8,7 +8,7 @@ const Home: React.FC = () => {
   return (
     <div className="p-6 max-w-lg mx-auto space-y-8">
       <header className="py-8">
-        <h1 className="text-4xl font-bold tracking-tight text-brand-teal">Rally Ledger</h1>
+        <h1 className="text-4xl font-bold tracking-tight text-brand-teal">Century Matchbook</h1>
         <p className="text-brand-text-secondary mt-2 italic">Notice. Adapt. Commit.</p>
       </header>
 

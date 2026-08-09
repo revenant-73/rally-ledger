@@ -116,7 +116,7 @@ const Settings: React.FC = () => {
             <div className="flex items-start gap-4">
               <Info size={20} className="text-brand-teal mt-0.5" />
               <div>
-                <p className="text-sm font-bold">Rally Ledger v0.1.0</p>
+                <p className="text-sm font-bold">Century Matchbook v0.1.0</p>
                 <p className="text-xs text-brand-text-secondary leading-relaxed mt-1">
                   Built for coaches who need to notice trends, adapt on the fly, and commit to useful next actions.
                 </p>

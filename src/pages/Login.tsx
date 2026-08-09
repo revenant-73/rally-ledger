@@ -46,7 +46,7 @@ const Login: React.FC = () => {
             animate={{ scale: 1 }}
             className="text-6xl font-black text-brand-teal italic tracking-tighter"
           >
-            Rally Ledger
+            Century Matchbook
           </motion.h1>
           <p className="text-brand-text-secondary font-black tracking-[0.2em] uppercase text-xs">Notice. Adapt. Commit.</p>
         </header>

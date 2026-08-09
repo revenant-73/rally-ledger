@@ -98,9 +98,9 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         registerType: 'autoUpdate',
         manifest: {
-          name: 'Rally Ledger',
-          short_name: 'RallyLedger',
-          description: 'Live volleyball match tracking and decision-support app',
+          name: 'Century Matchbook',
+          short_name: 'Matchbook',
+          description: 'Live match tracking and decision support for Century Volleyball',
           theme_color: '#16171d',
           icons: [
             {

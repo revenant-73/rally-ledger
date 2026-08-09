@@ -1,6 +1,6 @@
 # Repository Guidelines
 
-Rally Ledger is a live volleyball match-tracking application designed for fast, real-time data entry and coaching decision support. It is built with React, TypeScript, Vite, and Drizzle ORM (using LibSQL).
+Century Matchbook is a live volleyball match-tracking application designed for fast, real-time data entry and coaching decision support. It is built with React, TypeScript, Vite, and Drizzle ORM (using LibSQL).
 
 ## Project Structure & Module Organization
 
@@ -81,6 +81,7 @@ To ensure rapid data entry on mobile devices, the following UI patterns are enfo
 
 ## Git & Contribution Guidelines
 
-- **Repository**: Managed on GitHub at [revenant-73/rally-ledger](https://github.com/revenant-73/rally-ledger.git).
+- **Repository**: Managed on GitHub at [revenant-73/century-matchbook](https://github.com/revenant-73/century-matchbook.git).
 - **Branching**: The primary development branch is `main`.
 - **Commits**: Use concise, descriptive commit messages.
+
