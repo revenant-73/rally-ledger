@@ -77,4 +77,6 @@ Last updated: 2026-08-09
 - Done: match creation, match updates, set creation, and set updates are moved behind Netlify functions.
 - Done: roster creation/update and player add/delete writes are moved behind Netlify functions.
 - Done: team, player, match, active-set, and rally reads are moved behind Netlify functions.
-- Remaining: full credential hardening still requires replacing localStorage-only auth with a real session.
+- Done: auth issues signed session tokens, and functions reject missing or invalid sessions.
+- Done: auth has basic rate limiting and configurable signup controls.
+- Remaining: consider cookie-backed sessions and durable/distributed rate limiting before public launch.

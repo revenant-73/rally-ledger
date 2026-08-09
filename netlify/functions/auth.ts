@@ -10,6 +10,7 @@ import { createSessionToken, verifySessionToken } from './_session';
 
 let cachedClient: Client | null = null;
 let cachedDb: LibSQLDatabase<{ users: typeof users }> | null = null;
+const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
 
 const getDb = () => {
   if (!cachedClient) {
@@ -23,12 +24,63 @@ const getDb = () => {
 };
 
 const MIN_PASSWORD_LENGTH = 8;
+const AUTH_WINDOW_MS = 15 * 60 * 1000;
+const MAX_AUTH_ATTEMPTS = 10;
 
-const json = (statusCode: number, body: unknown) => ({
+const json = (statusCode: number, body: unknown, headers: Record<string, string> = {}) => ({
   statusCode,
-  headers: { 'Content-Type': 'application/json' },
+  headers: { 'Content-Type': 'application/json', ...headers },
   body: JSON.stringify(body),
 });
+
+const getClientIp = (headers: Record<string, string | undefined>) => {
+  const forwardedFor = headers['x-forwarded-for'] || headers['X-Forwarded-For'];
+  return forwardedFor?.split(',')[0]?.trim() || headers['client-ip'] || headers['Client-Ip'] || 'unknown';
+};
+
+const checkRateLimit = (key: string) => {
+  const now = Date.now();
+  const existing = rateLimitBuckets.get(key);
+
+  if (!existing || existing.resetAt <= now) {
+    rateLimitBuckets.set(key, { count: 1, resetAt: now + AUTH_WINDOW_MS });
+    return null;
+  }
+
+  existing.count += 1;
+  if (existing.count <= MAX_AUTH_ATTEMPTS) {
+    return null;
+  }
+
+  const retryAfterSeconds = Math.ceil((existing.resetAt - now) / 1000);
+  return json(
+    429,
+    { error: 'Too many login attempts. Please try again later.' },
+    { 'Retry-After': String(retryAfterSeconds) },
+  );
+};
+
+const isSignupAllowed = (email: string) => {
+  if (process.env.AUTH_ALLOW_SIGNUP === 'false') {
+    return false;
+  }
+
+  const allowlist = (process.env.AUTH_ALLOWED_EMAILS || '')
+    .split(',')
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (allowlist.length === 0) {
+    return true;
+  }
+
+  const domain = email.split('@')[1];
+  return allowlist.some((entry) => {
+    if (entry === email) return true;
+    if (entry.startsWith('@')) return email.endsWith(entry);
+    return domain && entry === domain;
+  });
+};
 
 const toSafeUser = (user: {
   id: string;
@@ -85,12 +137,20 @@ export const handler: Handler = async (event) => {
   }
 
   const normalizedEmail = email.toLowerCase().trim();
+  const rateLimited = checkRateLimit(`${getClientIp(event.headers)}:${normalizedEmail}`);
+  if (rateLimited) {
+    return rateLimited;
+  }
 
   try {
     const db = getDb();
     const existing = await db.select().from(users).where(eq(users.email, normalizedEmail)).limit(1);
 
     if (existing.length === 0) {
+      if (!isSignupAllowed(normalizedEmail)) {
+        return json(403, { error: 'Signup is not available for this email.' });
+      }
+
       // First time we've seen this email - create the account.
       const passwordHash = await bcrypt.hash(password, 10);
       const now = new Date().toISOString();
