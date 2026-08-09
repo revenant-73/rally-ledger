@@ -7,6 +7,7 @@ import { usePlayers, useAddPlayer, useDeletePlayer } from '../hooks/queries/useP
 import { useMatches, useStartMatch, useUpdateMatch } from '../hooks/queries/useMatches';
 import { useActiveSet, useStartSet, useUpdateSet } from '../hooks/queries/useSets';
 import { useRallies, useAddRally, useUndoLastRally } from '../hooks/queries/useRallies';
+import { useAccess } from '../hooks/queries/useAccess';
 import { useQueryClient } from '@tanstack/react-query';
 
 export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -33,8 +34,11 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Queries
   const { data: teams = [] } = useTeams(user?.id);
+  const { data: access } = useAccess(user?.id);
   
   const teamIds = useMemo(() => teams.map(t => t.id), [teams]);
+  const manageableTeamIds = useMemo(() => access?.manageableTeamIds ?? [], [access]);
+  const manageableTeamIdSet = useMemo(() => new Set(manageableTeamIds), [manageableTeamIds]);
   
   const { data: playersData = [] } = usePlayers(user?.id, teamIds);
   const { data: matchesData = [] } = useMatches(user?.id, teamIds);
@@ -83,6 +87,11 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const selectTeam = (teamId: string) => {
     const team = teams.find(t => t.id === teamId) || null;
     setActiveTeam(team);
+  };
+
+  const canManageTeam = (teamId?: string) => {
+    if (!teamId) return false;
+    return access?.isAdmin === true || manageableTeamIdSet.has(teamId);
   };
 
   const addTeam = async (team: Team) => {
@@ -206,7 +215,10 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       teams, 
       players: playersData,
       matches: matchesData,
+      isAdmin: access?.isAdmin === true,
       isSyncing,
+      manageableTeamIds,
+      canManageTeam,
       startMatch,
       startSet,
       addRally,

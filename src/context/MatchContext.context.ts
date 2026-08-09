@@ -9,7 +9,10 @@ export interface MatchContextType {
   teams: Team[];
   players: Player[];
   matches: Match[];
+  isAdmin: boolean;
   isSyncing: boolean;
+  manageableTeamIds: string[];
+  canManageTeam: (teamId?: string) => boolean;
   startMatch: (match: Match) => Promise<void>;
   startSet: (set: Set) => Promise<void>;
   addRally: (rally: RallyEvent, setMetadataUpdates?: Set['metadata']) => Promise<void>;

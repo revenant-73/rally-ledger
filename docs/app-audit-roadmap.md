@@ -82,5 +82,6 @@ Last updated: 2026-08-09
 - Done: Settings reset is admin-only and no longer appears for normal coach accounts.
 - Done: local and example Turso config use server-only `TURSO_*` env names instead of browser-exposed `VITE_*` names.
 - Done: Netlify functions use the LibSQL web transport to avoid native optional package failures in production.
+- Done: roster and new-match screens use permission-aware controls so coaches can view shared rosters but only edit/start matches for assigned teams.
 - Remaining: consider cookie-backed sessions and durable/distributed rate limiting before public launch.
 

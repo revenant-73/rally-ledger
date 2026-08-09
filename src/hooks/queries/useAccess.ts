@@ -6,6 +6,7 @@ export type AccessResponse = {
   isAdmin: boolean;
   teams: Team[];
   assignments: TeamAccessAssignment[];
+  manageableTeamIds: string[];
 };
 
 export const accessQueryKey = (userId?: string) => ['access', userId];

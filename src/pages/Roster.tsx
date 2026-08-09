@@ -5,7 +5,7 @@ import type { Player, PlayerPosition, Team } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 const Roster: React.FC = () => {
-  const { players, addPlayer, removePlayer, teams, activeTeam, addTeam, selectTeam, updateTeam } = useMatch();
+  const { players, addPlayer, removePlayer, teams, activeTeam, addTeam, selectTeam, updateTeam, canManageTeam, isAdmin } = useMatch();
   const [showAddPlayerForm, setShowAddPlayerForm] = useState(false);
   const [showAddTeamForm, setShowAddTeamForm] = useState(false);
   const [isEditingTeam, setIsEditingTeam] = useState(false);
@@ -81,24 +81,27 @@ const Roster: React.FC = () => {
 
   const positions: PlayerPosition[] = ['OH', 'OPP', 'MB', 'S', 'L', 'DS', 'Other'];
   const rosterPlayers = activeTeam ? players.filter(player => player.teamId === activeTeam.id) : [];
+  const canManageActiveTeam = canManageTeam(activeTeam?.id);
 
   return (
     <div className="p-6 max-w-lg mx-auto">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold">Roster</h1>
         <div className="flex gap-2">
-          <button
-            onClick={() => {
-              setIsEditingTeam(false);
-              setNewTeam({ name: '', level: 'High School', season: new Date().getFullYear().toString() });
-              setShowAddTeamForm(true);
-            }}
-            className="bg-brand-gray/10 text-brand-text p-2 rounded-full hover:bg-brand-gray/20 transition-all"
-            title="Create New Team"
-          >
-            <Users size={24} />
-          </button>
-          {activeTeam && (
+          {isAdmin && (
+            <button
+              onClick={() => {
+                setIsEditingTeam(false);
+                setNewTeam({ name: '', level: 'High School', season: new Date().getFullYear().toString() });
+                setShowAddTeamForm(true);
+              }}
+              className="bg-brand-gray/10 text-brand-text p-2 rounded-full hover:bg-brand-gray/20 transition-all"
+              title="Create New Team"
+            >
+              <Users size={24} />
+            </button>
+          )}
+          {activeTeam && canManageActiveTeam && (
             <button
               onClick={handleEditClick}
               className="bg-brand-gray/10 text-brand-text p-2 rounded-full hover:bg-brand-gray/20 transition-all"
@@ -107,14 +110,16 @@ const Roster: React.FC = () => {
               <Edit2 size={24} />
             </button>
           )}
-          <button
-            onClick={() => setShowAddPlayerForm(true)}
-            className="bg-brand-teal text-brand-bg p-2 rounded-full hover:bg-brand-teal/90 transition-all"
-            title="Add Player"
-            disabled={!activeTeam}
-          >
-            <Plus size={24} />
-          </button>
+          {canManageActiveTeam && (
+            <button
+              onClick={() => setShowAddPlayerForm(true)}
+              className="bg-brand-teal text-brand-bg p-2 rounded-full hover:bg-brand-teal/90 transition-all"
+              title="Add Player"
+              disabled={!activeTeam}
+            >
+              <Plus size={24} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -139,10 +144,13 @@ const Roster: React.FC = () => {
         {teams.length === 0 && (
           <p className="text-xs text-brand-text-secondary mt-2">No rosters saved yet. Create one to get started.</p>
         )}
+        {activeTeam && !canManageActiveTeam && (
+          <p className="text-xs text-brand-text-secondary mt-2">View-only roster. You can use reports, but edits are limited to assigned teams.</p>
+        )}
       </div>
 
       {/* Add Team Form */}
-      {showAddTeamForm && (
+      {showAddTeamForm && isAdmin && (
         <div className="mb-8 bg-brand-gray/5 border border-brand-gray/20 rounded-2xl p-6 relative">
           <button 
             onClick={() => setShowAddTeamForm(false)}
@@ -202,7 +210,7 @@ const Roster: React.FC = () => {
       )}
 
       {/* Add Player Form */}
-      {showAddPlayerForm && activeTeam && (
+      {showAddPlayerForm && activeTeam && canManageActiveTeam && (
         <div className="mb-8 bg-brand-gray/5 border border-brand-gray/20 rounded-2xl p-6 relative">
           <button 
             onClick={() => setShowAddPlayerForm(false)}
@@ -304,13 +312,15 @@ const Roster: React.FC = () => {
                   <p className="text-xs font-bold text-brand-text-secondary uppercase">{player.position}</p>
                 </div>
               </div>
-              <button
-                onClick={() => removePlayer(player.id)}
-                className="text-brand-gray hover:text-brand-red p-2 transition-colors"
-                aria-label={`Remove ${player.firstName} ${player.lastName}`}
-              >
-                <Trash2 size={20} />
-              </button>
+              {canManageActiveTeam && (
+                <button
+                  onClick={() => removePlayer(player.id)}
+                  className="text-brand-gray hover:text-brand-red p-2 transition-colors"
+                  aria-label={`Remove ${player.firstName} ${player.lastName}`}
+                >
+                  <Trash2 size={20} />
+                </button>
+              )}
             </div>
           ))
         )}

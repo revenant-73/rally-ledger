@@ -9,10 +9,11 @@ import toast from 'react-hot-toast';
 
 const NewMatch: React.FC = () => {
   const navigate = useNavigate();
-  const { startMatch, teams, selectTeam, activeTeam } = useMatch();
+  const { startMatch, teams, selectTeam, activeTeam, canManageTeam } = useMatch();
+  const manageableTeams = teams.filter(team => canManageTeam(team.id));
   
   const [formData, setFormData] = useState({
-    teamId: activeTeam?.id || '',
+    teamId: activeTeam && canManageTeam(activeTeam.id) ? activeTeam.id : '',
     opponentName: '',
     location: '',
     matchType: 'Tournament',
@@ -48,7 +49,7 @@ const NewMatch: React.FC = () => {
   };
 
   const handleTeamChange = (teamId: string) => {
-    const selectedTeam = teams.find(t => t.id === teamId);
+    const selectedTeam = manageableTeams.find(t => t.id === teamId);
     setFormData({ 
       ...formData, 
       teamId,
@@ -85,7 +86,7 @@ const NewMatch: React.FC = () => {
             className="w-full bg-brand-gray/10 border border-brand-gray/20 rounded-xl p-4 focus:outline-none focus:border-brand-teal transition-colors"
           >
             <option value="">Select a saved roster...</option>
-            {teams.map(team => (
+            {manageableTeams.map(team => (
               <option key={team.id} value={team.id} className="bg-brand-bg">
                 {team.name} ({team.level})
               </option>
@@ -96,17 +97,22 @@ const NewMatch: React.FC = () => {
               + Create your first roster
             </p>
           )}
+          {teams.length > 0 && manageableTeams.length === 0 && (
+            <p className="text-xs text-brand-text-secondary mt-1">
+              You can view rosters, but you do not have match entry access for any roster yet.
+            </p>
+          )}
         </motion.div>
 
         {/* Quick Select Rosters */}
-        {teams.length > 0 && (
+        {manageableTeams.length > 0 && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
             className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
           >
-            {teams.slice(0, 3).map(team => (
+            {manageableTeams.slice(0, 3).map(team => (
               <button
                 key={team.id}
                 type="button"
@@ -194,6 +200,7 @@ const NewMatch: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
           className="w-full bg-brand-teal hover:bg-brand-teal/90 text-brand-bg font-black py-5 rounded-xl flex items-center justify-center gap-2 text-lg transition-all mt-8 uppercase tracking-widest"
+          disabled={manageableTeams.length === 0}
         >
           <Save size={24} />
           Create Match

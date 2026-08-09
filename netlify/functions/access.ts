@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { createClient, type Client } from '@libsql/client/web';
 import type { Team } from '../../src/types';
 import { requireSession } from './_session';
-import { ensureTeamAccessTable, isAdmin } from './_access';
+import { canViewProgram, ensureTeamAccessTable, isAdmin } from './_access';
 
 let cachedClient: Client | null = null;
 
@@ -142,19 +142,45 @@ const getAssignments = async (client: Client): Promise<AccessAssignment[]> => {
   return result.rows as unknown as AccessAssignment[];
 };
 
-const handleList = async (payload: ListPayload) => {
-  if (!requireAdmin(payload)) {
-    return json(403, { error: 'Admins only' });
-  }
+const getManageableTeamIds = async (client: Client, userId: string) => {
+  const result = await client.execute({
+    sql: `select id from teams where owner_id = ?
+      union
+      select team_id as id from team_access where user_id = ? and role = 'coach'`,
+    args: [userId, userId],
+  });
 
+  return result.rows.map((row) => row.id as string);
+};
+
+const handleList = async (payload: ListPayload) => {
   const client = getClient();
   await ensureTeamAccessTable(client);
+
+  if (!await canViewProgram(client, { userId: payload.userId, email: payload.email || '' })) {
+    return json(403, { error: 'Not authorized for this program' });
+  }
+
+  if (!requireAdmin(payload)) {
+    return json(200, {
+      isAdmin: false,
+      teams: [],
+      assignments: [],
+      manageableTeamIds: await getManageableTeamIds(client, payload.userId),
+    });
+  }
+
   const [teams, assignments] = await Promise.all([
     getTeams(client),
     getAssignments(client),
   ]);
 
-  return json(200, { isAdmin: true, teams, assignments });
+  return json(200, {
+    isAdmin: true,
+    teams,
+    assignments,
+    manageableTeamIds: teams.map((team) => team.id),
+  });
 };
 
 const handleGrant = async (payload: GrantPayload) => {
