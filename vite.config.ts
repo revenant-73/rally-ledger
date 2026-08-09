@@ -18,7 +18,7 @@ const localNetlifyFunctions = (env: Record<string, string>): Plugin => ({
     const runFunction = async (
       req: IncomingMessage,
       res: ServerResponse,
-      functionName: 'auth' | 'rallies',
+      functionName: 'auth' | 'matches' | 'sets' | 'rallies',
     ) => {
       try {
         process.env.VITE_TURSO_DATABASE_URL ||= env.VITE_TURSO_DATABASE_URL
@@ -57,6 +57,14 @@ const localNetlifyFunctions = (env: Record<string, string>): Plugin => ({
 
     server.middlewares.use('/.netlify/functions/rallies', async (req, res) => {
       await runFunction(req, res, 'rallies')
+    })
+
+    server.middlewares.use('/.netlify/functions/matches', async (req, res) => {
+      await runFunction(req, res, 'matches')
+    })
+
+    server.middlewares.use('/.netlify/functions/sets', async (req, res) => {
+      await runFunction(req, res, 'sets')
     })
   },
 })

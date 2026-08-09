@@ -92,7 +92,9 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const endSet = async (result: 'Win' | 'Loss') => {
     if (!activeSetData) return;
+    if (!user) throw new Error('User missing');
     await updateSetMutation.mutateAsync({
+      userId: user.id,
       setId: activeSetData.id,
       updates: { status: 'completed', finalResult: result },
       matchId: activeMatch?.id
@@ -100,11 +102,13 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const updateSet = async (setId: string, updates: Partial<Set>) => {
-    await updateSetMutation.mutateAsync({ setId, updates, matchId: activeMatch?.id });
+    if (!user) throw new Error('User missing');
+    await updateSetMutation.mutateAsync({ userId: user.id, setId, updates, matchId: activeMatch?.id });
   };
 
   const updateMatch = async (matchId: string, updates: Partial<Match>) => {
-    await updateMatchMutation.mutateAsync({ matchId, updates });
+    if (!user) throw new Error('User missing');
+    await updateMatchMutation.mutateAsync({ userId: user.id, matchId, updates });
     if (activeMatch && activeMatch.id === matchId) {
       setActiveMatch({ ...activeMatch, ...updates });
     }
@@ -122,12 +126,14 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const startMatch = async (match: Match) => {
-    await startMatchMutation.mutateAsync(match);
+    if (!user) throw new Error('User missing');
+    await startMatchMutation.mutateAsync({ userId: user.id, match });
     setActiveMatch(match);
   };
 
   const startSet = async (set: Set) => {
-    await startSetMutation.mutateAsync(set);
+    if (!user) throw new Error('User missing');
+    await startSetMutation.mutateAsync({ userId: user.id, set });
   };
 
   const addRally = async (rally: RallyEvent, setMetadataUpdates?: Set['metadata']) => {
