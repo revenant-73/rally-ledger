@@ -88,7 +88,7 @@ const NewMatch: React.FC = () => {
             <option value="">Select a saved roster...</option>
             {manageableTeams.map(team => (
               <option key={team.id} value={team.id} className="bg-brand-bg">
-                {team.name} ({team.level})
+                {team.name}
               </option>
             ))}
           </select>

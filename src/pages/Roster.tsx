@@ -158,7 +158,7 @@ const Roster: React.FC = () => {
           <option value="">Select a roster...</option>
           {teams.map(team => (
             <option key={team.id} value={team.id} className="bg-brand-bg">
-              {team.name} ({team.level})
+              {team.name}
             </option>
           ))}
         </select>

@@ -109,7 +109,7 @@ const CoachAccessPanel: React.FC = () => {
                 <option value="">Select a roster...</option>
                 {teams.map((team) => (
                   <option key={team.id} value={team.id} className="bg-brand-bg">
-                    {team.name} ({team.level})
+                    {team.name}
                   </option>
                 ))}
               </select>
@@ -141,7 +141,7 @@ const CoachAccessPanel: React.FC = () => {
                 <div className="min-w-0">
                   <p className="font-bold truncate">{assignment.email}</p>
                   <p className="text-xs text-brand-text-secondary">
-                    {assignment.teamName} ({assignment.teamLevel})
+                    {assignment.teamName}
                   </p>
                 </div>
                 <button
