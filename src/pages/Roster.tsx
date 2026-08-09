@@ -53,14 +53,13 @@ const Roster: React.FC = () => {
         updatedAt: new Date().toISOString(),
       };
       await addTeam(team);
-      selectTeam(team.id);
     }
     setNewTeam({ name: '', level: 'High School', season: new Date().getFullYear().toString() });
     setShowAddTeamForm(false);
     setIsEditingTeam(false);
   };
 
-  const handleAddPlayer = (e: React.FormEvent) => {
+  const handleAddPlayer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeTeam) return;
 
@@ -75,7 +74,7 @@ const Roster: React.FC = () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    addPlayer(player);
+    await addPlayer(player);
     setNewPlayer({ firstName: '', lastName: '', jerseyNumber: '', position: 'OH' });
     setShowAddPlayerForm(false);
   };
@@ -307,6 +306,7 @@ const Roster: React.FC = () => {
               <button
                 onClick={() => removePlayer(player.id)}
                 className="text-brand-gray hover:text-brand-red p-2 transition-colors"
+                aria-label={`Remove ${player.firstName} ${player.lastName}`}
               >
                 <Trash2 size={20} />
               </button>

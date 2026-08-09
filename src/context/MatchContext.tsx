@@ -87,7 +87,9 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const addTeam = async (team: Team) => {
     if (!user) return;
-    await addTeamMutation.mutateAsync({ ...team, ownerId: user.id });
+    const savedTeam = { ...team, ownerId: user.id };
+    await addTeamMutation.mutateAsync({ userId: user.id, team: savedTeam });
+    setActiveTeam(savedTeam);
   };
 
   const endSet = async (result: 'Win' | 'Loss') => {
@@ -115,7 +117,8 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const updateTeam = async (teamId: string, updates: Partial<Team>) => {
-    await updateTeamMutation.mutateAsync({ teamId, updates });
+    if (!user) throw new Error('User missing');
+    await updateTeamMutation.mutateAsync({ userId: user.id, teamId, updates });
     if (activeTeam && activeTeam.id === teamId) {
       setActiveTeam({ ...activeTeam, ...updates });
     }
@@ -185,11 +188,13 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const addPlayer = async (player: Player) => {
-    await addPlayerMutation.mutateAsync(player);
+    if (!user) throw new Error('User missing');
+    await addPlayerMutation.mutateAsync({ userId: user.id, player });
   };
 
   const removePlayer = async (playerId: string) => {
-    await deletePlayerMutation.mutateAsync(playerId);
+    if (!user) throw new Error('User missing');
+    await deletePlayerMutation.mutateAsync({ userId: user.id, playerId });
   };
 
   // Filter players by active team if one is selected

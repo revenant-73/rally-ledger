@@ -20,9 +20,19 @@ export const useAddTeam = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (newTeam: Team) => {
-      await db.insert(teamsTable).values(newTeam);
-      return newTeam;
+    mutationFn: async ({ userId, team }: { userId: string; team: Team }) => {
+      const response = await fetch('/.netlify/functions/teams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'add', userId, team }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => null) as { error?: string } | null;
+        throw new Error(body?.error || 'Failed to save team');
+      }
+
+      return { ...team, ownerId: userId };
     },
     onSuccess: (newTeam) => {
       queryClient.invalidateQueries({ queryKey: ['teams', newTeam.ownerId] });
@@ -34,13 +44,18 @@ export const useUpdateTeam = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ teamId, updates }: { teamId: string; updates: Partial<Team> }) => {
-      await db.update(teamsTable)
-        .set({ ...updates, updatedAt: new Date().toISOString() })
-        .where(eq(teamsTable.id, teamId));
-      
-      // We need the ownerId to invalidate the correct query
-      // For now we'll just invalidate all teams, or we could fetch the team first
+    mutationFn: async ({ userId, teamId, updates }: { userId: string; teamId: string; updates: Partial<Team> }) => {
+      const response = await fetch('/.netlify/functions/teams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update', userId, teamId, updates }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => null) as { error?: string } | null;
+        throw new Error(body?.error || 'Failed to update team');
+      }
+
       return { teamId, updates };
     },
     onSuccess: () => {

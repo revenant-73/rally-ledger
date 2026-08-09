@@ -75,4 +75,5 @@ Last updated: 2026-08-09
 - Done: live rally save and undo use one atomic write batch.
 - Done: scoring and undo are moved behind a Netlify function.
 - Done: match creation, match updates, set creation, and set updates are moved behind Netlify functions.
-- Remaining: full credential hardening still requires moving remaining client-side database reads/writes and replacing localStorage-only auth with a real session.
+- Done: roster creation/update and player add/delete writes are moved behind Netlify functions.
+- Remaining: full credential hardening still requires moving remaining client-side database reads and replacing localStorage-only auth with a real session.
