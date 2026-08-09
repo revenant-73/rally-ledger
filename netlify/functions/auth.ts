@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { users } from '../../src/db/schema';
+import { createSessionToken, verifySessionToken } from './_session';
 
 let cachedClient: Client | null = null;
 let cachedDb: LibSQLDatabase<{ users: typeof users }> | null = null;
@@ -50,12 +51,30 @@ export const handler: Handler = async (event) => {
     return json(405, { error: 'Method not allowed' });
   }
 
+  let action: unknown;
   let email: unknown;
   let password: unknown;
   try {
-    ({ email, password } = JSON.parse(event.body || '{}'));
+    ({ action, email, password } = JSON.parse(event.body || '{}'));
   } catch {
     return json(400, { error: 'Invalid request body' });
+  }
+
+  if (action === 'session') {
+    const header = event.headers.authorization || event.headers.Authorization;
+    const token = header?.startsWith('Bearer ') ? header.slice('Bearer '.length) : undefined;
+    const session = verifySessionToken(token);
+    if (!session) {
+      return json(401, { error: 'Authentication required' });
+    }
+
+    const db = getDb();
+    const existing = await db.select().from(users).where(eq(users.id, session.userId)).limit(1);
+    if (existing.length === 0) {
+      return json(401, { error: 'Authentication required' });
+    }
+
+    return json(200, { user: toSafeUser(existing[0]) });
   }
 
   if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
@@ -83,7 +102,7 @@ export const handler: Handler = async (event) => {
         updatedAt: now,
       };
       await db.insert(users).values(newUser);
-      return json(201, { user: toSafeUser(newUser) });
+      return json(201, { user: toSafeUser(newUser), sessionToken: createSessionToken(newUser) });
     }
 
     const existingUser = existing[0];
@@ -95,7 +114,7 @@ export const handler: Handler = async (event) => {
       await db.update(users)
         .set({ passwordHash, updatedAt: new Date().toISOString() })
         .where(eq(users.id, existingUser.id));
-      return json(200, { user: toSafeUser(existingUser) });
+      return json(200, { user: toSafeUser(existingUser), sessionToken: createSessionToken(existingUser) });
     }
 
     const passwordMatches = await bcrypt.compare(password, existingUser.passwordHash);
@@ -103,7 +122,7 @@ export const handler: Handler = async (event) => {
       return json(401, { error: 'Invalid email or password' });
     }
 
-    return json(200, { user: toSafeUser(existingUser) });
+    return json(200, { user: toSafeUser(existingUser), sessionToken: createSessionToken(existingUser) });
   } catch (error) {
     console.error('auth function failed:', error);
     return json(500, { error: 'Something went wrong. Please try again.' });

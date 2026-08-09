@@ -6,6 +6,7 @@ import { useMatch } from '../hooks/useMatch';
 import { useAuth } from '../hooks/useAuth';
 import { useMatchDetailMetrics } from '../hooks/useMatchDetailMetrics';
 import { normalizeRallies } from '../utils/rallies';
+import { apiPost } from '../utils/api';
 
 const MatchDetail: React.FC = () => {
   const { matchId } = useParams<{ matchId: string }>();
@@ -35,28 +36,12 @@ const MatchDetail: React.FC = () => {
       if (teams.length === 0) return;
       
       try {
-        const response = await fetch('/.netlify/functions/matches', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'detail', userId: user.id, matchId }),
-        });
-
-        if (response.status === 404 || response.status === 403) {
-          setLoading(false);
-          return;
-        }
-
-        if (!response.ok) {
-          const body = await response.json().catch(() => null) as { error?: string } | null;
-          throw new Error(body?.error || 'Failed to fetch match details');
-        }
-
-        const detail = await response.json() as {
+        const detail = await apiPost<{
           match: Match;
           sets: Set[];
           rallies: RallyEvent[];
           players: Player[];
-        };
+        }>('/.netlify/functions/matches', { action: 'detail', userId: user.id, matchId });
 
         const currentMatch = detail.match;
         

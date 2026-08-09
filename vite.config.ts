@@ -23,9 +23,11 @@ const localNetlifyFunctions = (env: Record<string, string>): Plugin => ({
       try {
         process.env.VITE_TURSO_DATABASE_URL ||= env.VITE_TURSO_DATABASE_URL
         process.env.VITE_TURSO_AUTH_TOKEN ||= env.VITE_TURSO_AUTH_TOKEN
+        process.env.SESSION_SECRET ||= env.SESSION_SECRET
         const { handler } = await server.ssrLoadModule(`/netlify/functions/${functionName}.ts`)
         const result = await handler({
           httpMethod: req.method || 'GET',
+          headers: req.headers,
           body: await readBody(req),
         } as never, {} as never, undefined as never)
 

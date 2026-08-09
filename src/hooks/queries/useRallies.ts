@@ -1,24 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { RallyEvent, Set } from '../../types';
 import { normalizeRallies, sortRallies } from '../../utils/rallies';
+import { apiPost } from '../../utils/api';
 
 export const useRallies = (userId: string | undefined, matchId: string | undefined) => {
   return useQuery({
     queryKey: ['rallies', userId, matchId],
     queryFn: async () => {
       if (!matchId) return [];
-      const response = await fetch('/.netlify/functions/rallies', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'list', userId, matchId }),
-      });
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => null) as { error?: string } | null;
-        throw new Error(body?.error || 'Failed to load rallies');
-      }
-
-      const body = await response.json() as { rallies: RallyEvent[] };
+      const body = await apiPost<{ rallies: RallyEvent[] }>('/.netlify/functions/rallies', { action: 'list', userId, matchId });
       return normalizeRallies(body.rallies);
     },
     enabled: !!userId && !!matchId,
@@ -41,16 +31,7 @@ type AddRallyVariables = {
 // original component closure that created it.
 export const addRallyMutationFn = async ({ userId, rally, updatedSet }: AddRallyVariables) => {
   try {
-    const response = await fetch('/.netlify/functions/rallies', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'add', userId, rally, updatedSet }),
-    });
-
-    if (!response.ok) {
-      const body = await response.json().catch(() => null) as { error?: string } | null;
-      throw new Error(body?.error || 'Failed to save rally');
-    }
+    await apiPost('/.netlify/functions/rallies', { action: 'add', userId, rally, updatedSet });
 
     return { rally, updatedSet };
   } catch (error) {
@@ -124,24 +105,15 @@ type UndoLastRallyVariables = {
 };
 
 export const undoLastRallyMutationFn = async ({ userId, rallyId, setId, restoredScores, restoredMetadata, matchId }: UndoLastRallyVariables) => {
-  const response = await fetch('/.netlify/functions/rallies', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'undo',
-      userId,
-      rallyId,
-      matchId,
-      setId,
-      restoredScores,
-      restoredMetadata,
-    }),
+  await apiPost('/.netlify/functions/rallies', {
+    action: 'undo',
+    userId,
+    rallyId,
+    matchId,
+    setId,
+    restoredScores,
+    restoredMetadata,
   });
-
-  if (!response.ok) {
-    const body = await response.json().catch(() => null) as { error?: string } | null;
-    throw new Error(body?.error || 'Failed to undo rally');
-  }
 
   return { matchId };
 };

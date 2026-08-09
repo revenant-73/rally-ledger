@@ -1,5 +1,6 @@
 import type { Handler } from '@netlify/functions';
 import { createClient, type Client } from '@libsql/client';
+import { requireSession } from './_session';
 
 let cachedClient: Client | null = null;
 
@@ -49,6 +50,11 @@ export const handler: Handler = async (event) => {
   if (!payload) {
     return json(400, { error: 'Invalid request body' });
   }
+  const auth = requireSession(event, payload.userId);
+  if ('response' in auth) {
+    return auth.response;
+  }
+  payload.userId = auth.session.userId;
 
   try {
     const client = getClient();

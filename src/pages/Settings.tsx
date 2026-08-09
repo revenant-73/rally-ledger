@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Trash2, Database, ShieldAlert, Info, LogOut, User as UserIcon } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { apiPost } from '../utils/api';
 
 const Settings: React.FC = () => {
   const navigate = useNavigate();
@@ -16,16 +17,7 @@ const Settings: React.FC = () => {
     if (!user) return;
     if (window.confirm('CRITICAL: This will delete YOUR matches, rosters, and stats. This cannot be undone. Are you absolutely sure?')) {
       try {
-        const response = await fetch('/.netlify/functions/reset', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'reset', userId: user.id }),
-        });
-
-        if (!response.ok) {
-          const body = await response.json().catch(() => null) as { error?: string } | null;
-          throw new Error(body?.error || 'Failed to reset data');
-        }
+        await apiPost('/.netlify/functions/reset', { action: 'reset', userId: user.id });
         
         localStorage.removeItem('activeMatch');
         localStorage.removeItem('activeSet');

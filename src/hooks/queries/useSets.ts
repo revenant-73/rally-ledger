@@ -1,23 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Set } from '../../types';
+import { apiPost } from '../../utils/api';
 
 export const useActiveSet = (userId: string | undefined, matchId: string | undefined) => {
   return useQuery({
     queryKey: ['sets', 'active', userId, matchId],
     queryFn: async () => {
       if (!matchId) return null;
-      const response = await fetch('/.netlify/functions/sets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'active', userId, matchId }),
-      });
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => null) as { error?: string } | null;
-        throw new Error(body?.error || 'Failed to load active set');
-      }
-
-      const body = await response.json() as { set: Set | null };
+      const body = await apiPost<{ set: Set | null }>('/.netlify/functions/sets', { action: 'active', userId, matchId });
       return body.set;
     },
     enabled: !!userId && !!matchId,
@@ -29,17 +19,7 @@ export const useStartSet = () => {
 
   return useMutation({
     mutationFn: async ({ userId, set: newSet }: { userId: string; set: Set }) => {
-      const response = await fetch('/.netlify/functions/sets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'start', userId, set: newSet }),
-      });
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => null) as { error?: string } | null;
-        throw new Error(body?.error || 'Failed to start set');
-      }
-
+      await apiPost('/.netlify/functions/sets', { action: 'start', userId, set: newSet });
       return newSet;
     },
     onSuccess: (newSet, variables) => {
@@ -55,16 +35,7 @@ export const updateSetMutationFn = async ({ userId, setId, updates, matchId }: U
     throw new Error('Match ID is required to update a set');
   }
 
-  const response = await fetch('/.netlify/functions/sets', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'update', userId, setId, matchId, updates }),
-  });
-
-  if (!response.ok) {
-    const body = await response.json().catch(() => null) as { error?: string } | null;
-    throw new Error(body?.error || 'Failed to update set');
-  }
+  await apiPost('/.netlify/functions/sets', { action: 'update', userId, setId, matchId, updates });
 
   return { setId, updates, matchId };
 };

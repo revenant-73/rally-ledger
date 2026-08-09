@@ -1,23 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Team } from '../../types';
+import { apiPost } from '../../utils/api';
 
 export const useTeams = (userId: string | undefined) => {
   return useQuery({
     queryKey: ['teams', userId],
     queryFn: async () => {
       if (!userId) return [];
-      const response = await fetch('/.netlify/functions/teams', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'list', userId }),
-      });
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => null) as { error?: string } | null;
-        throw new Error(body?.error || 'Failed to load teams');
-      }
-
-      const body = await response.json() as { teams: Team[] };
+      const body = await apiPost<{ teams: Team[] }>('/.netlify/functions/teams', { action: 'list', userId });
       return body.teams;
     },
     enabled: !!userId,
@@ -29,17 +19,7 @@ export const useAddTeam = () => {
 
   return useMutation({
     mutationFn: async ({ userId, team }: { userId: string; team: Team }) => {
-      const response = await fetch('/.netlify/functions/teams', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'add', userId, team }),
-      });
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => null) as { error?: string } | null;
-        throw new Error(body?.error || 'Failed to save team');
-      }
-
+      await apiPost('/.netlify/functions/teams', { action: 'add', userId, team });
       return { ...team, ownerId: userId };
     },
     onSuccess: (newTeam) => {
@@ -53,17 +33,7 @@ export const useUpdateTeam = () => {
 
   return useMutation({
     mutationFn: async ({ userId, teamId, updates }: { userId: string; teamId: string; updates: Partial<Team> }) => {
-      const response = await fetch('/.netlify/functions/teams', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'update', userId, teamId, updates }),
-      });
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => null) as { error?: string } | null;
-        throw new Error(body?.error || 'Failed to update team');
-      }
-
+      await apiPost('/.netlify/functions/teams', { action: 'update', userId, teamId, updates });
       return { teamId, updates };
     },
     onSuccess: () => {
