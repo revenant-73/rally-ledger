@@ -83,5 +83,6 @@ Last updated: 2026-08-09
 - Done: local and example Turso config use server-only `TURSO_*` env names instead of browser-exposed `VITE_*` names.
 - Done: Netlify functions use the LibSQL web transport to avoid native optional package failures in production.
 - Done: roster and new-match screens use permission-aware controls so coaches can view shared rosters but only edit/start matches for assigned teams.
+- Done: admins can delete rosters through a server-side cascade that removes related players, matches, sets, rallies, and coach assignments.
 - Remaining: consider cookie-backed sessions and durable/distributed rate limiting before public launch.
 

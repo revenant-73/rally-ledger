@@ -41,3 +41,36 @@ export const useUpdateTeam = () => {
     },
   });
 };
+
+export const useDeleteTeam = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ userId, teamId }: { userId: string; teamId: string }) => {
+      await apiPost('/.netlify/functions/teams', { action: 'delete', userId, teamId });
+      return { userId, teamId };
+    },
+    onSuccess: ({ teamId }) => {
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      queryClient.invalidateQueries({ queryKey: ['players'] });
+      queryClient.invalidateQueries({ queryKey: ['matches'] });
+      queryClient.invalidateQueries({ queryKey: ['access'] });
+      queryClient.removeQueries({ queryKey: ['activeSet'] });
+      queryClient.removeQueries({ queryKey: ['rallies'] });
+      localStorage.removeItem('activeTeam');
+      const savedMatch = localStorage.getItem('activeMatch');
+      if (savedMatch) {
+        try {
+          const match = JSON.parse(savedMatch) as { teamId?: string };
+          if (match.teamId === teamId) {
+            localStorage.removeItem('activeMatch');
+            localStorage.removeItem('activeSet');
+          }
+        } catch {
+          localStorage.removeItem('activeMatch');
+          localStorage.removeItem('activeSet');
+        }
+      }
+    },
+  });
+};

@@ -3,9 +3,10 @@ import { Plus, Trash2, UserPlus, X, Users, Save, Edit2 } from 'lucide-react';
 import { useMatch } from '../hooks/useMatch';
 import type { Player, PlayerPosition, Team } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import toast from 'react-hot-toast';
 
 const Roster: React.FC = () => {
-  const { players, addPlayer, removePlayer, teams, activeTeam, addTeam, selectTeam, updateTeam, canManageTeam, isAdmin } = useMatch();
+  const { players, addPlayer, removePlayer, teams, activeTeam, addTeam, deleteTeam, selectTeam, updateTeam, canManageTeam, isAdmin } = useMatch();
   const [showAddPlayerForm, setShowAddPlayerForm] = useState(false);
   const [showAddTeamForm, setShowAddTeamForm] = useState(false);
   const [isEditingTeam, setIsEditingTeam] = useState(false);
@@ -79,6 +80,20 @@ const Roster: React.FC = () => {
     setShowAddPlayerForm(false);
   };
 
+  const handleDeleteTeam = async () => {
+    if (!activeTeam) return;
+    const confirmed = window.confirm(`Delete ${activeTeam.name}? This will permanently delete its players, matches, sets, rallies, and coach assignments.`);
+    if (!confirmed) return;
+
+    try {
+      await deleteTeam(activeTeam.id);
+      toast.success('Roster deleted');
+    } catch (error) {
+      console.error('Failed to delete roster:', error);
+      toast.error(error instanceof Error ? error.message : 'Could not delete roster');
+    }
+  };
+
   const positions: PlayerPosition[] = ['OH', 'OPP', 'MB', 'S', 'L', 'DS', 'Other'];
   const rosterPlayers = activeTeam ? players.filter(player => player.teamId === activeTeam.id) : [];
   const canManageActiveTeam = canManageTeam(activeTeam?.id);
@@ -108,6 +123,15 @@ const Roster: React.FC = () => {
               title="Edit Roster"
             >
               <Edit2 size={24} />
+            </button>
+          )}
+          {activeTeam && isAdmin && (
+            <button
+              onClick={() => void handleDeleteTeam()}
+              className="bg-brand-red/10 text-brand-red p-2 rounded-full hover:bg-brand-red/20 transition-all"
+              title="Delete Roster"
+            >
+              <Trash2 size={24} />
             </button>
           )}
           {canManageActiveTeam && (

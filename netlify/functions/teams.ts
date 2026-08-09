@@ -2,7 +2,7 @@ import type { Handler } from '@netlify/functions';
 import { createClient, type Client } from '@libsql/client/web';
 import type { Team } from '../../src/types';
 import { requireSession } from './_session';
-import { canCreateTeam, canManageTeam, canViewProgram, ensureTeamAccessTable } from './_access';
+import { canCreateTeam, canManageTeam, canViewProgram, ensureTeamAccessTable, isAdmin } from './_access';
 
 let cachedClient: Client | null = null;
 
@@ -43,7 +43,14 @@ type UpdateTeamPayload = {
   updates: Partial<Team>;
 };
 
-type TeamPayload = AddTeamPayload | ListTeamsPayload | UpdateTeamPayload;
+type DeleteTeamPayload = {
+  action: 'delete';
+  userId: string;
+  email?: string;
+  teamId: string;
+};
+
+type TeamPayload = AddTeamPayload | ListTeamsPayload | UpdateTeamPayload | DeleteTeamPayload;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null;
@@ -179,6 +186,58 @@ const handleUpdate = async (payload: UpdateTeamPayload) => {
   return json(200, { teamId, updates });
 };
 
+const handleDelete = async (payload: DeleteTeamPayload) => {
+  const { teamId, userId } = payload;
+
+  if (!teamId) {
+    return json(400, { error: 'Invalid roster delete payload' });
+  }
+  if (!isAdmin({ userId, email: payload.email || '' })) {
+    return json(403, { error: 'Only admins can delete rosters' });
+  }
+
+  const client = getClient();
+  const existing = await client.execute({
+    sql: 'select id from teams where id = ? limit 1',
+    args: [teamId],
+  });
+  if (existing.rows.length === 0) {
+    return json(404, { error: 'Roster not found' });
+  }
+
+  await ensureTeamAccessTable(client);
+  await client.batch([
+    {
+      sql: `delete from rally_events
+        where match_id in (select id from matches where team_id = ?)`,
+      args: [teamId],
+    },
+    {
+      sql: `delete from sets
+        where match_id in (select id from matches where team_id = ?)`,
+      args: [teamId],
+    },
+    {
+      sql: 'delete from matches where team_id = ?',
+      args: [teamId],
+    },
+    {
+      sql: 'delete from players where team_id = ?',
+      args: [teamId],
+    },
+    {
+      sql: 'delete from team_access where team_id = ?',
+      args: [teamId],
+    },
+    {
+      sql: 'delete from teams where id = ?',
+      args: [teamId],
+    },
+  ], 'write');
+
+  return json(200, { teamId });
+};
+
 export const handler: Handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return json(405, { error: 'Method not allowed' });
@@ -204,6 +263,9 @@ export const handler: Handler = async (event) => {
     }
     if (payload.action === 'update') {
       return await handleUpdate(payload);
+    }
+    if (payload.action === 'delete') {
+      return await handleDelete(payload);
     }
     return json(400, { error: 'Unknown action' });
   } catch (error) {
