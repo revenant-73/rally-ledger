@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Zap, Calendar, MapPin, Trophy, Copy, Download, FileSpreadsheet } from 'lucide-react';
+import { ArrowLeft, Zap, Calendar, MapPin, Trophy, Copy, Download, FileSpreadsheet, Printer } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { Match, Set, RallyEvent, Player } from '../types';
 import { useMatch } from '../hooks/useMatch';
@@ -49,6 +49,10 @@ const MatchDetail: React.FC = () => {
     buildMatchCsvFiles(match, reportStats, rallies, players).forEach(file => {
       downloadTextFile(file.filename, file.contents, 'text/csv;charset=utf-8');
     });
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   useEffect(() => {
@@ -111,9 +115,9 @@ const MatchDetail: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-brand-bg text-brand-text p-6 max-w-lg mx-auto pb-24">
+    <div className="print-report min-h-screen bg-brand-bg text-brand-text p-6 max-w-lg mx-auto pb-24">
       <header className="flex items-center justify-between mb-8">
-        <button onClick={() => navigate('/history')} className="text-brand-text-secondary hover:text-brand-text">
+        <button onClick={() => navigate('/history')} className="print-hide text-brand-text-secondary hover:text-brand-text">
           <ArrowLeft size={24} />
         </button>
         <div className="text-center">
@@ -125,7 +129,7 @@ const MatchDetail: React.FC = () => {
 
       <div className="space-y-6">
         {rallies.length > 0 && (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="print-hide grid grid-cols-4 gap-2">
             <button
               onClick={handleCopySummary}
               className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-brand-gray/10 bg-brand-gray/5 px-3 py-4 text-xs font-black uppercase tracking-tight text-brand-text-secondary hover:border-brand-teal/40 hover:text-brand-teal transition-colors"
@@ -146,6 +150,13 @@ const MatchDetail: React.FC = () => {
             >
               <FileSpreadsheet size={18} />
               CSVs
+            </button>
+            <button
+              onClick={handlePrint}
+              className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-brand-gray/10 bg-brand-gray/5 px-3 py-4 text-xs font-black uppercase tracking-tight text-brand-text-secondary hover:border-brand-teal/40 hover:text-brand-teal transition-colors"
+            >
+              <Printer size={18} />
+              Print
             </button>
           </div>
         )}

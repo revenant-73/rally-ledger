@@ -9,6 +9,7 @@ import {
   Copy,
   Download,
   FileSpreadsheet,
+  Printer,
   ShieldCheck,
   Target,
   Trophy,
@@ -230,18 +231,22 @@ const Reports: React.FC = () => {
     });
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   const hasTeams = teams.length > 0;
   const hasMatches = Boolean(reportData && reportData.matches.length > 0);
   const hasRallies = Boolean(reportData && reportData.rallies.length > 0);
   const earnedGiftedBalance = stats ? stats.ourEarned - stats.ourGifted : 0;
 
   return (
-    <div className="min-h-screen bg-brand-bg px-4 py-6 text-brand-text md:px-8">
+    <div className="print-report min-h-screen bg-brand-bg px-4 py-6 text-brand-text md:px-8">
       <div className="mx-auto max-w-6xl pb-24">
         <header className="mb-6 flex items-start justify-between gap-3">
           <button
             onClick={() => navigate('/')}
-            className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand-gray/5 text-brand-text-secondary transition-colors hover:bg-brand-gray/10 hover:text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-teal/60"
+            className="print-hide mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand-gray/5 text-brand-text-secondary transition-colors hover:bg-brand-gray/10 hover:text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-teal/60"
             aria-label="Back to home"
           >
             <ArrowLeft size={22} />
@@ -255,13 +260,13 @@ const Reports: React.FC = () => {
             </p>
           </div>
 
-          <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand-teal/10 text-brand-teal">
+          <div className="print-hide mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand-teal/10 text-brand-teal">
             <BarChart3 size={21} />
           </div>
         </header>
 
         {teams.length > 1 && (
-          <label className="mb-5 block">
+          <label className="print-hide mb-5 block">
             <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">Roster</span>
             <div className="relative">
               <select
@@ -329,7 +334,7 @@ const Reports: React.FC = () => {
           />
         ) : (
           <div className="space-y-6">
-            <section className="grid grid-cols-3 gap-2">
+            <section className="print-hide grid grid-cols-4 gap-2">
               <button
                 onClick={handleCopySummary}
                 className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-brand-gray/10 bg-brand-gray/5 px-3 py-4 text-xs font-black uppercase tracking-tight text-brand-text-secondary transition-colors hover:border-brand-teal/40 hover:text-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/50"
@@ -350,6 +355,13 @@ const Reports: React.FC = () => {
               >
                 <FileSpreadsheet size={18} />
                 CSVs
+              </button>
+              <button
+                onClick={handlePrint}
+                className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-brand-gray/10 bg-brand-gray/5 px-3 py-4 text-xs font-black uppercase tracking-tight text-brand-text-secondary transition-colors hover:border-brand-teal/40 hover:text-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/50"
+              >
+                <Printer size={18} />
+                Print
               </button>
             </section>
 

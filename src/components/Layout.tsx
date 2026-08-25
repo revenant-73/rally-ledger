@@ -18,7 +18,7 @@ const Layout: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-brand-bg text-brand-text">
-      <div className="fixed top-4 right-4 z-50 pointer-events-none">
+      <div className="print-hide fixed top-4 right-4 z-50 pointer-events-none">
         {isSyncing ? (
           <div className="bg-brand-teal/20 backdrop-blur-sm p-2 rounded-full animate-pulse">
             <Cloud size={16} className="text-brand-teal" />
@@ -33,7 +33,7 @@ const Layout: React.FC = () => {
         <Outlet />
       </main>
       
-      <nav className="fixed bottom-0 left-0 right-0 bg-brand-bg border-t border-brand-gray/20 px-6 py-3">
+      <nav className="print-hide fixed bottom-0 left-0 right-0 bg-brand-bg border-t border-brand-gray/20 px-6 py-3">
         <div className="flex justify-between items-center max-w-lg mx-auto">
           {navItems.map((item) => (
             <button

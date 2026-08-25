@@ -22,3 +22,118 @@ body {
   min-width: 320px;
   min-height: 100vh;
 }
+
+@media print {
+  @page {
+    margin: 0.5in;
+  }
+
+  :root,
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  body {
+    min-width: 0;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .print-hide {
+    display: none !important;
+  }
+
+  main {
+    display: block !important;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  .print-report {
+    min-height: auto !important;
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  .print-report *,
+  .print-report *::before,
+  .print-report *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  .print-report [class*="bg-brand-bg"],
+  .print-report [class*="bg-brand-gray"],
+  .print-report [class*="bg-brand-teal"],
+  .print-report [class*="bg-brand-green"],
+  .print-report [class*="bg-brand-amber"],
+  .print-report [class*="bg-brand-red"] {
+    background: #ffffff !important;
+  }
+
+  .print-report [class*="text-brand-text"],
+  .print-report [class*="text-brand-gray"] {
+    color: #111827 !important;
+  }
+
+  .print-report [class*="text-brand-text-secondary"] {
+    color: #4b5563 !important;
+  }
+
+  .print-report [class*="text-brand-teal"],
+  .print-report [class*="text-brand-green"] {
+    color: #047857 !important;
+  }
+
+  .print-report [class*="text-brand-amber"] {
+    color: #92400e !important;
+  }
+
+  .print-report [class*="text-brand-red"] {
+    color: #b91c1c !important;
+  }
+
+  .print-report [class*="border-brand"],
+  .print-report table,
+  .print-report th,
+  .print-report td {
+    border-color: #d1d5db !important;
+  }
+
+  .print-report section,
+  .print-report table,
+  .print-report tr,
+  .print-report [class*="rounded-2xl"],
+  .print-report [class*="rounded-3xl"] {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-report .md\:hidden {
+    display: none !important;
+  }
+
+  .print-report .md\:block {
+    display: block !important;
+  }
+
+  .print-report table {
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+  }
+
+  .print-report th,
+  .print-report td {
+    border-bottom: 1px solid #e5e7eb !important;
+  }
+
+  .print-report a {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+}

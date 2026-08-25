@@ -49,9 +49,9 @@ Recommended order:
      - Player serving.
      - Player receiving.
 
-3. Print-friendly report
+3. Done: print-friendly report
    - Use browser print/save-to-PDF before adding a heavy PDF-generation dependency.
-   - Keep a dedicated print layout as a later polish step.
+   - Print styles hide app navigation/actions and convert report views to white-paper layouts.
 
 ## Cumulative Season Reports
 
@@ -85,7 +85,8 @@ Core season report sections:
 4. Done: add a season report API action that fetches all authorized match, set, rally, and player data for selected teams.
 5. Done: add a Reports page with team/season filtering and cumulative stat views.
 6. Done: add copyable text and CSV downloads for season reports.
-7. Add print styles and a dedicated print/export report layout.
+7. Done: add print styles and native print controls for browser save-to-PDF.
+8. Add richer dedicated print/export report layouts if coaches need more polished packets later.
 
 ## Validation
 
