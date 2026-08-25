@@ -40,7 +40,8 @@ Last updated: 2026-08-09
 - Add a visible pending/offline queue count during live matches.
 - Disable or debounce rapid repeated scoring taps while a point write is pending.
 - Add clearer recovery messaging when a rally fails to save.
-- Add export/share flows for post-match reports.
+- Done: add initial export/share flows for post-match and season reports (copyable text, text download, CSV bundle).
+- Done: add initial cumulative season reports for team/player trends across matches.
 - Add match-level setup for best-of format, target scores, and deciding-set target.
 
 ## Analytics Upgrades
@@ -84,5 +85,7 @@ Last updated: 2026-08-09
 - Done: Netlify functions use the LibSQL web transport to avoid native optional package failures in production.
 - Done: roster and new-match screens use permission-aware controls so coaches can view shared rosters but only edit/start matches for assigned teams.
 - Done: admins can delete rosters through a server-side cascade that removes related players, matches, sets, rallies, and coach assignments.
+- Done: historical match details include report copy/download controls, and `/reports` shows initial cumulative season stats using shared report helpers.
 - Remaining: consider cookie-backed sessions and durable/distributed rate limiting before public launch.
+- Remaining: add print-friendly report styling, filtered rally logs, and richer season trend charts.
 

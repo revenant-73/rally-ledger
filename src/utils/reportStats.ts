@@ -1,0 +1,298 @@
+import type { Match, Player, RallyEvent, Set as MatchSet } from '../types';
+
+export interface PlayerServeReport {
+  playerId: string;
+  name: string;
+  jersey: string;
+  attempts: number;
+  aces: number;
+  errors: number;
+  inSystem: number;
+  outOfSystem: number;
+  servePct: number;
+  koPct: number;
+}
+
+export interface PlayerReceiveReport {
+  playerId: string;
+  name: string;
+  jersey: string;
+  attempts: number;
+  errors: number;
+  overpass: number;
+  inSystem: number;
+  outOfSystem: number;
+  score: number;
+}
+
+export interface SetReport {
+  setId: string;
+  setNumber: number;
+  score: string;
+  result?: 'Win' | 'Loss';
+  ourEarned: number;
+  ourGifted: number;
+  servePct: number;
+  serveKoPct: number;
+  passScore: number;
+}
+
+export interface ReportStats {
+  ralliesTracked: number;
+  ourEarned: number;
+  ourGifted: number;
+  opponentEarned: number;
+  opponentGifted: number;
+  biggestWeapon: string;
+  biggestLeak: string;
+  serve: {
+    attempts: number;
+    aces: number;
+    errors: number;
+    inSystem: number;
+    outOfSystem: number;
+    servePct: number;
+    koPct: number;
+  };
+  receive: {
+    attempts: number;
+    errors: number;
+    overpass: number;
+    inSystem: number;
+    outOfSystem: number;
+    score: number;
+  };
+  playerServing: PlayerServeReport[];
+  playerReceiving: PlayerReceiveReport[];
+  setReports: SetReport[];
+  focus: string;
+}
+
+export interface SeasonReportStats extends ReportStats {
+  matchesPlayed: number;
+  wins: number;
+  losses: number;
+  setsWon: number;
+  setsLost: number;
+  matchRows: Array<{
+    matchId: string;
+    opponentName: string;
+    matchDate: string;
+    result?: 'Win' | 'Loss';
+    ralliesTracked: number;
+    earnedGifted: string;
+    servePct: number;
+    serveKoPct: number;
+    passScore: number;
+  }>;
+}
+
+const pct = (part: number, total: number) => total > 0 ? Math.round((part / total) * 100) : 0;
+
+const passScore = (stats: { errors: number; overpass: number; outOfSystem: number; inSystem: number; attempts: number }) => {
+  if (stats.attempts === 0) return 0;
+  return Number(((stats.inSystem * 3 + stats.outOfSystem * 2 + stats.overpass) / stats.attempts).toFixed(2));
+};
+
+const playerName = (player: Player) => `${player.firstName} ${player.lastName}`.trim();
+
+const countOutcomes = (rallies: RallyEvent[]) => {
+  return rallies.reduce<Record<string, number>>((counts, rally) => {
+    counts[rally.outcomeType] = (counts[rally.outcomeType] || 0) + 1;
+    return counts;
+  }, {});
+};
+
+const topOutcome = (rallies: RallyEvent[]) => {
+  return Object.entries(countOutcomes(rallies)).sort((a, b) => b[1] - a[1])[0]?.[0] || 'None';
+};
+
+const buildFocus = (stats: Pick<ReportStats, 'ourEarned' | 'ourGifted' | 'biggestLeak' | 'biggestWeapon' | 'serve' | 'receive'>) => {
+  if (stats.ourGifted > stats.ourEarned) {
+    return `Execution leak: gifted points outpaced earned points. Start with ${stats.biggestLeak.toLowerCase()} cleanup.`;
+  }
+  if (stats.serve.errors >= Math.max(3, stats.serve.aces)) {
+    return 'Serving consistency: reduce missed serves before adding more risk.';
+  }
+  if (stats.receive.attempts > 0 && stats.receive.score < 2) {
+    return 'First contact: prioritize serve receive reps and out-of-system transition work.';
+  }
+  return `Maintain pressure: ${stats.biggestWeapon.toLowerCase()} was the top scoring source while tightening ${stats.biggestLeak.toLowerCase()}.`;
+};
+
+export const calculateReportStats = (
+  rallies: RallyEvent[],
+  players: Player[],
+  sets: MatchSet[] = []
+): ReportStats => {
+  const playerMap = new Map(players.map(player => [player.id, player]));
+  const ourServeRallies = rallies.filter(rally => rally.servingTeam === 'Us' && rally.serveResult);
+  const ourReceiveRallies = rallies.filter(rally => rally.servingTeam === 'Opponent' && rally.receiveResult);
+
+  const serve = {
+    attempts: ourServeRallies.length,
+    aces: ourServeRallies.filter(rally => rally.serveResult === 'Ace').length,
+    errors: ourServeRallies.filter(rally => rally.serveResult === 'Error').length,
+    inSystem: ourServeRallies.filter(rally => rally.serveResult === 'In-System').length,
+    outOfSystem: ourServeRallies.filter(rally => rally.serveResult === 'Out-of-System').length,
+    servePct: 0,
+    koPct: 0,
+  };
+  serve.servePct = pct(serve.attempts - serve.errors, serve.attempts);
+  serve.koPct = pct(serve.aces + serve.outOfSystem, serve.attempts);
+
+  const receive = {
+    attempts: ourReceiveRallies.length,
+    errors: ourReceiveRallies.filter(rally => rally.receiveResult === 'Error').length,
+    overpass: ourReceiveRallies.filter(rally => rally.receiveResult === 'Overpass').length,
+    inSystem: ourReceiveRallies.filter(rally => rally.receiveResult === 'In-System').length,
+    outOfSystem: ourReceiveRallies.filter(rally => rally.receiveResult === 'Out-of-System').length,
+    score: 0,
+  };
+  receive.score = passScore(receive);
+
+  const playerServing = new Map<string, Omit<PlayerServeReport, 'servePct' | 'koPct'>>();
+  const playerReceiving = new Map<string, Omit<PlayerReceiveReport, 'score'>>();
+
+  ourServeRallies.forEach((rally) => {
+    if (!rally.serverPlayerId) return;
+    const player = playerMap.get(rally.serverPlayerId);
+    if (!player) return;
+    const current = playerServing.get(player.id) ?? {
+      playerId: player.id,
+      name: playerName(player),
+      jersey: player.jerseyNumber,
+      attempts: 0,
+      aces: 0,
+      errors: 0,
+      inSystem: 0,
+      outOfSystem: 0,
+    };
+    current.attempts += 1;
+    if (rally.serveResult === 'Ace') current.aces += 1;
+    if (rally.serveResult === 'Error') current.errors += 1;
+    if (rally.serveResult === 'In-System') current.inSystem += 1;
+    if (rally.serveResult === 'Out-of-System') current.outOfSystem += 1;
+    playerServing.set(player.id, current);
+  });
+
+  ourReceiveRallies.forEach((rally) => {
+    if (!rally.receivePlayerId) return;
+    const player = playerMap.get(rally.receivePlayerId);
+    if (!player) return;
+    const current = playerReceiving.get(player.id) ?? {
+      playerId: player.id,
+      name: playerName(player),
+      jersey: player.jerseyNumber,
+      attempts: 0,
+      errors: 0,
+      overpass: 0,
+      inSystem: 0,
+      outOfSystem: 0,
+    };
+    current.attempts += 1;
+    if (rally.receiveResult === 'Error') current.errors += 1;
+    if (rally.receiveResult === 'Overpass') current.overpass += 1;
+    if (rally.receiveResult === 'In-System') current.inSystem += 1;
+    if (rally.receiveResult === 'Out-of-System') current.outOfSystem += 1;
+    playerReceiving.set(player.id, current);
+  });
+
+  const ourEarned = rallies.filter(rally => rally.pointWinner === 'Us' && rally.classification === 'Earned').length;
+  const ourGifted = rallies.filter(rally => rally.pointWinner === 'Opponent' && rally.classification === 'Gifted').length;
+  const opponentEarned = rallies.filter(rally => rally.pointWinner === 'Opponent' && rally.classification === 'Earned').length;
+  const opponentGifted = rallies.filter(rally => rally.pointWinner === 'Us' && rally.classification === 'Gifted').length;
+  const biggestWeapon = topOutcome(rallies.filter(rally => rally.pointWinner === 'Us' && rally.classification === 'Earned'));
+  const biggestLeak = topOutcome(rallies.filter(rally => rally.pointWinner === 'Opponent' && rally.classification === 'Gifted'));
+
+  const setReports = sets.map((set) => {
+    const setRallies = rallies.filter(rally => rally.setId === set.id);
+    const setServes = setRallies.filter(rally => rally.servingTeam === 'Us' && rally.serveResult);
+    const setServeErrors = setServes.filter(rally => rally.serveResult === 'Error').length;
+    const setServeKos = setServes.filter(rally => rally.serveResult === 'Ace' || rally.serveResult === 'Out-of-System').length;
+    const setReceive = setRallies.filter(rally => rally.servingTeam === 'Opponent' && rally.receiveResult);
+    const setReceiveStats = {
+      attempts: setReceive.length,
+      errors: setReceive.filter(rally => rally.receiveResult === 'Error').length,
+      overpass: setReceive.filter(rally => rally.receiveResult === 'Overpass').length,
+      inSystem: setReceive.filter(rally => rally.receiveResult === 'In-System').length,
+      outOfSystem: setReceive.filter(rally => rally.receiveResult === 'Out-of-System').length,
+    };
+
+    return {
+      setId: set.id,
+      setNumber: set.setNumber,
+      score: `${set.ourScore}-${set.opponentScore}`,
+      result: set.finalResult,
+      ourEarned: setRallies.filter(rally => rally.pointWinner === 'Us' && rally.classification === 'Earned').length,
+      ourGifted: setRallies.filter(rally => rally.pointWinner === 'Opponent' && rally.classification === 'Gifted').length,
+      servePct: pct(setServes.length - setServeErrors, setServes.length),
+      serveKoPct: pct(setServeKos, setServes.length),
+      passScore: passScore(setReceiveStats),
+    };
+  });
+
+  const baseStats = {
+    ralliesTracked: rallies.length,
+    ourEarned,
+    ourGifted,
+    opponentEarned,
+    opponentGifted,
+    biggestWeapon,
+    biggestLeak,
+    serve,
+    receive,
+    playerServing: Array.from(playerServing.values())
+      .map(stats => ({
+        ...stats,
+        servePct: pct(stats.attempts - stats.errors, stats.attempts),
+        koPct: pct(stats.aces + stats.outOfSystem, stats.attempts),
+      }))
+      .sort((a, b) => b.koPct - a.koPct || b.servePct - a.servePct || b.attempts - a.attempts),
+    playerReceiving: Array.from(playerReceiving.values())
+      .map(stats => ({ ...stats, score: passScore(stats) }))
+      .sort((a, b) => b.score - a.score || b.attempts - a.attempts),
+    setReports,
+  };
+
+  return {
+    ...baseStats,
+    focus: buildFocus(baseStats),
+  };
+};
+
+export const calculateSeasonReportStats = (
+  matches: Match[],
+  sets: MatchSet[],
+  rallies: RallyEvent[],
+  players: Player[]
+): SeasonReportStats => {
+  const base = calculateReportStats(rallies, players, sets);
+  const setsWon = sets.filter(set => set.finalResult === 'Win').length;
+  const setsLost = sets.filter(set => set.finalResult === 'Loss').length;
+
+  return {
+    ...base,
+    matchesPlayed: matches.length,
+    wins: matches.filter(match => match.result === 'Win').length,
+    losses: matches.filter(match => match.result === 'Loss').length,
+    setsWon,
+    setsLost,
+    matchRows: matches.map((match) => {
+      const matchSets = sets.filter(set => set.matchId === match.id);
+      const matchRallies = rallies.filter(rally => rally.matchId === match.id);
+      const matchStats = calculateReportStats(matchRallies, players, matchSets);
+      return {
+        matchId: match.id,
+        opponentName: match.opponentName,
+        matchDate: match.matchDate,
+        result: match.result,
+        ralliesTracked: matchRallies.length,
+        earnedGifted: `+${matchStats.ourEarned}/-${matchStats.ourGifted}`,
+        servePct: matchStats.serve.servePct,
+        serveKoPct: matchStats.serve.koPct,
+        passScore: matchStats.receive.score,
+      };
+    }),
+  };
+};

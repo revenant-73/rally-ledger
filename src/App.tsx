@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import Roster from './pages/Roster';
 import History from './pages/History';
 import MatchDetail from './pages/MatchDetail';
+import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import NewMatch from './pages/NewMatch';
 import LiveMatch from './pages/LiveMatch';
@@ -52,6 +53,7 @@ function App() {
           <Route path="roster" element={<Roster />} />
           <Route path="history" element={<History />} />
           <Route path="match/history/:matchId" element={<MatchDetail />} />
+          <Route path="reports" element={<Reports />} />
           <Route path="settings" element={<Settings />} />
         </Route>
         

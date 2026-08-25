@@ -1,12 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Zap, Calendar, MapPin, Trophy } from 'lucide-react';
+import { ArrowLeft, Zap, Calendar, MapPin, Trophy, Copy, Download, FileSpreadsheet } from 'lucide-react';
+import toast from 'react-hot-toast';
 import type { Match, Set, RallyEvent, Player } from '../types';
 import { useMatch } from '../hooks/useMatch';
 import { useAuth } from '../hooks/useAuth';
 import { useMatchDetailMetrics } from '../hooks/useMatchDetailMetrics';
 import { normalizeRallies } from '../utils/rallies';
 import { apiPost } from '../utils/api';
+import { calculateReportStats } from '../utils/reportStats';
+import { buildMatchCsvFiles, buildMatchTextSummary, downloadTextFile, fileSafe } from '../utils/reportExport';
 
 const MatchDetail: React.FC = () => {
   const { matchId } = useParams<{ matchId: string }>();
@@ -21,6 +24,32 @@ const MatchDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   const metrics = useMatchDetailMetrics(rallies, players);
+  const reportStats = useMemo(() => calculateReportStats(rallies, players, sets), [rallies, players, sets]);
+
+  const handleCopySummary = async () => {
+    if (!match) return;
+    try {
+      await navigator.clipboard.writeText(buildMatchTextSummary(match, reportStats));
+      toast.success('Report summary copied');
+    } catch {
+      toast.error('Unable to copy report');
+    }
+  };
+
+  const handleDownloadText = () => {
+    if (!match) return;
+    downloadTextFile(
+      `${fileSafe(match.opponentName)}-match-report.txt`,
+      buildMatchTextSummary(match, reportStats)
+    );
+  };
+
+  const handleDownloadCsv = () => {
+    if (!match) return;
+    buildMatchCsvFiles(match, reportStats, rallies, players).forEach(file => {
+      downloadTextFile(file.filename, file.contents, 'text/csv;charset=utf-8');
+    });
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -95,6 +124,32 @@ const MatchDetail: React.FC = () => {
       </header>
 
       <div className="space-y-6">
+        {rallies.length > 0 && (
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={handleCopySummary}
+              className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-brand-gray/10 bg-brand-gray/5 px-3 py-4 text-xs font-black uppercase tracking-tight text-brand-text-secondary hover:border-brand-teal/40 hover:text-brand-teal transition-colors"
+            >
+              <Copy size={18} />
+              Copy
+            </button>
+            <button
+              onClick={handleDownloadText}
+              className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-brand-gray/10 bg-brand-gray/5 px-3 py-4 text-xs font-black uppercase tracking-tight text-brand-text-secondary hover:border-brand-teal/40 hover:text-brand-teal transition-colors"
+            >
+              <Download size={18} />
+              Text
+            </button>
+            <button
+              onClick={handleDownloadCsv}
+              className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-brand-gray/10 bg-brand-gray/5 px-3 py-4 text-xs font-black uppercase tracking-tight text-brand-text-secondary hover:border-brand-teal/40 hover:text-brand-teal transition-colors"
+            >
+              <FileSpreadsheet size={18} />
+              CSVs
+            </button>
+          </div>
+        )}
+
         {/* Post-Match Summary / Key Insights */}
         {metrics && (
           <div className="bg-brand-teal/5 border-2 border-brand-teal/20 rounded-3xl p-6 shadow-sm">

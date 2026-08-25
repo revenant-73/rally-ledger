@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Users, History, Settings, Cloud } from 'lucide-react';
+import { Home, Users, History, Settings, Cloud, BarChart3 } from 'lucide-react';
 import { useMatch } from '../hooks/useMatch';
 
 const Layout: React.FC = () => {
@@ -12,6 +12,7 @@ const Layout: React.FC = () => {
     { icon: <Home size={24} />, label: 'Home', path: '/' },
     { icon: <Users size={24} />, label: 'Roster', path: '/roster' },
     { icon: <History size={24} />, label: 'History', path: '/history' },
+    { icon: <BarChart3 size={24} />, label: 'Reports', path: '/reports' },
     { icon: <Settings size={24} />, label: 'Settings', path: '/settings' },
   ];
 

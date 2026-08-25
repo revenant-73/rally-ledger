@@ -43,6 +43,13 @@ type DetailMatchPayload = {
   matchId: string;
 };
 
+type SeasonReportPayload = {
+  action: 'seasonReport';
+  userId: string;
+  email?: string;
+  teamIds: string[];
+};
+
 type UpdateMatchPayload = {
   action: 'update';
   userId: string;
@@ -51,7 +58,7 @@ type UpdateMatchPayload = {
   updates: Partial<Match>;
 };
 
-type MatchPayload = StartMatchPayload | ListMatchesPayload | DetailMatchPayload | UpdateMatchPayload;
+type MatchPayload = StartMatchPayload | ListMatchesPayload | DetailMatchPayload | SeasonReportPayload | UpdateMatchPayload;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null;
@@ -241,6 +248,135 @@ const handleDetail = async (payload: DetailMatchPayload) => {
   });
 };
 
+const handleSeasonReport = async (payload: SeasonReportPayload) => {
+  const { userId, teamIds } = payload;
+
+  if (!Array.isArray(teamIds)) {
+    return json(400, { error: 'Invalid season report payload' });
+  }
+  if (teamIds.length === 0) {
+    return json(200, { matches: [], sets: [], rallies: [], players: [] });
+  }
+
+  const client = getClient();
+  await ensureTeamAccessTable(client);
+  if (!await canViewProgram(client, { userId, email: payload.email || '' })) {
+    return json(200, { matches: [], sets: [], rallies: [], players: [] });
+  }
+
+  const teamPlaceholders = teamIds.map(() => '?').join(', ');
+  const matchesResult = await client.execute({
+    sql: `select
+      matches.id,
+      matches.team_id as teamId,
+      matches.opponent_name as opponentName,
+      matches.match_date as matchDate,
+      matches.location,
+      matches.match_type as matchType,
+      matches.status,
+      matches.result,
+      matches.notes,
+      matches.created_at as createdAt,
+      matches.updated_at as updatedAt,
+      matches.metadata
+    from matches
+    where matches.team_id in (${teamPlaceholders})
+    order by matches.match_date desc, matches.created_at desc`,
+    args: teamIds,
+  });
+
+  const matches = matchesResult.rows.map((row) => ({
+    ...row,
+    metadata: parseMetadata(row.metadata),
+  }));
+  const matchIds = matches.map(match => String(match.id));
+  const matchPlaceholders = matchIds.map(() => '?').join(', ');
+
+  const [setsResult, ralliesResult, playersResult] = await Promise.all([
+    matchIds.length > 0
+      ? client.execute({
+          sql: `select
+            id,
+            match_id as matchId,
+            set_number as setNumber,
+            our_score as ourScore,
+            opponent_score as opponentScore,
+            status,
+            starting_server_team as startingServerTeam,
+            final_result as finalResult,
+            created_at as createdAt,
+            updated_at as updatedAt,
+            metadata
+          from sets
+          where match_id in (${matchPlaceholders})
+          order by match_id, set_number asc`,
+          args: matchIds,
+        })
+      : Promise.resolve({ rows: [] }),
+    matchIds.length > 0
+      ? client.execute({
+          sql: `select
+            id,
+            match_id as matchId,
+            set_id as setId,
+            rally_number as rallyNumber,
+            score_before_us as scoreBeforeUs,
+            score_before_opponent as scoreBeforeOpponent,
+            score_after_us as scoreAfterUs,
+            score_after_opponent as scoreAfterOpponent,
+            point_winner as pointWinner,
+            serving_team as servingTeam,
+            server_player_id as serverPlayerId,
+            outcome_type as outcomeType,
+            classification,
+            player_id as playerId,
+            notes,
+            created_at as createdAt,
+            metadata
+          from rally_events
+          where match_id in (${matchPlaceholders})
+          order by match_id, rally_number asc, created_at asc`,
+          args: matchIds,
+        })
+      : Promise.resolve({ rows: [] }),
+    client.execute({
+      sql: `select
+        players.id,
+        players.team_id as teamId,
+        players.first_name as firstName,
+        players.last_name as lastName,
+        players.jersey_number as jerseyNumber,
+        players.position,
+        players.active,
+        players.photo_url as photoUrl,
+        players.created_at as createdAt,
+        players.updated_at as updatedAt,
+        players.metadata
+      from players
+      where players.team_id in (${teamPlaceholders})
+      order by players.team_id, cast(players.jersey_number as integer), players.jersey_number`,
+      args: teamIds,
+    }),
+  ]);
+
+  return json(200, {
+    matches,
+    sets: setsResult.rows.map((row) => ({
+      ...row,
+      metadata: parseMetadata(row.metadata),
+    })),
+    rallies: ralliesResult.rows.map((row) => ({
+      ...row,
+      metadata: parseMetadata(row.metadata),
+    })),
+    players: playersResult.rows.map((row) => ({
+      ...row,
+      active: Boolean(row.active),
+      metadata: parseMetadata(row.metadata),
+    })),
+  });
+};
+
 const handleStart = async (payload: StartMatchPayload) => {
   const { match, userId } = payload;
 
@@ -353,6 +489,9 @@ export const handler: Handler = async (event) => {
     }
     if (payload.action === 'detail') {
       return await handleDetail(payload);
+    }
+    if (payload.action === 'seasonReport') {
+      return await handleSeasonReport(payload);
     }
     if (payload.action === 'start') {
       return await handleStart(payload);
