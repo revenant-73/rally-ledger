@@ -8,6 +8,7 @@ All notable changes to this project are documented here. Format loosely follows 
 - Added a reporting roadmap (`docs/reporting-roadmap.md`) plus the first reporting implementation slice: shared report stat helpers, single-match copy/text/CSV exports, season copy/text/CSV exports, and a cumulative `/reports` page backed by a new `seasonReport` Netlify Function action.
 - Added print/save-to-PDF report controls and print-specific styles for match and season reports.
 - Expanded season downloads into a coach-ready CSV package with summary, match trends, player totals, serving, receiving, opponent breakdown, and practice plan files.
+- Added cumulative report filters for date range, match type, opponent, and result, with filtered stats/export behavior and a clear-filters action.
 
 ### Fixed
 - Fixed the `react-hooks/set-state-in-effect` lint warning in `useLiveMatchLogic` by moving the activeSet-metadata sync out of a `useEffect` and into the render body, guarded by a `prevMetadata` comparison - React's documented pattern for "adjusting state when a prop changes," which avoids the extra commit-then-effect render pass.

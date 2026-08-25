@@ -80,6 +80,15 @@ Core season report sections:
 - Player development view: per-player recent form compared with season average.
 - Practice planning view: auto-generated focus areas from the season trends.
 
+Completed report filters:
+
+- Date range.
+- Match type.
+- Opponent.
+- Result.
+- Filtered match count.
+- Clear filters action.
+
 ## Implementation Order
 
 1. Done: extract shared report/stat helpers so live, match-detail, export, and season reports use the same calculations.
@@ -90,7 +99,8 @@ Core season report sections:
 6. Done: add copyable text and CSV downloads for season reports.
 7. Done: add print styles and native print controls for browser save-to-PDF.
 8. Done: expand season downloads into a coach-ready CSV package with player totals, opponent breakdown, and practice plan files.
-9. Add richer dedicated print/export report layouts if coaches need more polished packets later.
+9. Done: add cumulative report filters for date range, match type, opponent, and result.
+10. Add richer dedicated print/export report layouts if coaches need more polished packets later.
 
 ## Validation
 

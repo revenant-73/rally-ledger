@@ -9,7 +9,9 @@ import {
   Copy,
   Download,
   FileSpreadsheet,
+  ListFilter,
   Printer,
+  RotateCcw,
   ShieldCheck,
   Target,
   Trophy,
@@ -40,6 +42,8 @@ const formatDate = (date: string) => {
 };
 
 const pct = (value: number) => `${value}%`;
+
+const dateKey = (date: string) => date.split('T')[0] ?? date;
 
 const scoreTone = (value: number, strong: number, caution: number) => {
   if (value >= strong) return 'text-brand-green';
@@ -125,6 +129,11 @@ const Reports: React.FC = () => {
   const [reportData, setReportData] = useState<SeasonReportResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [matchTypeFilter, setMatchTypeFilter] = useState('all');
+  const [opponentFilter, setOpponentFilter] = useState('all');
+  const [resultFilter, setResultFilter] = useState('all');
 
   const effectiveTeamId = useMemo(() => {
     if (teams.length === 0) return '';
@@ -191,15 +200,49 @@ const Reports: React.FC = () => {
     [effectiveTeamId, teams]
   );
 
-  const stats = useMemo<SeasonReportStats | null>(() => {
-    if (!reportData) return null;
-    return calculateSeasonReportStats(
-      reportData.matches,
-      reportData.sets,
-      reportData.rallies,
-      reportData.players
-    );
+  const matchTypeOptions = useMemo(() => {
+    if (!reportData) return [];
+    return Array.from(new Set(reportData.matches.map(match => match.matchType).filter(Boolean))).sort();
   }, [reportData]);
+
+  const opponentOptions = useMemo(() => {
+    if (!reportData) return [];
+    return Array.from(new Set(reportData.matches.map(match => match.opponentName).filter(Boolean))).sort();
+  }, [reportData]);
+
+  const filteredReportData = useMemo<SeasonReportResponse | null>(() => {
+    if (!reportData) return null;
+
+    const filteredMatches = reportData.matches.filter((match) => {
+      const matchDate = dateKey(match.matchDate);
+      if (startDate && matchDate < startDate) return false;
+      if (endDate && matchDate > endDate) return false;
+      if (matchTypeFilter !== 'all' && match.matchType !== matchTypeFilter) return false;
+      if (opponentFilter !== 'all' && match.opponentName !== opponentFilter) return false;
+      if (resultFilter === 'Open' && match.result) return false;
+      if (resultFilter !== 'all' && resultFilter !== 'Open' && match.result !== resultFilter) return false;
+      return true;
+    });
+
+    const matchIds = new Set(filteredMatches.map(match => match.id));
+
+    return {
+      matches: filteredMatches,
+      sets: reportData.sets.filter(set => matchIds.has(set.matchId)),
+      rallies: reportData.rallies.filter(rally => matchIds.has(rally.matchId)),
+      players: reportData.players,
+    };
+  }, [endDate, matchTypeFilter, opponentFilter, reportData, resultFilter, startDate]);
+
+  const stats = useMemo<SeasonReportStats | null>(() => {
+    if (!filteredReportData) return null;
+    return calculateSeasonReportStats(
+      filteredReportData.matches,
+      filteredReportData.sets,
+      filteredReportData.rallies,
+      filteredReportData.players
+    );
+  }, [filteredReportData]);
 
   const handleTeamChange = (teamId: string) => {
     setSelectedTeamId(teamId);
@@ -236,10 +279,25 @@ const Reports: React.FC = () => {
     window.print();
   };
 
+  const clearFilters = () => {
+    setStartDate('');
+    setEndDate('');
+    setMatchTypeFilter('all');
+    setOpponentFilter('all');
+    setResultFilter('all');
+  };
+
   const hasTeams = teams.length > 0;
   const hasMatches = Boolean(reportData && reportData.matches.length > 0);
-  const hasRallies = Boolean(reportData && reportData.rallies.length > 0);
+  const hasFilteredMatches = Boolean(filteredReportData && filteredReportData.matches.length > 0);
+  const hasRallies = Boolean(filteredReportData && filteredReportData.rallies.length > 0);
   const earnedGiftedBalance = stats ? stats.ourEarned - stats.ourGifted : 0;
+  const activeFilterCount = [startDate, endDate, matchTypeFilter !== 'all', opponentFilter !== 'all', resultFilter !== 'all']
+    .filter(Boolean)
+    .length;
+  const filtersActive = activeFilterCount > 0;
+  const totalMatches = reportData?.matches.length ?? 0;
+  const visibleMatches = filteredReportData?.matches.length ?? 0;
 
   return (
     <div className="print-report min-h-screen bg-brand-bg px-4 py-6 text-brand-text md:px-8">
@@ -259,6 +317,11 @@ const Reports: React.FC = () => {
             <p className="mt-1 truncate text-xs font-bold uppercase tracking-widest text-brand-text-secondary">
               {selectedTeam ? `${selectedTeam.name} · ${selectedTeam.season}` : 'No roster selected'}
             </p>
+            {filtersActive && (
+              <p className="mt-2 text-[11px] font-black uppercase tracking-widest text-brand-teal">
+                Filtered view · {visibleMatches} of {totalMatches} matches
+              </p>
+            )}
           </div>
 
           <div className="print-hide mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand-teal/10 text-brand-teal">
@@ -287,6 +350,100 @@ const Reports: React.FC = () => {
               />
             </div>
           </label>
+        )}
+
+        {hasMatches && (
+          <section className="print-hide mb-5 rounded-3xl border border-brand-gray/10 bg-brand-gray/5 p-4">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-teal/10 text-brand-teal">
+                  <ListFilter size={20} />
+                </div>
+                <div>
+                  <h2 className="text-sm font-black uppercase tracking-widest text-brand-text-secondary">Report Filters</h2>
+                  <p className="mt-1 text-xs font-bold text-brand-text-secondary">
+                    Showing {visibleMatches} of {totalMatches} matches
+                  </p>
+                </div>
+              </div>
+              {filtersActive && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="flex items-center gap-2 rounded-2xl border border-brand-gray/10 bg-brand-bg px-3 py-2 text-xs font-black uppercase tracking-tight text-brand-text-secondary transition-colors hover:border-brand-teal/40 hover:text-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/50"
+                >
+                  <RotateCcw size={15} />
+                  Clear
+                </button>
+              )}
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-5">
+              <label className="block">
+                <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">From</span>
+                <input
+                  type="date"
+                  value={startDate}
+                  max={endDate || undefined}
+                  onChange={(event) => setStartDate(event.target.value)}
+                  className="w-full rounded-2xl border border-brand-gray/20 bg-brand-bg px-3 py-3 text-sm font-bold text-brand-text outline-none transition-colors focus:border-brand-teal/60 focus:ring-2 focus:ring-brand-teal/20"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">To</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  min={startDate || undefined}
+                  onChange={(event) => setEndDate(event.target.value)}
+                  className="w-full rounded-2xl border border-brand-gray/20 bg-brand-bg px-3 py-3 text-sm font-bold text-brand-text outline-none transition-colors focus:border-brand-teal/60 focus:ring-2 focus:ring-brand-teal/20"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">Type</span>
+                <select
+                  value={matchTypeFilter}
+                  onChange={(event) => setMatchTypeFilter(event.target.value)}
+                  className="w-full rounded-2xl border border-brand-gray/20 bg-brand-bg px-3 py-3 text-sm font-bold text-brand-text outline-none transition-colors focus:border-brand-teal/60 focus:ring-2 focus:ring-brand-teal/20"
+                >
+                  <option value="all">All types</option>
+                  {matchTypeOptions.map(matchType => (
+                    <option key={matchType} value={matchType}>{matchType}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">Opponent</span>
+                <select
+                  value={opponentFilter}
+                  onChange={(event) => setOpponentFilter(event.target.value)}
+                  className="w-full rounded-2xl border border-brand-gray/20 bg-brand-bg px-3 py-3 text-sm font-bold text-brand-text outline-none transition-colors focus:border-brand-teal/60 focus:ring-2 focus:ring-brand-teal/20"
+                >
+                  <option value="all">All opponents</option>
+                  {opponentOptions.map(opponent => (
+                    <option key={opponent} value={opponent}>{opponent}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">Result</span>
+                <select
+                  value={resultFilter}
+                  onChange={(event) => setResultFilter(event.target.value)}
+                  className="w-full rounded-2xl border border-brand-gray/20 bg-brand-bg px-3 py-3 text-sm font-bold text-brand-text outline-none transition-colors focus:border-brand-teal/60 focus:ring-2 focus:ring-brand-teal/20"
+                >
+                  <option value="all">All results</option>
+                  <option value="Win">Wins</option>
+                  <option value="Loss">Losses</option>
+                  <option value="Open">Open</option>
+                </select>
+              </label>
+            </div>
+          </section>
         )}
 
         {loading || (isSyncing && !reportData) ? (
@@ -324,6 +481,20 @@ const Reports: React.FC = () => {
                 className="rounded-2xl bg-brand-teal px-5 py-3 text-sm font-black text-brand-bg transition-transform active:scale-95"
               >
                 Start match
+              </button>
+            }
+          />
+        ) : !hasFilteredMatches ? (
+          <EmptyState
+            icon={<ListFilter size={30} />}
+            title="No matches match these filters"
+            message="Clear or widen the report filters to bring season matches back into the cumulative report."
+            action={
+              <button
+                onClick={clearFilters}
+                className="rounded-2xl bg-brand-teal px-5 py-3 text-sm font-black text-brand-bg transition-transform active:scale-95"
+              >
+                Clear filters
               </button>
             }
           />
