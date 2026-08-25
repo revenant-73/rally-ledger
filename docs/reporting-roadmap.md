@@ -46,8 +46,11 @@ Recommended order:
    - Season report CSV files:
      - Season summary.
      - Match trends.
+     - Player totals across serve and receive.
      - Player serving.
      - Player receiving.
+     - Opponent breakdown.
+     - Practice plan.
 
 3. Done: print-friendly report
    - Use browser print/save-to-PDF before adding a heavy PDF-generation dependency.
@@ -86,7 +89,8 @@ Core season report sections:
 5. Done: add a Reports page with team/season filtering and cumulative stat views.
 6. Done: add copyable text and CSV downloads for season reports.
 7. Done: add print styles and native print controls for browser save-to-PDF.
-8. Add richer dedicated print/export report layouts if coaches need more polished packets later.
+8. Done: expand season downloads into a coach-ready CSV package with player totals, opponent breakdown, and practice plan files.
+9. Add richer dedicated print/export report layouts if coaches need more polished packets later.
 
 ## Validation
 

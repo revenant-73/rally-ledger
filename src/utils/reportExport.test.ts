@@ -97,16 +97,22 @@ describe('report export', () => {
     expect(summary).toContain('8/20/2026 vs Liberty: Win');
   });
 
-  it('builds season csv files for summary, trends, serving, and receiving', () => {
+  it('builds a season csv report bundle for coach review', () => {
     const files = buildSeasonCsvFiles(team, stats);
 
     expect(files.map(file => file.filename)).toEqual([
       'century-varsity-2026-season-summary.csv',
       'century-varsity-2026-season-match-trends.csv',
+      'century-varsity-2026-season-player-totals.csv',
       'century-varsity-2026-season-serving.csv',
       'century-varsity-2026-season-receiving.csv',
+      'century-varsity-2026-season-opponent-breakdown.csv',
+      'century-varsity-2026-season-practice-plan.csv',
     ]);
     expect(files[0].contents).toContain('Practice focus,Maintain pressure.');
     expect(files[1].contents).toContain('8/20/2026,Liberty,Win');
+    expect(files[2].contents).toContain('07,Avery Nguyen,8,2,1,88,50,0');
+    expect(files[5].contents).toContain('Liberty,1,1,0,8,5,2,90,45,2.3');
+    expect(files[6].contents).toContain('Earned/Gifted');
   });
 });

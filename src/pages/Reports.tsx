@@ -229,6 +229,7 @@ const Reports: React.FC = () => {
     buildSeasonCsvFiles(selectedTeam, stats).forEach(file => {
       downloadTextFile(file.filename, file.contents, 'text/csv;charset=utf-8');
     });
+    toast.success('Season CSV package downloaded');
   };
 
   const handlePrint = () => {
@@ -354,7 +355,7 @@ const Reports: React.FC = () => {
                 className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-brand-gray/10 bg-brand-gray/5 px-3 py-4 text-xs font-black uppercase tracking-tight text-brand-text-secondary transition-colors hover:border-brand-teal/40 hover:text-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/50"
               >
                 <FileSpreadsheet size={18} />
-                CSVs
+                CSV Pack
               </button>
               <button
                 onClick={handlePrint}

@@ -39,6 +39,20 @@ const formatReportDate = (date: string) => {
   return parsed.toLocaleDateString();
 };
 
+const average = (values: number[]) => {
+  const populated = values.filter(value => Number.isFinite(value));
+  if (populated.length === 0) return 0;
+  return Number((populated.reduce((total, value) => total + value, 0) / populated.length).toFixed(2));
+};
+
+const parseEarnedGifted = (value: string) => {
+  const match = value.match(/\+?(-?\d+)\/-?(-?\d+)/);
+  return {
+    earned: match ? Number(match[1]) : 0,
+    gifted: match ? Number(match[2]) : 0,
+  };
+};
+
 export const buildMatchTextSummary = (match: Match, stats: ReportStats) => {
   const result = match.result ? ` (${match.result})` : '';
   const lines = [
@@ -241,6 +255,84 @@ export const buildSeasonTextSummary = (team: Team, stats: SeasonReportStats) => 
 
 export const buildSeasonCsvFiles = (team: Team, stats: SeasonReportStats) => {
   const baseName = `${fileSafe(team.name)}-${fileSafe(team.season)}-season`;
+  const playerServing = new Map(stats.playerServing.map(player => [player.playerId, player]));
+  const playerReceiving = new Map(stats.playerReceiving.map(player => [player.playerId, player]));
+  const playerIds = Array.from(new Set([...playerServing.keys(), ...playerReceiving.keys()]));
+  const opponentRows = Array.from(
+    stats.matchRows.reduce((opponents, row) => {
+      const current = opponents.get(row.opponentName) ?? {
+        opponentName: row.opponentName,
+        matches: 0,
+        wins: 0,
+        losses: 0,
+        rallies: 0,
+        earned: 0,
+        gifted: 0,
+        servePcts: [] as number[],
+        serveKoPcts: [] as number[],
+        passScores: [] as number[],
+      };
+      const earnedGifted = parseEarnedGifted(row.earnedGifted);
+      current.matches += 1;
+      current.wins += row.result === 'Win' ? 1 : 0;
+      current.losses += row.result === 'Loss' ? 1 : 0;
+      current.rallies += row.ralliesTracked;
+      current.earned += earnedGifted.earned;
+      current.gifted += earnedGifted.gifted;
+      current.servePcts.push(row.servePct);
+      current.serveKoPcts.push(row.serveKoPct);
+      current.passScores.push(row.passScore);
+      opponents.set(row.opponentName, current);
+      return opponents;
+    }, new Map<string, {
+      opponentName: string;
+      matches: number;
+      wins: number;
+      losses: number;
+      rallies: number;
+      earned: number;
+      gifted: number;
+      servePcts: number[];
+      serveKoPcts: number[];
+      passScores: number[];
+    }>())
+      .values()
+  ).sort((a, b) => b.matches - a.matches || a.opponentName.localeCompare(b.opponentName));
+
+  const practiceRows = [
+    {
+      priority: stats.ourGifted > stats.ourEarned ? 'High' : 'Medium',
+      area: 'Earned/Gifted',
+      evidence: `Earned ${stats.ourEarned}, gifted ${stats.ourGifted}`,
+      recommendation: stats.ourGifted > stats.ourEarned
+        ? `Reduce ${stats.biggestLeak.toLowerCase()} before adding more risk.`
+        : `Keep using ${stats.biggestWeapon.toLowerCase()} as the primary scoring pressure.`,
+    },
+    {
+      priority: stats.serve.servePct < 85 || stats.serve.errors >= Math.max(3, stats.serve.aces) ? 'High' : 'Medium',
+      area: 'Serve',
+      evidence: `${stats.serve.servePct}% in, ${stats.serve.koPct}% KO, ${stats.serve.errors} errors`,
+      recommendation: stats.serve.servePct < 85
+        ? 'Build serve consistency first, then layer in zones and pressure.'
+        : 'Maintain serve-in rate while targeting more out-of-system first contacts.',
+    },
+    {
+      priority: stats.receive.attempts > 0 && stats.receive.score < 2 ? 'High' : 'Medium',
+      area: 'Serve Receive',
+      evidence: `${stats.receive.score.toFixed(2)} pass score on ${stats.receive.attempts} attempts`,
+      recommendation: stats.receive.attempts === 0
+        ? 'No receive data tracked yet; capture pass quality in upcoming matches.'
+        : stats.receive.score < 2
+          ? 'Prioritize first-contact reps and out-of-system transition work.'
+          : 'Use serve receive as a strength while sharpening high-pressure rotations.',
+    },
+    {
+      priority: 'Medium',
+      area: 'Player Development',
+      evidence: `${stats.playerServing.length} servers and ${stats.playerReceiving.length} passers tracked`,
+      recommendation: 'Use player totals to assign focused serve and receive reps by role.',
+    },
+  ];
 
   return [
     {
@@ -290,6 +382,45 @@ export const buildSeasonCsvFiles = (team: Team, stats: SeasonReportStats) => {
       ),
     },
     {
+      filename: `${baseName}-player-totals.csv`,
+      contents: toCsv(
+        [
+          'Jersey',
+          'Player',
+          'Serve Attempts',
+          'Aces',
+          'Serve Errors',
+          'Serve %',
+          'KO %',
+          'Receive Attempts',
+          '3 Pass',
+          '2 Pass',
+          'Overpass',
+          'Receive Errors',
+          'Pass Score',
+        ],
+        playerIds.map(playerId => {
+          const serving = playerServing.get(playerId);
+          const receiving = playerReceiving.get(playerId);
+          return [
+            serving?.jersey ?? receiving?.jersey ?? '',
+            serving?.name ?? receiving?.name ?? '',
+            serving?.attempts ?? 0,
+            serving?.aces ?? 0,
+            serving?.errors ?? 0,
+            serving?.servePct ?? 0,
+            serving?.koPct ?? 0,
+            receiving?.attempts ?? 0,
+            receiving?.inSystem ?? 0,
+            receiving?.outOfSystem ?? 0,
+            receiving?.overpass ?? 0,
+            receiving?.errors ?? 0,
+            receiving?.score ?? 0,
+          ];
+        })
+      ),
+    },
+    {
       filename: `${baseName}-serving.csv`,
       contents: toCsv(
         ['Jersey', 'Player', 'Attempts', 'Aces', 'Errors', 'In System', 'Out Of System', 'Serve %', 'KO %'],
@@ -319,6 +450,36 @@ export const buildSeasonCsvFiles = (team: Team, stats: SeasonReportStats) => {
           player.overpass,
           player.errors,
           player.score,
+        ])
+      ),
+    },
+    {
+      filename: `${baseName}-opponent-breakdown.csv`,
+      contents: toCsv(
+        ['Opponent', 'Matches', 'Wins', 'Losses', 'Rallies', 'Earned', 'Gifted', 'Avg Serve %', 'Avg KO %', 'Avg Pass Score'],
+        opponentRows.map(row => [
+          row.opponentName,
+          row.matches,
+          row.wins,
+          row.losses,
+          row.rallies,
+          row.earned,
+          row.gifted,
+          average(row.servePcts),
+          average(row.serveKoPcts),
+          average(row.passScores),
+        ])
+      ),
+    },
+    {
+      filename: `${baseName}-practice-plan.csv`,
+      contents: toCsv(
+        ['Priority', 'Area', 'Evidence', 'Recommendation'],
+        practiceRows.map(row => [
+          row.priority,
+          row.area,
+          row.evidence,
+          row.recommendation,
         ])
       ),
     },
