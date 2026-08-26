@@ -87,7 +87,7 @@ describe('report stats', () => {
     expect(stats.serve).toMatchObject({ attempts: 2, aces: 1, errors: 1, servePct: 50, koPct: 50 });
     expect(stats.receive).toMatchObject({ attempts: 2, inSystem: 1, outOfSystem: 1, score: 2.5 });
     expect(stats.attack).toMatchObject({ attempts: 2, kills: 1, errors: 1, net: 0, killPct: 50, errorPct: 50 });
-    expect(stats.playerServing[0]).toMatchObject({ jersey: '07', attempts: 2, servePct: 50, koPct: 50 });
+    expect(stats.playerServing[0]).toMatchObject({ jersey: '07', attempts: 2, ko: 1, servePct: 50, koPct: 50 });
     expect(stats.playerReceiving[0]).toMatchObject({ jersey: '12', attempts: 2, score: 2.5 });
     expect(stats.playerAttacking).toEqual([
       expect.objectContaining({ jersey: '07', kills: 1, errors: 0, net: 1, killPct: 100 }),
@@ -104,7 +104,7 @@ describe('report stats', () => {
     ], players, [sets[0]]);
 
     expect(stats.serve).toMatchObject({ attempts: 3, aces: 1, errors: 2, servePct: 33, koPct: 33 });
-    expect(stats.playerServing[0]).toMatchObject({ jersey: '07', attempts: 3, errors: 2, servePct: 33 });
+    expect(stats.playerServing[0]).toMatchObject({ jersey: '07', attempts: 3, errors: 2, ko: 1, servePct: 33 });
     expect(stats.setReports[0]).toMatchObject({ servePct: 33, serveKoPct: 33 });
   });
 

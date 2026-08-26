@@ -40,6 +40,7 @@ This prevents stray metadata from counting on the wrong serving side.
 - Serve attempts: our serve rallies with a valid serve result.
 - Serve in percentage: `(serve attempts - serve errors) / serve attempts`.
 - Serve KO percentage: `(aces + out-of-system serves) / serve attempts`.
+- Serve KO count: `aces + out-of-system serves`; expanded serving reports also show out-of-system separately as `OOS`.
 - Receive attempts: opponent serve rallies with a valid receive result.
 - Pass score: `(3 * in-system + 2 * out-of-system + 1 * overpass) / receive attempts`.
 - Kills: earned `Kill` outcomes won by us.

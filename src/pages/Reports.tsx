@@ -274,6 +274,7 @@ const Reports: React.FC = () => {
           errors: serving?.errors ?? 0,
           inSystem: serving?.inSystem ?? 0,
           outOfSystem: serving?.outOfSystem ?? 0,
+          ko: serving?.ko ?? 0,
           servePct: serving?.servePct ?? 0,
           koPct: serving?.koPct ?? 0,
         };
@@ -728,6 +729,7 @@ const Reports: React.FC = () => {
                           <th className="px-3 py-3 text-right">Ace</th>
                           <th className="px-3 py-3 text-right">Err</th>
                           <th className="px-3 py-3 text-right">InSys</th>
+                          <th className="px-3 py-3 text-right">OOS</th>
                           <th className="px-3 py-3 text-right">KO</th>
                           <th className="px-3 py-3 text-right">In%</th>
                           <th className="px-3 py-3 text-right">KO%</th>
@@ -742,6 +744,7 @@ const Reports: React.FC = () => {
                             <td className="px-3 py-3 text-right text-brand-red">{player.errors}</td>
                             <td className="px-3 py-3 text-right">{player.inSystem}</td>
                             <td className="px-3 py-3 text-right">{player.outOfSystem}</td>
+                            <td className="px-3 py-3 text-right text-brand-teal">{player.ko}</td>
                             <td className="px-3 py-3 text-right text-brand-green">{pct(player.servePct)}</td>
                             <td className="px-3 py-3 text-right text-brand-teal">{pct(player.koPct)}</td>
                           </tr>

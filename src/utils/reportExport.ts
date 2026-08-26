@@ -156,7 +156,7 @@ export const buildMatchCsvFiles = (
     {
       filename: `${fileSafe(match.opponentName)}-serving.csv`,
       contents: toCsv(
-        ['Jersey', 'Player', 'Attempts', 'Aces', 'Errors', 'In System', 'Out Of System', 'Serve %', 'KO %'],
+        ['Jersey', 'Player', 'Attempts', 'Aces', 'Errors', 'In System', 'Out Of System', 'KO', 'Serve %', 'KO %'],
         stats.playerServing.map(player => [
           player.jersey,
           player.name,
@@ -165,6 +165,7 @@ export const buildMatchCsvFiles = (
           player.errors,
           player.inSystem,
           player.outOfSystem,
+          player.ko,
           player.servePct,
           player.koPct,
         ])
@@ -437,6 +438,8 @@ export const buildSeasonCsvFiles = (team: Team, stats: SeasonReportStats) => {
           'Serve Attempts',
           'Aces',
           'Serve Errors',
+          'Serve OOS',
+          'Serve KO',
           'Serve %',
           'KO %',
           'Receive Attempts',
@@ -461,6 +464,8 @@ export const buildSeasonCsvFiles = (team: Team, stats: SeasonReportStats) => {
             serving?.attempts ?? 0,
             serving?.aces ?? 0,
             serving?.errors ?? 0,
+            serving?.outOfSystem ?? 0,
+            serving?.ko ?? 0,
             serving?.servePct ?? 0,
             serving?.koPct ?? 0,
             receiving?.attempts ?? 0,
@@ -481,7 +486,7 @@ export const buildSeasonCsvFiles = (team: Team, stats: SeasonReportStats) => {
     {
       filename: `${baseName}-serving.csv`,
       contents: toCsv(
-        ['Jersey', 'Player', 'Attempts', 'Aces', 'Errors', 'In System', 'Out Of System', 'Serve %', 'KO %'],
+        ['Jersey', 'Player', 'Attempts', 'Aces', 'Errors', 'In System', 'Out Of System', 'KO', 'Serve %', 'KO %'],
         stats.playerServing.map(player => [
           player.jersey,
           player.name,
@@ -490,6 +495,7 @@ export const buildSeasonCsvFiles = (team: Team, stats: SeasonReportStats) => {
           player.errors,
           player.inSystem,
           player.outOfSystem,
+          player.ko,
           player.servePct,
           player.koPct,
         ])

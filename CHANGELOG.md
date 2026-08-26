@@ -18,6 +18,7 @@ All notable changes to this project are documented here. Format loosely follows 
 ### Fixed
 - Fixed serve reporting for one-tap ACE/ERR entries by persisting inferred serve results on new rallies and inferring serve aces/errors from older outcome-only rally rows in reports and dashboards.
 - Fixed serve/receive result helpers so stored quality metadata is ignored when it belongs to the wrong serving side.
+- Fixed expanded serving reports so the `KO` count matches `KO%` by showing pressure serves as aces plus out-of-system serves, while preserving out-of-system as its own column.
 - Fixed the `react-hooks/set-state-in-effect` lint warning in `useLiveMatchLogic` by moving the activeSet-metadata sync out of a `useEffect` and into the render body, guarded by a `prevMetadata` comparison - React's documented pattern for "adjusting state when a prop changes," which avoids the extra commit-then-effect render pass.
 
 ### Security

@@ -61,6 +61,7 @@ const stats: SeasonReportStats = {
       errors: 1,
       inSystem: 3,
       outOfSystem: 2,
+      ko: 4,
       servePct: 88,
       koPct: 50,
     },
@@ -138,7 +139,8 @@ describe('report export', () => {
     ]);
     expect(files[0].contents).toContain('Practice focus,Maintain pressure.');
     expect(files[1].contents).toContain('8/20/2026,Liberty,Win,8,+5/-2,90,45,2.3,4,1,3');
-    expect(files[2].contents).toContain('07,Avery Nguyen,8,2,1,88,50,0,0,0,0,0,0,4,1,3,80,20');
+    expect(files[2].contents).toContain('07,Avery Nguyen,8,2,1,2,4,88,50,0,0,0,0,0,0,4,1,3,80,20');
+    expect(files[3].contents).toContain('07,Avery Nguyen,8,2,1,3,2,4,88,50');
     expect(files[5].contents).toContain('07,Avery Nguyen,4,1,5,3,80,20');
     expect(files[6].contents).toContain('Liberty,1,1,0,8,5,2,90,45,2.3');
     expect(files[7].contents).toContain('Earned/Gifted');

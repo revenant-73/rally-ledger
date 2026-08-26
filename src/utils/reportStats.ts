@@ -10,6 +10,7 @@ export interface PlayerServeReport {
   errors: number;
   inSystem: number;
   outOfSystem: number;
+  ko: number;
   servePct: number;
   koPct: number;
 }
@@ -189,7 +190,7 @@ export const calculateReportStats = (
   attack.killPct = pct(attack.kills, attack.attempts);
   attack.errorPct = pct(attack.errors, attack.attempts);
 
-  const playerServing = new Map<string, Omit<PlayerServeReport, 'servePct' | 'koPct'>>();
+  const playerServing = new Map<string, Omit<PlayerServeReport, 'ko' | 'servePct' | 'koPct'>>();
   const playerReceiving = new Map<string, Omit<PlayerReceiveReport, 'score'>>();
   const playerAttacking = new Map<string, Omit<PlayerAttackReport, 'attempts' | 'net' | 'killPct' | 'errorPct'>>();
 
@@ -317,6 +318,7 @@ export const calculateReportStats = (
     playerServing: Array.from(playerServing.values())
       .map(stats => ({
         ...stats,
+        ko: stats.aces + stats.outOfSystem,
         servePct: pct(stats.attempts - stats.errors, stats.attempts),
         koPct: pct(stats.aces + stats.outOfSystem, stats.attempts),
       }))
