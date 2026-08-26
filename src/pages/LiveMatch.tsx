@@ -71,6 +71,7 @@ const LiveMatch: React.FC = () => {
   const [showLineupEditor, setShowLineupEditor] = useState(false);
   const [selectedPositionIdx, setSelectedPositionIdx] = useState<number | null>(null);
   const [tableMode, setTableMode] = useState(() => localStorage.getItem('liveTableMode') === 'true');
+  const [brightGymMode, setBrightGymMode] = useState(() => localStorage.getItem('liveBrightGymMode') === 'true');
   const { data: matchSets = [] } = useMatchSets(user?.id, activeMatch?.id);
   useScreenWakeLock(Boolean(activeMatch && activeSet));
 
@@ -83,6 +84,10 @@ const LiveMatch: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('liveTableMode', String(tableMode));
   }, [tableMode]);
+
+  useEffect(() => {
+    localStorage.setItem('liveBrightGymMode', String(brightGymMode));
+  }, [brightGymMode]);
 
   if (!activeMatch) return null;
 
@@ -297,7 +302,7 @@ const LiveMatch: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-brand-bg text-brand-text flex flex-col relative">
+    <div className={`min-h-screen flex flex-col relative ${brightGymMode ? 'bg-slate-100 text-slate-950' : 'bg-brand-bg text-brand-text'}`}>
       <LiveMatchHeader 
         onBack={() => navigate('/')}
         setNumber={activeSet.setNumber}
@@ -306,6 +311,7 @@ const LiveMatch: React.FC = () => {
         onShowStats={() => navigate('/match/dashboard')}
         onShowMore={() => setShowMoreMenu(true)}
         compact={tableMode}
+        brightGymMode={brightGymMode}
       />
 
       <NoteModal 
@@ -363,6 +369,8 @@ const LiveMatch: React.FC = () => {
         onAbandonMatch={() => navigate('/')}
         tableMode={tableMode}
         onToggleTableMode={() => setTableMode((current) => !current)}
+        brightGymMode={brightGymMode}
+        onToggleBrightGymMode={() => setBrightGymMode((current) => !current)}
       />
 
       <LiveMatchScoreboard 
@@ -373,6 +381,7 @@ const LiveMatch: React.FC = () => {
         onManualScoreChange={handleManualScoreChange}
         servingTeam={servingTeam}
         onToggleServingTeam={toggleServingTeam}
+        brightGymMode={brightGymMode}
       />
 
       {currentLineup ? (
@@ -396,13 +405,14 @@ const LiveMatch: React.FC = () => {
               toast.success(`Rotated to ${nextRotation}`);
             }}
             onPlayerClick={(idx) => setSelectedPositionIdx(idx)}
+            brightGymMode={brightGymMode}
           />
         </div>
       ) : (
         <div className="px-3 pb-2">
           <button 
             onClick={() => setShowLineupEditor(true)}
-            className="w-full py-2 bg-brand-gray/5 border border-brand-gray/10 rounded-xl text-brand-text-secondary text-xs font-bold uppercase"
+            className={`w-full py-2 rounded-xl text-xs font-bold uppercase ${brightGymMode ? 'border border-slate-300 bg-white text-slate-700' : 'border border-brand-gray/10 bg-brand-gray/5 text-brand-text-secondary'}`}
           >
             Set Starting Lineup
           </button>
@@ -440,6 +450,7 @@ const LiveMatch: React.FC = () => {
         onSetServerPlayerId={setServerPlayerId}
         currentLineup={currentLineup}
         currentRotation={currentRotation}
+        brightGymMode={brightGymMode}
       />
 
       {selectedPositionIdx && currentLineup && (
@@ -487,14 +498,14 @@ const LiveMatch: React.FC = () => {
       <div className={`grid grid-cols-2 gap-2 ${tableMode ? 'p-1.5' : 'p-2'}`}>
         <button
           onClick={undoWithFeedback}
-          className={`flex flex-col items-center gap-0.5 rounded-xl border border-brand-gray/40 bg-[#0f1117] text-brand-text active:border-brand-teal active:text-brand-teal ${tableMode ? 'p-1.5' : 'p-2'}`}
+          className={`flex flex-col items-center gap-0.5 rounded-xl border active:border-brand-teal active:text-brand-teal ${brightGymMode ? 'border-slate-300 bg-white text-slate-950 shadow-sm' : 'border-brand-gray/40 bg-[#0f1117] text-brand-text'} ${tableMode ? 'p-1.5' : 'p-2'}`}
         >
           <RotateCcw size={tableMode ? 16 : 18} />
           <span className={tableMode ? 'text-[8px] font-bold uppercase' : 'text-[9px] font-bold uppercase'}>Undo</span>
         </button>
         <button
           onClick={() => setShowNoteModal(true)}
-          className={`flex flex-col items-center gap-0.5 rounded-xl border border-brand-gray/40 bg-[#0f1117] text-brand-text active:border-brand-teal active:text-brand-teal ${tableMode ? 'p-1.5' : 'p-2'}`}
+          className={`flex flex-col items-center gap-0.5 rounded-xl border active:border-brand-teal active:text-brand-teal ${brightGymMode ? 'border-slate-300 bg-white text-slate-950 shadow-sm' : 'border-brand-gray/40 bg-[#0f1117] text-brand-text'} ${tableMode ? 'p-1.5' : 'p-2'}`}
         >
           <MessageSquare size={tableMode ? 16 : 18} />
           <span className={tableMode ? 'text-[8px] font-bold uppercase' : 'text-[9px] font-bold uppercase'}>Note</span>

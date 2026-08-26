@@ -11,6 +11,7 @@ interface RotationDisplayProps {
   onManualRotate?: () => void;
   onPlayerClick?: (playerIdx: number) => void;
   liberoServingPosition?: number;
+  brightGymMode?: boolean;
 }
 
 const RotationDisplay: React.FC<RotationDisplayProps> = ({ 
@@ -21,7 +22,8 @@ const RotationDisplay: React.FC<RotationDisplayProps> = ({
   servingTeam,
   onManualRotate,
   onPlayerClick,
-  liberoServingPosition
+  liberoServingPosition,
+  brightGymMode = false
 }) => {
   // Map positions to their current location based on rotation
   // Rotation 1: Pos 1 is back right, Pos 2 is front right, etc.
@@ -53,7 +55,7 @@ const RotationDisplay: React.FC<RotationDisplayProps> = ({
   const positions = [4, 3, 2, 5, 6, 1];
 
   return (
-    <div className="rounded-xl border border-brand-gray/40 bg-[#0f1117] p-2">
+    <div className={`rounded-xl border p-2 ${brightGymMode ? 'border-slate-300 bg-white shadow-sm' : 'border-brand-gray/40 bg-[#0f1117]'}`}>
       <div className="flex items-center justify-between mb-1">
         <h4 className="text-[10px] font-black uppercase text-brand-teal tracking-widest">Rotation {currentRotation}</h4>
         <div className="flex items-center gap-2">
@@ -61,14 +63,14 @@ const RotationDisplay: React.FC<RotationDisplayProps> = ({
             {[1, 2, 3, 4, 5, 6].map(r => (
               <div 
                 key={r} 
-                className={`h-1.5 w-1.5 rounded-full ${r === currentRotation ? 'bg-brand-teal' : 'bg-brand-gray/40'}`}
+                className={`h-1.5 w-1.5 rounded-full ${r === currentRotation ? 'bg-brand-teal' : brightGymMode ? 'bg-slate-400' : 'bg-brand-gray/40'}`}
               />
             ))}
           </div>
           {onManualRotate && (
             <button
               onClick={onManualRotate}
-              className="text-brand-text-secondary active:text-brand-teal transition-colors"
+              className={`${brightGymMode ? 'text-slate-700' : 'text-brand-text-secondary'} active:text-brand-teal transition-colors`}
               title="Manual Rotate"
               aria-label="Manually advance rotation"
             >
@@ -81,8 +83,8 @@ const RotationDisplay: React.FC<RotationDisplayProps> = ({
       <div className="grid grid-cols-3 gap-1 aspect-[5/2] relative">
         {/* Net Indicator */}
         <div className="absolute -top-1 left-0 right-0 flex justify-center z-10">
-          <div className="bg-brand-gray/40 h-[2px] w-full rounded-full flex items-center justify-center">
-            <span className="bg-brand-gray/20 px-2 py-0.5 rounded-full text-[4px] font-black uppercase text-brand-text-secondary tracking-[0.2em]">The Net</span>
+          <div className={`${brightGymMode ? 'bg-slate-400' : 'bg-brand-gray/40'} h-[2px] w-full rounded-full flex items-center justify-center`}>
+            <span className={`${brightGymMode ? 'bg-white text-slate-700' : 'bg-brand-gray/20 text-brand-text-secondary'} px-2 py-0.5 rounded-full text-[4px] font-black uppercase tracking-[0.2em]`}>The Net</span>
           </div>
         </div>
 
@@ -110,11 +112,13 @@ const RotationDisplay: React.FC<RotationDisplayProps> = ({
                   ? 'bg-brand-teal/25 border-brand-teal shadow-inner'
                   : isSubstitution
                     ? 'bg-brand-green/15 border-brand-green/60'
-                  : 'bg-brand-bg border-brand-gray/40'
+                  : brightGymMode
+                    ? 'bg-slate-50 border-slate-300'
+                    : 'bg-brand-bg border-brand-gray/40'
               } ${onPlayerClick ? 'active:scale-95' : ''}`}
             >
-              <div className="absolute top-0.5 right-0.5 rounded-[2px] bg-brand-gray/30 px-0.5">
-                <span className="text-[6px] font-black text-brand-text">{pos}</span>
+              <div className={`absolute top-0.5 right-0.5 rounded-[2px] px-0.5 ${brightGymMode ? 'bg-slate-200' : 'bg-brand-gray/30'}`}>
+                <span className={`text-[6px] font-black ${brightGymMode ? 'text-slate-950' : 'text-brand-text'}`}>{pos}</span>
               </div>
               
               {isLibero && (
@@ -129,7 +133,7 @@ const RotationDisplay: React.FC<RotationDisplayProps> = ({
                 </div>
               )}
 
-              <span className={`text-xl font-black leading-none ${isServer ? 'text-brand-teal' : 'text-brand-text'} ${isLibero ? 'text-brand-amber' : ''}`}>
+              <span className={`text-xl font-black leading-none ${isServer ? 'text-brand-teal' : brightGymMode ? 'text-slate-950' : 'text-brand-text'} ${isLibero ? 'text-brand-amber' : ''}`}>
                 {player?.jerseyNumber || '?'}
               </span>
 

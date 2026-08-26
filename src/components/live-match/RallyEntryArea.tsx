@@ -34,6 +34,7 @@ interface RallyEntryAreaProps {
   onSetServerPlayerId: (id: string | null) => void;
   currentLineup?: Lineup | null;
   currentRotation?: number;
+  brightGymMode?: boolean;
 }
 
 const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
@@ -66,8 +67,14 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
   onSetOutcome,
   currentLineup,
   currentRotation,
+  brightGymMode = false,
 }) => {
   const sortedPlayers = [...players].sort((a, b) => Number(a.jerseyNumber) - Number(b.jerseyNumber));
+  const panelTextClass = brightGymMode ? 'text-slate-950' : 'text-brand-text';
+  const mutedTextClass = brightGymMode ? 'text-slate-600' : 'text-brand-text-secondary';
+  const playerButtonClass = `rounded-xl border py-2.5 flex flex-col items-center justify-center active:scale-[0.95] transition-all ${
+    brightGymMode ? 'border-slate-400 bg-slate-50 text-slate-950' : 'border-brand-gray/50 bg-brand-bg'
+  }`;
 
   const getPredictedServerId = () => {
     if (!currentLineup || !currentRotation) return null;
@@ -99,7 +106,7 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
           className="flex-1 flex flex-col"
         >
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-base font-bold uppercase tracking-tight">Confirm Server</h3>
+            <h3 className={`text-base font-bold uppercase tracking-tight ${panelTextClass}`}>Confirm Server</h3>
             <button onClick={() => onServerClick('none')} className="text-brand-teal text-xs font-bold uppercase">Skip</button>
           </div>
           
@@ -126,7 +133,7 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
               <button
                 key={player.id}
                 onClick={() => onServerClick(player.id)}
-                className="bg-brand-bg border border-brand-gray/50 py-2.5 rounded-xl flex flex-col items-center justify-center active:scale-[0.95] transition-all"
+                className={playerButtonClass}
               >
                 <span className="text-base font-black text-brand-teal leading-none">#{player.jerseyNumber}</span>
                 <span className="text-[8px] font-bold uppercase mt-0.5 truncate w-full px-1 text-center">{player.firstName}</span>
@@ -148,10 +155,10 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
           className="flex-1 flex flex-col"
         >
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-base font-bold">
+            <h3 className={`text-base font-bold ${panelTextClass}`}>
               {servingTeam === 'Us' ? 'How was the serve?' : 'How was the receive?'}
             </h3>
-            <button onClick={onResetEntry} className="text-brand-text-secondary text-xs">Reset</button>
+            <button onClick={onResetEntry} className={`${mutedTextClass} text-xs`}>Reset</button>
           </div>
           <div className="flex-1 grid grid-cols-1 gap-2">
             {servingTeam === 'Us' ? (
@@ -169,7 +176,7 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
                 <button onClick={() => onReceiveQualityClick('Error')} className="bg-brand-red/25 border-2 border-brand-red/70 py-4 rounded-xl font-black text-brand-red text-xl shadow-sm active:scale-95 transition-all">ACE</button>
                 <button 
                   onClick={() => onCompleteRally('Gifted', 'Us', 'Serve Error', null)} 
-                  className="mt-1 bg-brand-gray/20 border-2 border-brand-gray/50 py-3.5 rounded-xl font-black text-brand-text text-lg active:scale-95 transition-all flex items-center justify-center gap-2"
+                  className={`mt-1 border-2 py-3.5 rounded-xl font-black text-lg active:scale-95 transition-all flex items-center justify-center gap-2 ${brightGymMode ? 'border-slate-400 bg-slate-100 text-slate-950' : 'border-brand-gray/50 bg-brand-gray/20 text-brand-text'}`}
                 >
                   <X size={18} />
                   OPP SERVE ERR
@@ -192,10 +199,10 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
           className="flex-1 flex flex-col"
         >
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-base font-bold">Who received?</h3>
+            <h3 className={`text-base font-bold ${panelTextClass}`}>Who received?</h3>
             <div className="flex gap-4">
               <button onClick={() => onReceivePlayerClick('none')} className="text-brand-teal text-xs font-bold">Skip</button>
-              <button onClick={() => { onSetShowReceivePlayerSelection(false); onSetReceiveResult(null); }} className="text-brand-text-secondary text-xs">Back</button>
+              <button onClick={() => { onSetShowReceivePlayerSelection(false); onSetReceiveResult(null); }} className={`${mutedTextClass} text-xs`}>Back</button>
             </div>
           </div>
           <div className="flex-1 grid grid-cols-4 gap-2 overflow-y-auto pb-2 content-start">
@@ -203,7 +210,7 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
               <button
                 key={player.id}
                 onClick={() => onReceivePlayerClick(player.id)}
-                className="bg-brand-bg border border-brand-gray/50 py-2.5 rounded-xl flex flex-col items-center justify-center active:scale-[0.95] transition-all"
+                className={playerButtonClass}
               >
                 <span className="text-base font-black text-brand-teal leading-none">#{player.jerseyNumber}</span>
                 <span className="text-[8px] font-bold uppercase mt-0.5 truncate w-full px-1 text-center">{player.firstName}</span>
@@ -225,11 +232,11 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
           className="flex-1 flex flex-col"
         >
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-base font-bold">Who won?</h3>
+            <h3 className={`text-base font-bold ${panelTextClass}`}>Who won?</h3>
             <button onClick={() => {
               if (servingTeam === 'Us') onSetServeResult(null);
               else onSetShowReceivePlayerSelection(true);
-            }} className="text-brand-text-secondary text-xs">Back</button>
+            }} className={`${mutedTextClass} text-xs`}>Back</button>
           </div>
           <div className="flex-1 grid grid-cols-1 gap-3">
             <button
@@ -262,10 +269,10 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
           className="flex-1 flex flex-col"
         >
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-base font-bold">Who was involved?</h3>
+            <h3 className={`text-base font-bold ${panelTextClass}`}>Who was involved?</h3>
             <div className="flex gap-4">
               <button onClick={() => onPlayerClick('none')} className="text-brand-teal text-xs font-bold">Skip</button>
-              <button onClick={() => { onSetShowPlayerSelection(false); onSetOutcome(null); }} className="text-brand-text-secondary text-xs">Back</button>
+              <button onClick={() => { onSetShowPlayerSelection(false); onSetOutcome(null); }} className={`${mutedTextClass} text-xs`}>Back</button>
             </div>
           </div>
           <div className="flex-1 grid grid-cols-4 gap-2 overflow-y-auto pb-2 content-start">
@@ -273,7 +280,7 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
               <button
                 key={player.id}
                 onClick={() => onPlayerClick(player.id)}
-                className="bg-brand-bg border border-brand-gray/50 py-3 rounded-xl flex flex-col items-center justify-center active:scale-[0.95] transition-all"
+                className={`${playerButtonClass} py-3`}
               >
                 <span className="text-base font-black text-brand-teal leading-none">#{player.jerseyNumber}</span>
                 <span className="text-[8px] font-bold uppercase mt-0.5 truncate w-full px-1 text-center">{player.firstName}</span>
@@ -295,8 +302,8 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
           className="flex-1 flex flex-col"
         >
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-bold">Classification</h3>
-            <button onClick={() => { onSetShowPlayerSelection(false); if(players.length > 0) onSetShowPlayerSelection(true); else onSetOutcome(null); }} className="text-brand-text-secondary text-xs">Back</button>
+            <h3 className={`text-base font-bold ${panelTextClass}`}>Classification</h3>
+            <button onClick={() => { onSetShowPlayerSelection(false); if(players.length > 0) onSetShowPlayerSelection(true); else onSetOutcome(null); }} className={`${mutedTextClass} text-xs`}>Back</button>
           </div>
           <div className="space-y-3">
             <button
@@ -335,8 +342,8 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
         className="flex-1 flex flex-col"
       >
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-base font-bold">How did it end?</h3>
-          <button onClick={() => onSetPointWinner(null)} className="text-brand-text-secondary text-xs">Back</button>
+          <h3 className={`text-base font-bold ${panelTextClass}`}>How did it end?</h3>
+          <button onClick={() => onSetPointWinner(null)} className={`${mutedTextClass} text-xs`}>Back</button>
         </div>
         <div className="flex-1 overflow-y-auto space-y-4">
           <div>
@@ -374,7 +381,9 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
   };
 
   return (
-    <div className="flex-1 bg-[#0f1117] rounded-2xl p-3 flex flex-col min-h-0 overflow-hidden relative border border-brand-gray/40">
+    <div className={`flex-1 rounded-2xl p-3 flex flex-col min-h-0 overflow-hidden relative border ${
+      brightGymMode ? 'border-slate-300 bg-white shadow-sm' : 'border-brand-gray/40 bg-[#0f1117]'
+    }`}>
       <AnimatePresence mode="wait">
         {renderContent()}
       </AnimatePresence>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Trophy, AlertCircle, Eye } from 'lucide-react';
+import { X, Trophy, AlertCircle, Eye, Sun } from 'lucide-react';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface MoreMenuModalProps {
@@ -13,6 +13,8 @@ interface MoreMenuModalProps {
   onAbandonMatch: () => void;
   tableMode: boolean;
   onToggleTableMode: () => void;
+  brightGymMode: boolean;
+  onToggleBrightGymMode: () => void;
 }
 
 const MoreMenuModal: React.FC<MoreMenuModalProps> = ({
@@ -26,6 +28,8 @@ const MoreMenuModal: React.FC<MoreMenuModalProps> = ({
   onAbandonMatch,
   tableMode,
   onToggleTableMode,
+  brightGymMode,
+  onToggleBrightGymMode,
 }) => {
   const dialogRef = useFocusTrap<HTMLDivElement>(isOpen, onClose);
 
@@ -62,6 +66,25 @@ const MoreMenuModal: React.FC<MoreMenuModalProps> = ({
             aria-hidden="true"
           >
             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${tableMode ? 'translate-x-6' : 'translate-x-1'}`} />
+          </span>
+        </button>
+
+        <button
+          onClick={onToggleBrightGymMode}
+          className="flex w-full items-center justify-between rounded-2xl border border-brand-gray/20 bg-brand-gray/10 p-4 text-brand-text"
+        >
+          <div className="flex items-center gap-3">
+            <Sun size={20} className="text-brand-amber" />
+            <div className="text-left">
+              <span className="block font-bold">Bright Gym Mode</span>
+              <span className="text-xs font-semibold text-brand-text-secondary">Higher contrast for bright courts</span>
+            </div>
+          </div>
+          <span
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${brightGymMode ? 'bg-brand-amber' : 'bg-brand-gray/40'}`}
+            aria-hidden="true"
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${brightGymMode ? 'translate-x-6' : 'translate-x-1'}`} />
           </span>
         </button>
         

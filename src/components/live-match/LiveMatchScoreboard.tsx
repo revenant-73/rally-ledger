@@ -10,6 +10,7 @@ interface LiveMatchScoreboardProps {
   onManualScoreChange: (team: 'Us' | 'Opponent', delta: number) => void;
   servingTeam: 'Us' | 'Opponent';
   onToggleServingTeam: () => void;
+  brightGymMode?: boolean;
 }
 
 const LiveMatchScoreboard: React.FC<LiveMatchScoreboardProps> = ({
@@ -20,9 +21,15 @@ const LiveMatchScoreboard: React.FC<LiveMatchScoreboardProps> = ({
   onManualScoreChange,
   servingTeam,
   onToggleServingTeam,
+  brightGymMode = false,
 }) => {
-  const scoreCardClass = "relative flex min-h-16 items-center justify-between overflow-hidden rounded-xl border bg-[#0f1117] px-3 py-2 shadow-inner";
-  const scoreButtonClass = "flex h-7 w-9 items-center justify-center rounded-lg border border-brand-gray/30 bg-brand-bg text-brand-text active:scale-95 active:border-brand-teal active:text-brand-teal transition-all";
+  const scoreCardClass = `relative flex min-h-16 items-center justify-between overflow-hidden rounded-xl border px-3 py-2 shadow-inner ${
+    brightGymMode ? 'bg-white shadow-slate-300/60' : 'bg-[#0f1117]'
+  }`;
+  const scoreButtonClass = `flex h-7 w-9 items-center justify-center rounded-lg border active:scale-95 active:border-brand-teal active:text-brand-teal transition-all ${
+    brightGymMode ? 'border-slate-400 bg-slate-50 text-slate-950' : 'border-brand-gray/30 bg-brand-bg text-brand-text'
+  }`;
+  const labelClass = brightGymMode ? 'text-slate-950' : 'text-brand-text';
 
   return (
     <div className="px-3 py-1.5 space-y-1.5">
@@ -30,7 +37,7 @@ const LiveMatchScoreboard: React.FC<LiveMatchScoreboardProps> = ({
         {/* Us Score */}
         <div className={`${scoreCardClass} border-brand-teal/50`}>
           <div className="relative z-10 min-w-0">
-            <span className="block text-[9px] text-brand-text font-black uppercase tracking-widest">Us</span>
+            <span className={`block text-[9px] font-black uppercase tracking-widest ${labelClass}`}>Us</span>
             <AnimatePresence mode="popLayout">
               <motion.span 
                 key={ourScore}
@@ -62,7 +69,7 @@ const LiveMatchScoreboard: React.FC<LiveMatchScoreboardProps> = ({
           {servingTeam === 'Us' && (
             <motion.div
               layoutId="serving-indicator-bg"
-              className="absolute inset-0 bg-brand-teal/10"
+              className={brightGymMode ? 'absolute inset-0 bg-brand-teal/20' : 'absolute inset-0 bg-brand-teal/10'}
             />
           )}
         </div>
@@ -70,7 +77,7 @@ const LiveMatchScoreboard: React.FC<LiveMatchScoreboardProps> = ({
         {/* Them Score */}
         <div className={`${scoreCardClass} border-brand-red/50`}>
           <div className="relative z-10 min-w-0">
-            <span className="block text-[9px] text-brand-text font-black uppercase tracking-widest">Them</span>
+            <span className={`block text-[9px] font-black uppercase tracking-widest ${labelClass}`}>Them</span>
             <AnimatePresence mode="popLayout">
               <motion.span 
                 key={opponentScore}
@@ -102,7 +109,7 @@ const LiveMatchScoreboard: React.FC<LiveMatchScoreboardProps> = ({
           {servingTeam === 'Opponent' && (
             <motion.div
               layoutId="serving-indicator-bg"
-              className="absolute inset-0 bg-brand-red/10"
+              className={brightGymMode ? 'absolute inset-0 bg-brand-red/20' : 'absolute inset-0 bg-brand-red/10'}
             />
           )}
         </div>
@@ -113,7 +120,9 @@ const LiveMatchScoreboard: React.FC<LiveMatchScoreboardProps> = ({
         <button 
           onClick={onToggleServingTeam}
           className={`flex-1 border rounded-xl px-3 py-2 flex items-center justify-center gap-3 active:scale-[0.98] transition-all relative overflow-hidden ${
-            servingTeam === 'Us' ? 'bg-brand-teal/15 border-brand-teal/60 text-brand-teal' : 'bg-brand-red/15 border-brand-red/60 text-brand-red'
+            servingTeam === 'Us'
+              ? `${brightGymMode ? 'bg-brand-teal/20' : 'bg-brand-teal/15'} border-brand-teal/60 text-brand-teal`
+              : `${brightGymMode ? 'bg-brand-red/20' : 'bg-brand-red/15'} border-brand-red/60 text-brand-red`
           }`}
         >
           <div className="flex items-center gap-2">
@@ -122,7 +131,7 @@ const LiveMatchScoreboard: React.FC<LiveMatchScoreboardProps> = ({
               transition={{ repeat: Infinity, duration: 2 }}
               className={`h-2 w-2 rounded-full ${servingTeam === 'Us' ? 'bg-brand-teal' : 'bg-brand-red'}`}
             />
-            <span className="text-[9px] font-black uppercase tracking-widest text-brand-text">Serving</span>
+            <span className={`text-[9px] font-black uppercase tracking-widest ${labelClass}`}>Serving</span>
           </div>
           <span className="min-w-0 truncate text-sm font-black uppercase tracking-tight leading-none">
             {servingTeam === 'Us' ? ourName : opponentName}
