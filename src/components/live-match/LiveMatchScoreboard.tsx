@@ -11,6 +11,7 @@ interface LiveMatchScoreboardProps {
   servingTeam: 'Us' | 'Opponent';
   onToggleServingTeam: () => void;
   brightGymMode?: boolean;
+  scorerFocusMode?: boolean;
 }
 
 const LiveMatchScoreboard: React.FC<LiveMatchScoreboardProps> = ({
@@ -22,17 +23,18 @@ const LiveMatchScoreboard: React.FC<LiveMatchScoreboardProps> = ({
   servingTeam,
   onToggleServingTeam,
   brightGymMode = false,
+  scorerFocusMode = false,
 }) => {
-  const scoreCardClass = `relative flex min-h-16 items-center justify-between overflow-hidden rounded-xl border px-3 py-2 shadow-inner ${
+  const scoreCardClass = `relative flex items-center justify-between overflow-hidden rounded-xl border px-3 shadow-inner ${
     brightGymMode ? 'bg-white shadow-slate-300/60' : 'bg-[#0f1117]'
-  }`;
+  } ${scorerFocusMode ? 'min-h-12 py-1.5' : 'min-h-16 py-2'}`;
   const scoreButtonClass = `flex h-7 w-9 items-center justify-center rounded-lg border active:scale-95 active:border-brand-teal active:text-brand-teal transition-all ${
     brightGymMode ? 'border-slate-400 bg-slate-50 text-slate-950' : 'border-brand-gray/30 bg-brand-bg text-brand-text'
   }`;
   const labelClass = brightGymMode ? 'text-slate-950' : 'text-brand-text';
 
   return (
-    <div className="px-3 py-1.5 space-y-1.5">
+    <div className={`px-3 ${scorerFocusMode ? 'py-1 space-y-1' : 'py-1.5 space-y-1.5'}`}>
       <div className="grid grid-cols-2 gap-2">
         {/* Us Score */}
         <div className={`${scoreCardClass} border-brand-teal/50`}>
@@ -44,28 +46,30 @@ const LiveMatchScoreboard: React.FC<LiveMatchScoreboardProps> = ({
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: -20, opacity: 0 }}
-                className="block text-4xl font-black text-brand-teal leading-none"
+                className={`${scorerFocusMode ? 'text-3xl' : 'text-4xl'} block font-black text-brand-teal leading-none`}
               >
                 {ourScore}
               </motion.span>
             </AnimatePresence>
           </div>
-          <div className="relative z-10 flex flex-col gap-1">
-            <button
-              onClick={() => onManualScoreChange('Us', -1)}
-              aria-label="Decrease our score"
-              className={scoreButtonClass}
-            >
-              <Minus size={15} />
-            </button>
-            <button
-              onClick={() => onManualScoreChange('Us', 1)}
-              aria-label="Increase our score"
-              className={scoreButtonClass}
-            >
-              <Plus size={15} />
-            </button>
-          </div>
+          {!scorerFocusMode && (
+            <div className="relative z-10 flex flex-col gap-1">
+              <button
+                onClick={() => onManualScoreChange('Us', -1)}
+                aria-label="Decrease our score"
+                className={scoreButtonClass}
+              >
+                <Minus size={15} />
+              </button>
+              <button
+                onClick={() => onManualScoreChange('Us', 1)}
+                aria-label="Increase our score"
+                className={scoreButtonClass}
+              >
+                <Plus size={15} />
+              </button>
+            </div>
+          )}
           {servingTeam === 'Us' && (
             <motion.div
               layoutId="serving-indicator-bg"
@@ -84,28 +88,30 @@ const LiveMatchScoreboard: React.FC<LiveMatchScoreboardProps> = ({
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: -20, opacity: 0 }}
-                className="block text-4xl font-black text-brand-red leading-none"
+                className={`${scorerFocusMode ? 'text-3xl' : 'text-4xl'} block font-black text-brand-red leading-none`}
               >
                 {opponentScore}
               </motion.span>
             </AnimatePresence>
           </div>
-          <div className="relative z-10 flex flex-col gap-1">
-            <button
-              onClick={() => onManualScoreChange('Opponent', -1)}
-              aria-label="Decrease their score"
-              className={scoreButtonClass}
-            >
-              <Minus size={15} />
-            </button>
-            <button
-              onClick={() => onManualScoreChange('Opponent', 1)}
-              aria-label="Increase their score"
-              className={scoreButtonClass}
-            >
-              <Plus size={15} />
-            </button>
-          </div>
+          {!scorerFocusMode && (
+            <div className="relative z-10 flex flex-col gap-1">
+              <button
+                onClick={() => onManualScoreChange('Opponent', -1)}
+                aria-label="Decrease their score"
+                className={scoreButtonClass}
+              >
+                <Minus size={15} />
+              </button>
+              <button
+                onClick={() => onManualScoreChange('Opponent', 1)}
+                aria-label="Increase their score"
+                className={scoreButtonClass}
+              >
+                <Plus size={15} />
+              </button>
+            </div>
+          )}
           {servingTeam === 'Opponent' && (
             <motion.div
               layoutId="serving-indicator-bg"
@@ -119,7 +125,7 @@ const LiveMatchScoreboard: React.FC<LiveMatchScoreboardProps> = ({
       <div className="flex gap-2">
         <button 
           onClick={onToggleServingTeam}
-          className={`flex-1 border rounded-xl px-3 py-2 flex items-center justify-center gap-3 active:scale-[0.98] transition-all relative overflow-hidden ${
+          className={`flex-1 border rounded-xl px-3 ${scorerFocusMode ? 'py-1.5' : 'py-2'} flex items-center justify-center gap-3 active:scale-[0.98] transition-all relative overflow-hidden ${
             servingTeam === 'Us'
               ? `${brightGymMode ? 'bg-brand-teal/20' : 'bg-brand-teal/15'} border-brand-teal/60 text-brand-teal`
               : `${brightGymMode ? 'bg-brand-red/20' : 'bg-brand-red/15'} border-brand-red/60 text-brand-red`

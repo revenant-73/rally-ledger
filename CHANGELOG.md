@@ -24,6 +24,7 @@ All notable changes to this project are documented here. Format loosely follows 
 - Added screen wake-lock support while an active match set is open, with graceful fallback for unsupported browsers.
 - Added a device-local Table Mode toggle in live Match Actions to compact the live header and bottom controls.
 - Added a device-local Bright Gym Mode toggle in live Match Actions for a lighter, higher-contrast live screen in bright gyms.
+- Added a device-local Scorer Focus Mode toggle that prioritizes the court and rally-entry controls while keeping lower-priority tools and score corrections in Match Actions.
 
 ### Fixed
 - Fixed serve reporting for one-tap ACE/ERR entries by persisting inferred serve results on new rallies and inferring serve aces/errors from older outcome-only rally rows in reports and dashboards.

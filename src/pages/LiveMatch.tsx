@@ -72,6 +72,7 @@ const LiveMatch: React.FC = () => {
   const [selectedPositionIdx, setSelectedPositionIdx] = useState<number | null>(null);
   const [tableMode, setTableMode] = useState(() => localStorage.getItem('liveTableMode') === 'true');
   const [brightGymMode, setBrightGymMode] = useState(() => localStorage.getItem('liveBrightGymMode') === 'true');
+  const [scorerFocusMode, setScorerFocusMode] = useState(() => localStorage.getItem('liveScorerFocusMode') === 'true');
   const { data: matchSets = [] } = useMatchSets(user?.id, activeMatch?.id);
   useScreenWakeLock(Boolean(activeMatch && activeSet));
 
@@ -88,6 +89,10 @@ const LiveMatch: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('liveBrightGymMode', String(brightGymMode));
   }, [brightGymMode]);
+
+  useEffect(() => {
+    localStorage.setItem('liveScorerFocusMode', String(scorerFocusMode));
+  }, [scorerFocusMode]);
 
   if (!activeMatch) return null;
 
@@ -312,6 +317,7 @@ const LiveMatch: React.FC = () => {
         onShowMore={() => setShowMoreMenu(true)}
         compact={tableMode}
         brightGymMode={brightGymMode}
+        scorerFocusMode={scorerFocusMode}
       />
 
       <NoteModal 
@@ -342,6 +348,10 @@ const LiveMatch: React.FC = () => {
         setNumber={activeSet.setNumber}
         ourScore={activeSet.ourScore}
         opponentScore={activeSet.opponentScore}
+        onShowTimeout={() => setShowTimeout(true)}
+        onShowStats={() => navigate('/match/dashboard')}
+        onShowNote={() => setShowNoteModal(true)}
+        onManualScoreChange={handleManualScoreChange}
         onEndSet={async (winner) => {
           await endSet(winner);
           setShowMoreMenu(false);
@@ -371,6 +381,8 @@ const LiveMatch: React.FC = () => {
         onToggleTableMode={() => setTableMode((current) => !current)}
         brightGymMode={brightGymMode}
         onToggleBrightGymMode={() => setBrightGymMode((current) => !current)}
+        scorerFocusMode={scorerFocusMode}
+        onToggleScorerFocusMode={() => setScorerFocusMode((current) => !current)}
       />
 
       <LiveMatchScoreboard 
@@ -382,6 +394,7 @@ const LiveMatch: React.FC = () => {
         servingTeam={servingTeam}
         onToggleServingTeam={toggleServingTeam}
         brightGymMode={brightGymMode}
+        scorerFocusMode={scorerFocusMode}
       />
 
       {currentLineup ? (
@@ -495,21 +508,23 @@ const LiveMatch: React.FC = () => {
       )}
 
       {/* Action Bar */}
-      <div className={`grid grid-cols-2 gap-2 ${tableMode ? 'p-1.5' : 'p-2'}`}>
+      <div className={`grid ${scorerFocusMode ? 'grid-cols-1' : 'grid-cols-2'} gap-2 ${tableMode || scorerFocusMode ? 'p-1.5' : 'p-2'}`}>
         <button
           onClick={undoWithFeedback}
-          className={`flex flex-col items-center gap-0.5 rounded-xl border active:border-brand-teal active:text-brand-teal ${brightGymMode ? 'border-slate-300 bg-white text-slate-950 shadow-sm' : 'border-brand-gray/40 bg-[#0f1117] text-brand-text'} ${tableMode ? 'p-1.5' : 'p-2'}`}
+          className={`flex flex-col items-center gap-0.5 rounded-xl border active:border-brand-teal active:text-brand-teal ${brightGymMode ? 'border-slate-300 bg-white text-slate-950 shadow-sm' : 'border-brand-gray/40 bg-[#0f1117] text-brand-text'} ${tableMode || scorerFocusMode ? 'p-1.5' : 'p-2'}`}
         >
-          <RotateCcw size={tableMode ? 16 : 18} />
-          <span className={tableMode ? 'text-[8px] font-bold uppercase' : 'text-[9px] font-bold uppercase'}>Undo</span>
+          <RotateCcw size={tableMode || scorerFocusMode ? 16 : 18} />
+          <span className={tableMode || scorerFocusMode ? 'text-[8px] font-bold uppercase' : 'text-[9px] font-bold uppercase'}>Undo</span>
         </button>
-        <button
-          onClick={() => setShowNoteModal(true)}
-          className={`flex flex-col items-center gap-0.5 rounded-xl border active:border-brand-teal active:text-brand-teal ${brightGymMode ? 'border-slate-300 bg-white text-slate-950 shadow-sm' : 'border-brand-gray/40 bg-[#0f1117] text-brand-text'} ${tableMode ? 'p-1.5' : 'p-2'}`}
-        >
-          <MessageSquare size={tableMode ? 16 : 18} />
-          <span className={tableMode ? 'text-[8px] font-bold uppercase' : 'text-[9px] font-bold uppercase'}>Note</span>
-        </button>
+        {!scorerFocusMode && (
+          <button
+            onClick={() => setShowNoteModal(true)}
+            className={`flex flex-col items-center gap-0.5 rounded-xl border active:border-brand-teal active:text-brand-teal ${brightGymMode ? 'border-slate-300 bg-white text-slate-950 shadow-sm' : 'border-brand-gray/40 bg-[#0f1117] text-brand-text'} ${tableMode ? 'p-1.5' : 'p-2'}`}
+          >
+            <MessageSquare size={tableMode ? 16 : 18} />
+            <span className={tableMode ? 'text-[8px] font-bold uppercase' : 'text-[9px] font-bold uppercase'}>Note</span>
+          </button>
+        )}
       </div>
     </div>
   );

@@ -20,7 +20,7 @@ Improve the live match screen for gym use by making the interface more compact, 
 2. Larger working area
    - Give more vertical space to the court and rally-entry area.
    - Keep the court visible while entering most points.
-   - Avoid burying key actions below the fold on phones.
+   - Optimize for tablets and large modern phones used at the scorer's table.
 
 3. Stronger contrast
    - Use less transparent gray on the live screen.
@@ -49,8 +49,8 @@ Improve the live match screen for gym use by making the interface more compact, 
 - Add wake-lock support while a match is active so the screen is less likely to dim or sleep at the scorer's table. Browsers that do not support wake lock continue normally.
 - Add a device-local Table Mode toggle in Match Actions to compact the live header and bottom controls when screen space is tight.
 - Add a device-local Bright Gym Mode toggle in Match Actions for a lighter, higher-contrast live screen in bright gyms.
+- Add a device-local Scorer Focus Mode toggle in Match Actions that keeps Undo visible while moving lower-priority actions and score corrections into Match Actions.
 
 ## Later Options
 
-- Add a more aggressive Coach Table Mode that hides lower-priority controls entirely.
-- Add responsive density presets for very small phones.
+- Continue tuning tablet and large-phone density after real scorer-table use.

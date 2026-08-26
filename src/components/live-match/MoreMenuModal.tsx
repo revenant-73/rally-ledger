@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Trophy, AlertCircle, Eye, Sun } from 'lucide-react';
+import { X, Trophy, AlertCircle, Eye, Sun, Crosshair, RotateCcw, BarChart2, MessageSquare, Minus, Plus } from 'lucide-react';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface MoreMenuModalProps {
@@ -8,6 +8,10 @@ interface MoreMenuModalProps {
   setNumber: number;
   ourScore: number;
   opponentScore: number;
+  onShowTimeout: () => void;
+  onShowStats: () => void;
+  onShowNote: () => void;
+  onManualScoreChange: (team: 'Us' | 'Opponent', delta: number) => void;
   onEndSet: (winner: 'Win' | 'Loss') => Promise<void>;
   onEndMatch: (winner: 'Win' | 'Loss') => Promise<void>;
   onAbandonMatch: () => void;
@@ -15,6 +19,8 @@ interface MoreMenuModalProps {
   onToggleTableMode: () => void;
   brightGymMode: boolean;
   onToggleBrightGymMode: () => void;
+  scorerFocusMode: boolean;
+  onToggleScorerFocusMode: () => void;
 }
 
 const MoreMenuModal: React.FC<MoreMenuModalProps> = ({
@@ -23,6 +29,10 @@ const MoreMenuModal: React.FC<MoreMenuModalProps> = ({
   setNumber,
   ourScore,
   opponentScore,
+  onShowTimeout,
+  onShowStats,
+  onShowNote,
+  onManualScoreChange,
   onEndSet,
   onEndMatch,
   onAbandonMatch,
@@ -30,10 +40,17 @@ const MoreMenuModal: React.FC<MoreMenuModalProps> = ({
   onToggleTableMode,
   brightGymMode,
   onToggleBrightGymMode,
+  scorerFocusMode,
+  onToggleScorerFocusMode,
 }) => {
   const dialogRef = useFocusTrap<HTMLDivElement>(isOpen, onClose);
 
   if (!isOpen) return null;
+
+  const handleMenuAction = (action: () => void) => {
+    onClose();
+    action();
+  };
 
   return (
     <div className="fixed inset-0 z-[110] bg-brand-bg/90 backdrop-blur-sm p-6 flex flex-col justify-end animate-in fade-in duration-300">
@@ -49,6 +66,49 @@ const MoreMenuModal: React.FC<MoreMenuModalProps> = ({
           <h3 id="more-menu-modal-title" className="text-xl font-bold">Match Actions</h3>
           <button onClick={onClose} className="text-brand-text-secondary" aria-label="Close"><X size={24} /></button>
         </div>
+
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            onClick={() => handleMenuAction(onShowTimeout)}
+            className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-2xl border border-brand-gray/20 bg-brand-gray/10 p-2 text-brand-text"
+          >
+            <RotateCcw size={18} className="rotate-90 text-brand-teal" />
+            <span className="text-[9px] font-black uppercase">Timeout</span>
+          </button>
+          <button
+            onClick={() => handleMenuAction(onShowStats)}
+            className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-2xl border border-brand-gray/20 bg-brand-gray/10 p-2 text-brand-text"
+          >
+            <BarChart2 size={19} className="text-brand-teal" />
+            <span className="text-[9px] font-black uppercase">Stats</span>
+          </button>
+          <button
+            onClick={() => handleMenuAction(onShowNote)}
+            className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-2xl border border-brand-gray/20 bg-brand-gray/10 p-2 text-brand-text"
+          >
+            <MessageSquare size={18} className="text-brand-teal" />
+            <span className="text-[9px] font-black uppercase">Note</span>
+          </button>
+        </div>
+
+        <button
+          onClick={onToggleScorerFocusMode}
+          className="flex w-full items-center justify-between rounded-2xl border border-brand-gray/20 bg-brand-gray/10 p-4 text-brand-text"
+        >
+          <div className="flex items-center gap-3">
+            <Crosshair size={20} className="text-brand-green" />
+            <div className="text-left">
+              <span className="block font-bold">Scorer Focus Mode</span>
+              <span className="text-xs font-semibold text-brand-text-secondary">Prioritize court and rally entry</span>
+            </div>
+          </div>
+          <span
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${scorerFocusMode ? 'bg-brand-green' : 'bg-brand-gray/40'}`}
+            aria-hidden="true"
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${scorerFocusMode ? 'translate-x-6' : 'translate-x-1'}`} />
+          </span>
+        </button>
 
         <button
           onClick={onToggleTableMode}
@@ -87,6 +147,42 @@ const MoreMenuModal: React.FC<MoreMenuModalProps> = ({
             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${brightGymMode ? 'translate-x-6' : 'translate-x-1'}`} />
           </span>
         </button>
+
+        <div className="rounded-2xl border border-brand-gray/20 bg-brand-gray/10 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">Score Corrections</span>
+            <span className="text-xs font-black text-brand-text">{ourScore} - {opponentScore}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {([
+              ['Us', ourScore],
+              ['Opponent', opponentScore],
+            ] as const).map(([team, score]) => (
+              <div key={team} className="rounded-xl border border-brand-gray/20 bg-brand-bg/60 p-2">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-[9px] font-black uppercase text-brand-text-secondary">{team}</span>
+                  <span className="text-lg font-black text-brand-text">{score}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    onClick={() => onManualScoreChange(team, -1)}
+                    className="flex h-8 items-center justify-center rounded-lg border border-brand-gray/30 text-brand-text active:border-brand-teal active:text-brand-teal"
+                    aria-label={`Decrease ${team === 'Us' ? 'our' : 'their'} score`}
+                  >
+                    <Minus size={15} />
+                  </button>
+                  <button
+                    onClick={() => onManualScoreChange(team, 1)}
+                    className="flex h-8 items-center justify-center rounded-lg border border-brand-gray/30 text-brand-text active:border-brand-teal active:text-brand-teal"
+                    aria-label={`Increase ${team === 'Us' ? 'our' : 'their'} score`}
+                  >
+                    <Plus size={15} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
         
         <button 
           onClick={() => {
