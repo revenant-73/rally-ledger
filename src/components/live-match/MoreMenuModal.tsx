@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Trophy, AlertCircle } from 'lucide-react';
+import { X, Trophy, AlertCircle, Eye } from 'lucide-react';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface MoreMenuModalProps {
@@ -11,6 +11,8 @@ interface MoreMenuModalProps {
   onEndSet: (winner: 'Win' | 'Loss') => Promise<void>;
   onEndMatch: (winner: 'Win' | 'Loss') => Promise<void>;
   onAbandonMatch: () => void;
+  tableMode: boolean;
+  onToggleTableMode: () => void;
 }
 
 const MoreMenuModal: React.FC<MoreMenuModalProps> = ({
@@ -22,6 +24,8 @@ const MoreMenuModal: React.FC<MoreMenuModalProps> = ({
   onEndSet,
   onEndMatch,
   onAbandonMatch,
+  tableMode,
+  onToggleTableMode,
 }) => {
   const dialogRef = useFocusTrap<HTMLDivElement>(isOpen, onClose);
 
@@ -41,6 +45,25 @@ const MoreMenuModal: React.FC<MoreMenuModalProps> = ({
           <h3 id="more-menu-modal-title" className="text-xl font-bold">Match Actions</h3>
           <button onClick={onClose} className="text-brand-text-secondary" aria-label="Close"><X size={24} /></button>
         </div>
+
+        <button
+          onClick={onToggleTableMode}
+          className="flex w-full items-center justify-between rounded-2xl border border-brand-gray/20 bg-brand-gray/10 p-4 text-brand-text"
+        >
+          <div className="flex items-center gap-3">
+            <Eye size={20} className="text-brand-teal" />
+            <div className="text-left">
+              <span className="block font-bold">Table Mode</span>
+              <span className="text-xs font-semibold text-brand-text-secondary">Compact header and bottom controls</span>
+            </div>
+          </div>
+          <span
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${tableMode ? 'bg-brand-teal' : 'bg-brand-gray/40'}`}
+            aria-hidden="true"
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${tableMode ? 'translate-x-6' : 'translate-x-1'}`} />
+          </span>
+        </button>
         
         <button 
           onClick={() => {

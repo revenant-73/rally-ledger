@@ -70,6 +70,7 @@ const LiveMatch: React.FC = () => {
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showLineupEditor, setShowLineupEditor] = useState(false);
   const [selectedPositionIdx, setSelectedPositionIdx] = useState<number | null>(null);
+  const [tableMode, setTableMode] = useState(() => localStorage.getItem('liveTableMode') === 'true');
   const { data: matchSets = [] } = useMatchSets(user?.id, activeMatch?.id);
   useScreenWakeLock(Boolean(activeMatch && activeSet));
 
@@ -78,6 +79,10 @@ const LiveMatch: React.FC = () => {
       navigate('/');
     }
   }, [activeMatch, navigate]);
+
+  useEffect(() => {
+    localStorage.setItem('liveTableMode', String(tableMode));
+  }, [tableMode]);
 
   if (!activeMatch) return null;
 
@@ -300,6 +305,7 @@ const LiveMatch: React.FC = () => {
         onShowTimeout={() => setShowTimeout(true)}
         onShowStats={() => navigate('/match/dashboard')}
         onShowMore={() => setShowMoreMenu(true)}
+        compact={tableMode}
       />
 
       <NoteModal 
@@ -355,6 +361,8 @@ const LiveMatch: React.FC = () => {
           navigate('/');
         }}
         onAbandonMatch={() => navigate('/')}
+        tableMode={tableMode}
+        onToggleTableMode={() => setTableMode((current) => !current)}
       />
 
       <LiveMatchScoreboard 
@@ -476,20 +484,20 @@ const LiveMatch: React.FC = () => {
       )}
 
       {/* Action Bar */}
-      <div className="grid grid-cols-2 gap-2 p-2">
+      <div className={`grid grid-cols-2 gap-2 ${tableMode ? 'p-1.5' : 'p-2'}`}>
         <button
           onClick={undoWithFeedback}
-          className="flex flex-col items-center gap-0.5 rounded-xl border border-brand-gray/40 bg-[#0f1117] p-2 text-brand-text active:border-brand-teal active:text-brand-teal"
+          className={`flex flex-col items-center gap-0.5 rounded-xl border border-brand-gray/40 bg-[#0f1117] text-brand-text active:border-brand-teal active:text-brand-teal ${tableMode ? 'p-1.5' : 'p-2'}`}
         >
-          <RotateCcw size={18} />
-          <span className="text-[9px] font-bold uppercase">Undo</span>
+          <RotateCcw size={tableMode ? 16 : 18} />
+          <span className={tableMode ? 'text-[8px] font-bold uppercase' : 'text-[9px] font-bold uppercase'}>Undo</span>
         </button>
         <button
           onClick={() => setShowNoteModal(true)}
-          className="flex flex-col items-center gap-0.5 rounded-xl border border-brand-gray/40 bg-[#0f1117] p-2 text-brand-text active:border-brand-teal active:text-brand-teal"
+          className={`flex flex-col items-center gap-0.5 rounded-xl border border-brand-gray/40 bg-[#0f1117] text-brand-text active:border-brand-teal active:text-brand-teal ${tableMode ? 'p-1.5' : 'p-2'}`}
         >
-          <MessageSquare size={18} />
-          <span className="text-[9px] font-bold uppercase">Note</span>
+          <MessageSquare size={tableMode ? 16 : 18} />
+          <span className={tableMode ? 'text-[8px] font-bold uppercase' : 'text-[9px] font-bold uppercase'}>Note</span>
         </button>
       </div>
     </div>

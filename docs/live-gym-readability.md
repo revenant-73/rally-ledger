@@ -47,9 +47,10 @@ Improve the live match screen for gym use by making the interface more compact, 
 ## Completed Follow-Up
 
 - Add wake-lock support while a match is active so the screen is less likely to dim or sleep at the scorer's table. Browsers that do not support wake lock continue normally.
+- Add a device-local Table Mode toggle in Match Actions to compact the live header and bottom controls when screen space is tight.
 
 ## Later Options
 
 - Add a device-local Bright Gym Mode toggle.
-- Add a more aggressive Coach Table Mode that hides lower-priority controls.
+- Add a more aggressive Coach Table Mode that hides lower-priority controls entirely.
 - Add responsive density presets for very small phones.

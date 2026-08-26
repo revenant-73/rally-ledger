@@ -8,6 +8,7 @@ interface LiveMatchHeaderProps {
   onShowTimeout: () => void;
   onShowStats: () => void;
   onShowMore: () => void;
+  compact?: boolean;
 }
 
 const LiveMatchHeader: React.FC<LiveMatchHeaderProps> = ({
@@ -17,31 +18,35 @@ const LiveMatchHeader: React.FC<LiveMatchHeaderProps> = ({
   onShowTimeout,
   onShowStats,
   onShowMore,
+  compact = false,
 }) => {
+  const actionLabelClass = compact ? 'sr-only' : 'text-[8px] font-black uppercase mt-0.5';
+
   return (
-    <header className="flex items-center justify-between border-b border-brand-gray/30 bg-[#0f1117] px-3 py-2">
+    <header className={`flex items-center justify-between border-b border-brand-gray/30 bg-[#0f1117] ${compact ? 'px-2 py-1' : 'px-3 py-2'}`}>
       <button onClick={onBack} aria-label="Back" className="rounded-lg p-1 text-brand-text">
-        <ArrowLeft size={22} />
+        <ArrowLeft size={compact ? 20 : 22} />
       </button>
       <div className="text-center">
         <h2 className="text-[10px] font-black text-brand-teal uppercase tracking-widest">Set {setNumber}</h2>
-        <p className="max-w-32 truncate text-sm font-black text-brand-text">vs {opponentName}</p>
+        <p className={`${compact ? 'max-w-44 text-xs' : 'max-w-32 text-sm'} truncate font-black text-brand-text`}>vs {opponentName}</p>
       </div>
-      <div className="flex gap-2">
+      <div className={`flex ${compact ? 'gap-1' : 'gap-2'}`}>
         <button 
           onClick={onShowTimeout} 
           className="flex flex-col items-center rounded-lg p-1 text-brand-text active:text-brand-teal"
+          aria-label="Timeout"
         >
-          <RotateCcw size={18} className="rotate-90" />
-          <span className="text-[8px] font-black uppercase mt-0.5">Timeout</span>
+          <RotateCcw size={compact ? 17 : 18} className="rotate-90" />
+          <span className={actionLabelClass}>Timeout</span>
         </button>
-        <button onClick={onShowStats} className="flex flex-col items-center rounded-lg p-1 text-brand-text active:text-brand-teal">
-          <BarChart2 size={22} />
-          <span className="text-[8px] font-black uppercase mt-0.5">Stats</span>
+        <button onClick={onShowStats} className="flex flex-col items-center rounded-lg p-1 text-brand-text active:text-brand-teal" aria-label="Stats">
+          <BarChart2 size={compact ? 19 : 22} />
+          <span className={actionLabelClass}>Stats</span>
         </button>
-        <button onClick={onShowMore} className="flex flex-col items-center rounded-lg p-1 text-brand-text active:text-brand-teal">
-          <MoreVertical size={22} />
-          <span className="text-[8px] font-black uppercase mt-0.5">More</span>
+        <button onClick={onShowMore} className="flex flex-col items-center rounded-lg p-1 text-brand-text active:text-brand-teal" aria-label="More match actions">
+          <MoreVertical size={compact ? 19 : 22} />
+          <span className={actionLabelClass}>More</span>
         </button>
       </div>
     </header>
