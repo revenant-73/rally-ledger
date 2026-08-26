@@ -42,7 +42,7 @@ Last updated: 2026-08-09
 - Add clearer recovery messaging when a rally fails to save.
 - Done: add initial export/share flows for post-match and season reports (copyable text, text download, CSV bundle).
 - Done: add initial cumulative season reports for team/player trends across matches.
-- Add match-level setup for best-of format, target scores, and deciding-set target.
+- Done: add match-level setup for best-of format, fixed scrimmage formats, target scores, and deciding-set target.
 
 ## Analytics Upgrades
 
@@ -89,5 +89,5 @@ Last updated: 2026-08-09
 - Done: coaches/admins can delete individual matches through a server-side cascade that removes related sets and rallies from history and reports.
 - Done: serve reports infer one-tap ACE/ERR entries from outcome-only rally rows so older tracked scrimmages are counted correctly.
 - Remaining: consider cookie-backed sessions and durable/distributed rate limiting before public launch.
-- Remaining: add print-friendly report styling, filtered rally logs, and richer season trend charts.
+- Remaining: add filtered rally logs and richer season trend charts.
 

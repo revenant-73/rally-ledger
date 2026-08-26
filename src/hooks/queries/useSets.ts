@@ -14,6 +14,18 @@ export const useActiveSet = (userId: string | undefined, matchId: string | undef
   });
 };
 
+export const useMatchSets = (userId: string | undefined, matchId: string | undefined) => {
+  return useQuery({
+    queryKey: ['sets', 'match', userId, matchId],
+    queryFn: async () => {
+      if (!matchId) return [];
+      const body = await apiPost<{ sets: Set[] }>('/.netlify/functions/sets', { action: 'list', userId, matchId });
+      return body.sets;
+    },
+    enabled: !!userId && !!matchId,
+  });
+};
+
 export const useStartSet = () => {
   const queryClient = useQueryClient();
 
@@ -24,6 +36,7 @@ export const useStartSet = () => {
     },
     onSuccess: (newSet, variables) => {
       queryClient.invalidateQueries({ queryKey: ['sets', 'active', variables.userId, newSet.matchId] });
+      queryClient.invalidateQueries({ queryKey: ['sets', 'match', variables.userId, newSet.matchId] });
     },
   });
 };
@@ -51,6 +64,7 @@ export const useUpdateSet = () => {
       // specific entry when we know the matchId instead of the whole 'sets' space.
       if (variables.matchId) {
         queryClient.invalidateQueries({ queryKey: ['sets', 'active', variables.userId, variables.matchId] });
+        queryClient.invalidateQueries({ queryKey: ['sets', 'match', variables.userId, variables.matchId] });
       } else {
         queryClient.invalidateQueries({ queryKey: ['sets'] });
       }

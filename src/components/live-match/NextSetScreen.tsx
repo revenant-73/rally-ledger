@@ -1,11 +1,19 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Trophy, ArrowLeft, CheckCircle } from 'lucide-react';
-import type { RallyEvent, Player, Lineup } from '../../types';
+import type { RallyEvent, Player, Lineup, Set } from '../../types';
 import LineupSelection from './lineup/LineupSelection';
+import {
+  getAvailableNextSetNumbers,
+  getMatchFormatSettings,
+  getSetTarget,
+  type MatchFormatSettings,
+} from '../../utils/matchFormat';
 
 interface NextSetScreenProps {
   rallies: RallyEvent[];
   players: Player[];
+  sets: Set[];
+  matchSettings: MatchFormatSettings;
   onStartSet: (setNumber: number, lineup?: Lineup) => Promise<void>;
   onEndMatch: (result: 'Win' | 'Loss') => Promise<void>;
   onBackToHome: () => void;
@@ -14,12 +22,24 @@ interface NextSetScreenProps {
 const NextSetScreen: React.FC<NextSetScreenProps> = ({
   rallies,
   players,
+  sets,
+  matchSettings,
   onStartSet,
   onEndMatch,
   onBackToHome,
 }) => {
-  const [pendingSetNumber, setPendingSetNumber] = useState(1);
+  const nextSetNumbers = useMemo(() => {
+    return getAvailableNextSetNumbers(matchSettings, sets.map(set => set.setNumber));
+  }, [matchSettings, sets]);
+
+  const [pendingSetNumber, setPendingSetNumber] = useState(nextSetNumbers[0] ?? 1);
   const [showLineupSelection, setShowLineupSelection] = useState(false);
+  const selectedSetNumber = nextSetNumbers.includes(pendingSetNumber) ? pendingSetNumber : nextSetNumbers[0] ?? 1;
+  const selectedTarget = getSetTarget(matchSettings, selectedSetNumber);
+  const settingsLabel = getMatchFormatSettings({ metadata: { matchFormat: matchSettings.format } }).format
+    .replace('best-of-', 'Best of ')
+    .replace('fixed-2', '2 Set Scrimmage')
+    .replace('single-set', 'Single Set');
 
   const lastSetRallies = rallies.length > 0 ? (() => {
     const maxRally = rallies.reduce((prev, current) => 
@@ -40,7 +60,7 @@ const NextSetScreen: React.FC<NextSetScreenProps> = ({
       <LineupSelection 
         players={players}
         onCancel={() => setShowLineupSelection(false)}
-        onComplete={(lineup) => onStartSet(pendingSetNumber, lineup)}
+        onComplete={(lineup) => onStartSet(selectedSetNumber, lineup)}
       />
     );
   }
@@ -80,29 +100,42 @@ const NextSetScreen: React.FC<NextSetScreenProps> = ({
         </div>
       )}
 
-      <h2 className="text-3xl font-bold mb-2">Ready for Next Set?</h2>
-      <p className="text-brand-text-secondary mb-8 text-lg">Select set number to begin</p>
-      
-      <div className="grid grid-cols-5 gap-3 mb-8 w-full max-w-xs">
-        {[1, 2, 3, 4, 5].map(n => (
-          <button
-            key={n}
-            onClick={() => setPendingSetNumber(n)}
-            className={`aspect-square rounded-xl font-black text-xl flex items-center justify-center transition-all ${
-              pendingSetNumber === n ? 'bg-brand-teal text-brand-bg scale-110 shadow-lg' : 'bg-brand-gray/10 text-brand-text-secondary'
-            }`}
-          >
-            {n}
-          </button>
-        ))}
-      </div>
+      {nextSetNumbers.length > 0 ? (
+        <>
+          <h2 className="text-3xl font-bold mb-2">Ready for Next Set?</h2>
+          <p className="text-brand-text-secondary mb-8 text-lg">
+            {settingsLabel} · set target {selectedTarget}
+          </p>
 
-      <button
-        onClick={() => setShowLineupSelection(true)}
-        className="bg-brand-teal text-brand-bg font-bold py-5 px-12 rounded-2xl text-xl shadow-xl active:scale-[0.98] transition-all"
-      >
-        Set Lineup & Start
-      </button>
+          <div className="grid gap-3 mb-8 w-full max-w-xs" style={{ gridTemplateColumns: `repeat(${nextSetNumbers.length}, minmax(0, 1fr))` }}>
+            {nextSetNumbers.map(n => (
+              <button
+                key={n}
+                onClick={() => setPendingSetNumber(n)}
+                className={`aspect-square rounded-xl font-black text-xl flex items-center justify-center transition-all ${
+                  selectedSetNumber === n ? 'bg-brand-teal text-brand-bg scale-110 shadow-lg' : 'bg-brand-gray/10 text-brand-text-secondary'
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={() => setShowLineupSelection(true)}
+            className="bg-brand-teal text-brand-bg font-bold py-5 px-12 rounded-2xl text-xl shadow-xl active:scale-[0.98] transition-all"
+          >
+            Set Lineup & Start
+          </button>
+        </>
+      ) : (
+        <>
+          <h2 className="text-3xl font-bold mb-2">Match Format Complete</h2>
+          <p className="text-brand-text-secondary mb-8 text-lg">
+            Finish the match result to close it out.
+          </p>
+        </>
+      )}
 
       <div className="mt-5 grid w-full max-w-xs grid-cols-2 gap-3">
         <button

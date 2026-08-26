@@ -175,7 +175,7 @@ export const useDashboardMetrics = (
     }
 
     // Win Probability Heuristic (Current Set)
-    const targetScore = activeSet.setNumber === 5 ? 15 : 25;
+    const targetScore = activeSet.metadata?.targetScore || (activeSet.setNumber === 5 ? 15 : 25);
     const diff = (activeSet.ourScore || 0) - (activeSet.opponentScore || 0);
     const total = (activeSet.ourScore || 0) + (activeSet.opponentScore || 0);
     const progress = total / (targetScore * 1.5); 

@@ -6,6 +6,7 @@ import { useMatch } from '../hooks/useMatch';
 import type { Match } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import toast from 'react-hot-toast';
+import { MATCH_FORMAT_OPTIONS, type MatchFormat } from '../utils/matchFormat';
 
 const NewMatch: React.FC = () => {
   const navigate = useNavigate();
@@ -17,7 +18,10 @@ const NewMatch: React.FC = () => {
     opponentName: '',
     location: '',
     matchType: 'Tournament',
-    level: activeTeam?.level || 'High School'
+    level: activeTeam?.level || 'High School',
+    matchFormat: 'best-of-3' as MatchFormat,
+    standardSetTarget: 25,
+    decidingSetTarget: 15,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,6 +37,11 @@ const NewMatch: React.FC = () => {
       status: 'active',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      metadata: {
+        matchFormat: formData.matchFormat,
+        standardSetTarget: formData.standardSetTarget,
+        decidingSetTarget: formData.decidingSetTarget,
+      },
     };
 
     try {
@@ -193,12 +202,64 @@ const NewMatch: React.FC = () => {
           </div>
         </motion.div>
 
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.5 }}
+          className="space-y-3"
+        >
+          <div>
+            <label className="text-[10px] font-black uppercase text-brand-text-secondary tracking-widest px-1">Match Format</label>
+            <select
+              value={formData.matchFormat}
+              onChange={(e) => setFormData({ ...formData, matchFormat: e.target.value as MatchFormat })}
+              className="mt-2 w-full bg-brand-bg border border-brand-gray/20 rounded-xl p-4 focus:outline-none focus:border-brand-teal transition-colors font-bold"
+            >
+              {MATCH_FORMAT_OPTIONS.map(option => (
+                <option key={option.value} value={option.value} className="bg-brand-bg">
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-2 px-1 text-xs font-bold text-brand-text-secondary">
+              {MATCH_FORMAT_OPTIONS.find(option => option.value === formData.matchFormat)?.description}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase text-brand-text-secondary tracking-widest px-1">Set Target</label>
+              <select
+                value={formData.standardSetTarget}
+                onChange={(e) => setFormData({ ...formData, standardSetTarget: Number(e.target.value) })}
+                className="w-full bg-brand-bg border border-brand-gray/20 rounded-xl p-4 focus:outline-none focus:border-brand-teal transition-colors font-bold"
+              >
+                {[25, 21, 15].map(target => (
+                  <option key={target} value={target} className="bg-brand-bg">{target}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase text-brand-text-secondary tracking-widest px-1">Final Set</label>
+              <select
+                value={formData.decidingSetTarget}
+                onChange={(e) => setFormData({ ...formData, decidingSetTarget: Number(e.target.value) })}
+                className="w-full bg-brand-bg border border-brand-gray/20 rounded-xl p-4 focus:outline-none focus:border-brand-teal transition-colors font-bold"
+              >
+                {[15, 11, 25].map(target => (
+                  <option key={target} value={target} className="bg-brand-bg">{target}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </motion.div>
+
         <motion.button
           type="submit"
           whileTap={{ scale: 0.98 }}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.6 }}
           className="w-full bg-brand-teal hover:bg-brand-teal/90 text-brand-bg font-black py-5 rounded-xl flex items-center justify-center gap-2 text-lg transition-all mt-8 uppercase tracking-widest"
           disabled={manageableTeams.length === 0}
         >

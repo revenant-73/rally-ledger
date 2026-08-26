@@ -36,6 +36,13 @@ type ActiveSetPayload = {
   matchId: string;
 };
 
+type ListSetsPayload = {
+  action: 'list';
+  userId: string;
+  email?: string;
+  matchId: string;
+};
+
 type UpdateSetPayload = {
   action: 'update';
   userId: string;
@@ -45,7 +52,7 @@ type UpdateSetPayload = {
   updates: Partial<Set>;
 };
 
-type SetPayload = StartSetPayload | ActiveSetPayload | UpdateSetPayload;
+type SetPayload = StartSetPayload | ActiveSetPayload | ListSetsPayload | UpdateSetPayload;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null;
@@ -108,6 +115,43 @@ const handleActive = async (payload: ActiveSetPayload) => {
       ...row,
       metadata: parseMetadata(row.metadata),
     } : null,
+  });
+};
+
+const handleList = async (payload: ListSetsPayload) => {
+  const { userId, matchId } = payload;
+
+  if (!matchId) {
+    return json(400, { error: 'Invalid set list payload' });
+  }
+  if (!await canViewMatch(getClient(), { userId, email: payload.email || '' }, matchId)) {
+    return json(403, { error: 'Not authorized for this match' });
+  }
+
+  const result = await getClient().execute({
+    sql: `select
+      id,
+      match_id as matchId,
+      set_number as setNumber,
+      our_score as ourScore,
+      opponent_score as opponentScore,
+      status,
+      starting_server_team as startingServerTeam,
+      final_result as finalResult,
+      created_at as createdAt,
+      updated_at as updatedAt,
+      metadata
+    from sets
+    where match_id = ?
+    order by set_number asc, created_at asc`,
+    args: [matchId],
+  });
+
+  return json(200, {
+    sets: result.rows.map(row => ({
+      ...row,
+      metadata: parseMetadata(row.metadata),
+    })),
   });
 };
 
@@ -217,6 +261,9 @@ export const handler: Handler = async (event) => {
   try {
     if (payload.action === 'active') {
       return await handleActive(payload);
+    }
+    if (payload.action === 'list') {
+      return await handleList(payload);
     }
     if (payload.action === 'start') {
       return await handleStart(payload);

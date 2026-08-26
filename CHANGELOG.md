@@ -17,6 +17,7 @@ All notable changes to this project are documented here. Format loosely follows 
 - Added an earned/net sort toggle to the cumulative point earners report.
 - Added a stats audit document covering source fields, formulas, live dashboard derivations, and report/export coverage.
 - Added visible individual-match kill performance and match-trend kill/error columns to season reports.
+- Added match format setup for best-of-three, best-of-five, two-set scrimmages, and single-set matches, including set target and deciding-set target tracking.
 
 ### Fixed
 - Fixed serve reporting for one-tap ACE/ERR entries by persisting inferred serve results on new rallies and inferring serve aces/errors from older outcome-only rally rows in reports and dashboards.

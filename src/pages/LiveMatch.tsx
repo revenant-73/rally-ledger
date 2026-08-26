@@ -4,6 +4,9 @@ import { MessageSquare, RotateCcw } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useMatch } from '../hooks/useMatch';
 import { useLiveMatchLogic } from '../hooks/useLiveMatchLogic';
+import { useAuth } from '../hooks/useAuth';
+import { useMatchSets } from '../hooks/queries/useSets';
+import { getMatchFormatSettings, getSetTarget, isMatchCompleteAfterSet } from '../utils/matchFormat';
 import type { OutcomeType, Classification, Set } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -22,6 +25,7 @@ import SubstitutionModal from '../components/live-match/lineup/SubstitutionModal
 
 const LiveMatch: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { 
     activeMatch, 
     activeSet, 
@@ -64,6 +68,7 @@ const LiveMatch: React.FC = () => {
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showLineupEditor, setShowLineupEditor] = useState(false);
   const [selectedPositionIdx, setSelectedPositionIdx] = useState<number | null>(null);
+  const { data: matchSets = [] } = useMatchSets(user?.id, activeMatch?.id);
 
   useEffect(() => {
     if (!activeMatch) {
@@ -75,6 +80,23 @@ const LiveMatch: React.FC = () => {
 
   const matchPlayers = players.filter(player => player.teamId === activeMatch.teamId);
   const matchTeam = teams.find(team => team.id === activeMatch.teamId) || (activeTeam?.id === activeMatch.teamId ? activeTeam : null);
+  const matchSettings = getMatchFormatSettings(activeMatch);
+
+  const getCompletedSetResults = (currentSetResult?: 'Win' | 'Loss') => {
+    const completedResults = matchSets
+      .filter(set => set.status === 'completed' && set.id !== activeSet?.id && set.finalResult)
+      .map(set => set.finalResult as 'Win' | 'Loss');
+
+    return currentSetResult ? [...completedResults, currentSetResult] : completedResults;
+  };
+
+  const getMatchResultFromSets = (setResults: Array<'Win' | 'Loss'>) => {
+    const wins = setResults.filter(result => result === 'Win').length;
+    const losses = setResults.filter(result => result === 'Loss').length;
+
+    if (wins === losses) return null;
+    return wins > losses ? 'Win' : 'Loss';
+  };
 
   if (showLineupEditor) {
     return (
@@ -101,6 +123,8 @@ const LiveMatch: React.FC = () => {
       <NextSetScreen 
         rallies={rallies}
         players={matchPlayers}
+        sets={matchSets}
+        matchSettings={matchSettings}
         onBackToHome={() => navigate('/')}
         onEndMatch={async (result) => {
           await endMatch(result);
@@ -121,6 +145,7 @@ const LiveMatch: React.FC = () => {
             metadata: {
               startingLineup: lineup,
               currentRotation: 1,
+              targetScore: getSetTarget(matchSettings, setNumber),
             }
           };
           await startSet(newSet);
@@ -309,7 +334,19 @@ const LiveMatch: React.FC = () => {
         onEndSet={async (winner) => {
           await endSet(winner);
           setShowMoreMenu(false);
-          toast.success(`Set ${activeSet.setNumber} completed!`);
+          const completedSetResults = getCompletedSetResults(winner);
+          const shouldCompleteMatch = isMatchCompleteAfterSet(matchSettings, completedSetResults);
+          const matchResult = shouldCompleteMatch ? getMatchResultFromSets(completedSetResults) : null;
+
+          if (matchResult) {
+            await endMatch(matchResult);
+            toast.success(`Match completed as a ${matchResult.toLowerCase()}.`);
+            navigate('/');
+          } else if (shouldCompleteMatch) {
+            toast.success('Set complete. Choose the match result to close it out.');
+          } else {
+            toast.success(`Set ${activeSet.setNumber} completed!`);
+          }
         }}
         onEndMatch={async (winner) => {
           await endSet(winner);

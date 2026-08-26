@@ -60,7 +60,13 @@ export interface Match {
   notes?: string;
   createdAt: string;
   updatedAt: string;
-  metadata?: Record<string, unknown>;
+  metadata?: MatchMetadata;
+}
+
+export interface MatchMetadata extends Record<string, unknown> {
+  matchFormat?: 'best-of-3' | 'best-of-5' | 'fixed-2' | 'single-set';
+  standardSetTarget?: number;
+  decidingSetTarget?: number;
 }
 
 export interface Lineup {
@@ -80,6 +86,7 @@ export interface SetMetadata extends Record<string, unknown> {
   currentRotation?: number; // 1-6
   liberoServingPosition?: number; // 1-6 (The position in the rotation where the libero is allowed to serve)
   servingTeam?: 'Us' | 'Opponent';
+  targetScore?: number;
 }
 
 export interface RallyMetadata extends Record<string, unknown> {
