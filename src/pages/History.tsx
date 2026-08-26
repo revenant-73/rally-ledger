@@ -1,11 +1,25 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronRight, Calendar, MapPin, Trophy } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Calendar, MapPin, Trophy, Trash2 } from 'lucide-react';
 import { useMatch } from '../hooks/useMatch';
+import toast from 'react-hot-toast';
 
 const History: React.FC = () => {
   const navigate = useNavigate();
-  const { matches, isSyncing } = useMatch();
+  const { matches, isSyncing, canManageTeam, deleteMatch } = useMatch();
+
+  const handleDeleteMatch = async (matchId: string, opponentName: string) => {
+    const confirmed = window.confirm(`Delete match vs ${opponentName}? This will permanently delete its sets, rallies, and stats from reports.`);
+    if (!confirmed) return;
+
+    try {
+      await deleteMatch(matchId);
+      toast.success('Match deleted');
+    } catch (error) {
+      console.error('Failed to delete match:', error);
+      toast.error('Unable to delete match');
+    }
+  };
 
   return (
     <div className="p-6 max-w-lg mx-auto pb-24">
@@ -34,13 +48,15 @@ const History: React.FC = () => {
       ) : (
         <div className="space-y-4">
           {matches.map((match) => (
-            <button
+            <div
               key={match.id}
-              onClick={() => navigate(`/match/history/${match.id}`)}
-              className="w-full text-left bg-brand-gray/5 border border-brand-gray/10 rounded-2xl p-5 hover:border-brand-teal/30 transition-all active:scale-[0.98] group"
+              className="w-full bg-brand-gray/5 border border-brand-gray/10 rounded-2xl p-5 transition-all hover:border-brand-teal/30"
             >
-              <div className="flex justify-between items-start mb-3">
-                <div>
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <button
+                  onClick={() => navigate(`/match/history/${match.id}`)}
+                  className="min-w-0 flex-1 text-left group"
+                >
                   <div className="flex items-center gap-2 mb-1">
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
                       match.status === 'active' ? 'bg-brand-teal/20 text-brand-teal' : 'bg-brand-gray/20 text-brand-text-secondary'
@@ -50,11 +66,26 @@ const History: React.FC = () => {
                     <span className="text-[10px] font-bold text-brand-text-secondary uppercase tracking-widest">{match.matchType}</span>
                   </div>
                   <h3 className="text-xl font-bold">vs {match.opponentName}</h3>
+                </button>
+                <div className="flex items-center gap-2">
+                  {canManageTeam(match.teamId) && (
+                    <button
+                      onClick={() => handleDeleteMatch(match.id, match.opponentName)}
+                      className="flex h-9 w-9 items-center justify-center rounded-xl text-brand-text-secondary transition-colors hover:bg-brand-red/10 hover:text-brand-red focus:outline-none focus:ring-2 focus:ring-brand-red/40"
+                      aria-label={`Delete match vs ${match.opponentName}`}
+                    >
+                      <Trash2 size={17} />
+                    </button>
+                  )}
+                  <ChevronRight size={20} className="text-brand-gray/30" />
                 </div>
-                <ChevronRight size={20} className="text-brand-gray/30 group-hover:text-brand-teal transition-colors" />
               </div>
 
-              <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-brand-text-secondary font-medium">
+              <button
+                onClick={() => navigate(`/match/history/${match.id}`)}
+                className="block w-full text-left"
+              >
+                <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-brand-text-secondary font-medium">
                 <div className="flex items-center gap-1.5">
                   <Calendar size={14} className="opacity-50" />
                   {new Date(match.matchDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -63,18 +94,19 @@ const History: React.FC = () => {
                   <MapPin size={14} className="opacity-50" />
                   {match.location}
                 </div>
-              </div>
-
-              {match.result && (
-                <div className="mt-4 flex items-center gap-2">
-                  <span className={`font-black text-sm uppercase ${match.result === 'Win' ? 'text-brand-teal' : 'text-brand-red'}`}>
-                    {match.result}
-                  </span>
-                  <div className="h-1 w-1 rounded-full bg-brand-gray/20" />
-                  <span className="text-xs text-brand-text-secondary">Match completed</span>
                 </div>
-              )}
-            </button>
+
+                {match.result && (
+                  <div className="mt-4 flex items-center gap-2">
+                    <span className={`font-black text-sm uppercase ${match.result === 'Win' ? 'text-brand-teal' : 'text-brand-red'}`}>
+                      {match.result}
+                    </span>
+                    <div className="h-1 w-1 rounded-full bg-brand-gray/20" />
+                    <span className="text-xs text-brand-text-secondary">Match completed</span>
+                  </div>
+                )}
+              </button>
+            </div>
           ))}
         </div>
       )}

@@ -9,8 +9,10 @@ All notable changes to this project are documented here. Format loosely follows 
 - Added print/save-to-PDF report controls and print-specific styles for match and season reports.
 - Expanded season downloads into a coach-ready CSV package with summary, match trends, player totals, serving, receiving, opponent breakdown, and practice plan files.
 - Added cumulative report filters for date range, match type, opponent, and result, with filtered stats/export behavior and a clear-filters action.
+- Added match deletion from History and match detail, with authorized server-side deletion of match sets and rallies.
 
 ### Fixed
+- Fixed serve reporting for one-tap ACE/ERR entries by persisting inferred serve results on new rallies and inferring serve aces/errors from older outcome-only rally rows in reports and dashboards.
 - Fixed the `react-hooks/set-state-in-effect` lint warning in `useLiveMatchLogic` by moving the activeSet-metadata sync out of a `useEffect` and into the render body, guarded by a `prevMetadata` comparison - React's documented pattern for "adjusting state when a prop changes," which avoids the extra commit-then-effect render pass.
 
 ### Security

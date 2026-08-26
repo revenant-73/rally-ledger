@@ -109,6 +109,30 @@ describe('useLiveMatchLogic', () => {
     expect(result.current.servingTeam).toBe('Opponent');
   });
 
+  it('persists inferred serveResult for one-tap serve errors', async () => {
+    const { result } = renderHook(() => useLiveMatchLogic(mockMatch, mockSet, [], mockAddRally, mockUndoLastRally, mockUpdateSet));
+
+    act(() => {
+      result.current.setServerPlayerId('p1');
+    });
+
+    await act(async () => {
+      await result.current.completeRally('Gifted', 'Opponent', 'Serve Error', 'p1');
+    });
+
+    expect(mockAddRally).toHaveBeenCalledWith(
+      expect.objectContaining({
+        servingTeam: 'Us',
+        serverPlayerId: 'p1',
+        outcomeType: 'Serve Error',
+        metadata: expect.objectContaining({
+          serveResult: 'Error',
+        }),
+      }),
+      expect.any(Object)
+    );
+  });
+
   it('should undo last rally and restore serving team', async () => {
     const rallies: RallyEvent[] = [{
       id: 'r1',

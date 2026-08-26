@@ -91,6 +91,18 @@ describe('report stats', () => {
     expect(stats.setReports[0]).toMatchObject({ setNumber: 1, score: '25-20', servePct: 50, passScore: 2.5 });
   });
 
+  it('infers serve attempts from ace and serve error outcomes when serveResult is missing', () => {
+    const stats = calculateReportStats([
+      rally({ rallyNumber: 1, serverPlayerId: 'p1', outcomeType: 'Ace', pointWinner: 'Us', classification: 'Earned' }),
+      rally({ rallyNumber: 2, serverPlayerId: 'p1', outcomeType: 'Serve Error', pointWinner: 'Opponent', classification: 'Gifted' }),
+      rally({ rallyNumber: 3, serverPlayerId: 'p1', outcomeType: 'Serve Error', pointWinner: 'Opponent', classification: 'Gifted' }),
+    ], players, [sets[0]]);
+
+    expect(stats.serve).toMatchObject({ attempts: 3, aces: 1, errors: 2, servePct: 33, koPct: 33 });
+    expect(stats.playerServing[0]).toMatchObject({ jersey: '07', attempts: 3, errors: 2, servePct: 33 });
+    expect(stats.setReports[0]).toMatchObject({ servePct: 33, serveKoPct: 33 });
+  });
+
   it('rolls multiple matches into season report rows', () => {
     const matches: Match[] = [
       {

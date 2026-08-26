@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Sun, Cloud, CloudLightning, CloudRain, Zap } from 'lucide-react';
 import type { RallyEvent, Player, Set as MatchSet } from '../../types';
+import { getReceiveResult, getServeResult } from '../../utils/rallyResults';
 
 export const useDashboardMetrics = (
   rallies: RallyEvent[],
@@ -79,13 +80,14 @@ export const useDashboardMetrics = (
     // Player Serving Stats (Match level)
     const playerServes: Record<string, { total: number, errors: number, kos: number }> = {};
     matchRallies.forEach(r => {
-      if (r.servingTeam === 'Us' && r.serverPlayerId && r.serveResult) {
+      const serveResult = getServeResult(r);
+      if (r.servingTeam === 'Us' && r.serverPlayerId && serveResult) {
         if (!playerServes[r.serverPlayerId]) {
           playerServes[r.serverPlayerId] = { total: 0, errors: 0, kos: 0 };
         }
         playerServes[r.serverPlayerId].total++;
-        if (r.serveResult === 'Error') playerServes[r.serverPlayerId].errors++;
-        if (r.serveResult === 'Ace' || r.serveResult === 'Out-of-System') playerServes[r.serverPlayerId].kos++;
+        if (serveResult === 'Error') playerServes[r.serverPlayerId].errors++;
+        if (serveResult === 'Ace' || serveResult === 'Out-of-System') playerServes[r.serverPlayerId].kos++;
       }
     });
 
@@ -105,15 +107,16 @@ export const useDashboardMetrics = (
     // Player Passing Stats (Match level)
     const playerPassing: Record<string, { ace: number, overpass: number, oos: number, is: number, total: number }> = {};
     matchRallies.forEach(r => {
-      if (r.servingTeam === 'Opponent' && r.receivePlayerId && r.receiveResult) {
+      const receiveResult = getReceiveResult(r);
+      if (r.servingTeam === 'Opponent' && r.receivePlayerId && receiveResult) {
         if (!playerPassing[r.receivePlayerId]) {
           playerPassing[r.receivePlayerId] = { ace: 0, overpass: 0, oos: 0, is: 0, total: 0 };
         }
         playerPassing[r.receivePlayerId].total++;
-        if (r.receiveResult === 'Error') playerPassing[r.receivePlayerId].ace++;
-        if (r.receiveResult === 'Overpass') playerPassing[r.receivePlayerId].overpass++;
-        if (r.receiveResult === 'Out-of-System') playerPassing[r.receivePlayerId].oos++;
-        if (r.receiveResult === 'In-System') playerPassing[r.receivePlayerId].is++;
+        if (receiveResult === 'Error') playerPassing[r.receivePlayerId].ace++;
+        if (receiveResult === 'Overpass') playerPassing[r.receivePlayerId].overpass++;
+        if (receiveResult === 'Out-of-System') playerPassing[r.receivePlayerId].oos++;
+        if (receiveResult === 'In-System') playerPassing[r.receivePlayerId].is++;
       }
     });
 
@@ -137,20 +140,22 @@ export const useDashboardMetrics = (
       .sort((a, b) => (b?.score || 0) - (a?.score || 0));
 
     // Serve & Receive Stats (Set level for team performance)
+    const setServeResults = setRallies.map(getServeResult).filter(Boolean);
+    const setReceiveResults = setRallies.map(getReceiveResult).filter(Boolean);
     const serveStats = {
-      aces: setRallies.filter(r => r.serveResult === 'Ace').length,
-      errors: setRallies.filter(r => r.serveResult === 'Error').length,
-      inSystem: setRallies.filter(r => r.serveResult === 'In-System').length,
-      outOfSystem: setRallies.filter(r => r.serveResult === 'Out-of-System').length,
-      total: setRallies.filter(r => r.serveResult).length
+      aces: setServeResults.filter(result => result === 'Ace').length,
+      errors: setServeResults.filter(result => result === 'Error').length,
+      inSystem: setServeResults.filter(result => result === 'In-System').length,
+      outOfSystem: setServeResults.filter(result => result === 'Out-of-System').length,
+      total: setServeResults.length
     };
 
     const receiveStats = {
-      errors: setRallies.filter(r => r.receiveResult === 'Error').length,
-      overpass: setRallies.filter(r => r.receiveResult === 'Overpass').length,
-      inSystem: setRallies.filter(r => r.receiveResult === 'In-System').length,
-      outOfSystem: setRallies.filter(r => r.receiveResult === 'Out-of-System').length,
-      total: setRallies.filter(r => r.receiveResult).length
+      errors: setReceiveResults.filter(result => result === 'Error').length,
+      overpass: setReceiveResults.filter(result => result === 'Overpass').length,
+      inSystem: setReceiveResults.filter(result => result === 'In-System').length,
+      outOfSystem: setReceiveResults.filter(result => result === 'Out-of-System').length,
+      total: setReceiveResults.length
     };
 
     // Match Flow (Cumulative point diff for current set)
@@ -250,16 +255,16 @@ export const useDashboardMetrics = (
         score: lastRally ? `${lastRally.scoreAfterUs}-${lastRally.scoreAfterOpponent}` : '0-0',
         ourEarned: setR.filter(r => r.pointWinner === 'Us' && r.classification === 'Earned').length,
         ourGifted: setR.filter(r => r.pointWinner === 'Opponent' && r.classification === 'Gifted').length,
-        serveKO: Math.round((setR.filter(r => r.servingTeam === 'Us' && (r.serveResult === 'Ace' || r.serveResult === 'Out-of-System')).length / (setR.filter(r => r.servingTeam === 'Us' && r.serveResult).length || 1)) * 100),
+        serveKO: Math.round((setR.filter(r => r.servingTeam === 'Us' && (getServeResult(r) === 'Ace' || getServeResult(r) === 'Out-of-System')).length / (setR.filter(r => r.servingTeam === 'Us' && getServeResult(r)).length || 1)) * 100),
       };
     }).sort((a, b) => {
       // Find the actual set number from the set object if possible
       return a.id === activeSet.id ? 1 : b.id === activeSet.id ? -1 : 0; 
     });
 
-    const ourServesMatch = matchRallies.filter(r => r.servingTeam === 'Us' && r.serveResult);
+    const ourServesMatch = matchRallies.filter(r => r.servingTeam === 'Us' && getServeResult(r));
     const ourServesMatchTotal = ourServesMatch.length;
-    const ourServesMatchErrors = ourServesMatch.filter(r => r.serveResult === 'Error').length;
+    const ourServesMatchErrors = ourServesMatch.filter(r => getServeResult(r) === 'Error').length;
 
     return {
       ourEarned,
@@ -287,14 +292,14 @@ export const useDashboardMetrics = (
       passingByPlayer: passingByPlayer as { name: string, jersey: string, ace: number, overpass: number, oos: number, is: number, score: number }[],
       serveMetrics: {
         our: (() => {
-          const ourServes = setRallies.filter(r => r.servingTeam === 'Us' && r.serveResult);
+          const ourServes = setRallies.filter(r => r.servingTeam === 'Us' && getServeResult(r));
           const total = ourServes.length;
-          const errors = ourServes.filter(r => r.serveResult === 'Error').length;
-          const kos = ourServes.filter(r => r.serveResult === 'Ace' || r.serveResult === 'Out-of-System').length;
+          const errors = ourServes.filter(r => getServeResult(r) === 'Error').length;
+          const kos = ourServes.filter(r => getServeResult(r) === 'Ace' || getServeResult(r) === 'Out-of-System').length;
           
           // Players with most misses (Match Level)
           const matchMissesByPlayer: Record<string, number> = {};
-          matchRallies.filter(r => r.servingTeam === 'Us' && r.serveResult === 'Error' && r.serverPlayerId).forEach(r => {
+          matchRallies.filter(r => r.servingTeam === 'Us' && getServeResult(r) === 'Error' && r.serverPlayerId).forEach(r => {
             if (r.serverPlayerId) {
               matchMissesByPlayer[r.serverPlayerId] = (matchMissesByPlayer[r.serverPlayerId] || 0) + 1;
             }

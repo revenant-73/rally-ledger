@@ -169,6 +169,11 @@ export const useLiveMatchLogic = (
 
     // Determine if libero was serving
     const isLiberoServing = servingTeam === 'Us' && currentRotation === liberoServingPosition;
+    const finalServeResult = serveResult
+      ?? (servingTeam === 'Us' && finalOutcome === 'Ace' ? 'Ace' : undefined)
+      ?? (servingTeam === 'Us' && finalOutcome === 'Serve Error' ? 'Error' : undefined);
+    const finalReceiveResult = receiveResult
+      ?? (servingTeam === 'Opponent' && finalOutcome === 'Ace' && winner === 'Opponent' ? 'Error' : undefined);
 
     const newRally: RallyEvent = {
       id: uuidv4(),
@@ -187,8 +192,8 @@ export const useLiveMatchLogic = (
       playerId: finalPlayerId || undefined,
       createdAt: new Date().toISOString(),
       metadata: {
-        serveResult: serveResult || undefined,
-        receiveResult: receiveResult || undefined,
+        serveResult: finalServeResult,
+        receiveResult: finalReceiveResult,
         receivePlayerId: receivePlayerId || undefined,
         rotation: currentRotation,
         lineup: currentLineup || undefined,

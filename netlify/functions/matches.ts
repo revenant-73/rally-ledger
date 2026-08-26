@@ -58,7 +58,14 @@ type UpdateMatchPayload = {
   updates: Partial<Match>;
 };
 
-type MatchPayload = StartMatchPayload | ListMatchesPayload | DetailMatchPayload | SeasonReportPayload | UpdateMatchPayload;
+type DeleteMatchPayload = {
+  action: 'delete';
+  userId: string;
+  email?: string;
+  matchId: string;
+};
+
+type MatchPayload = StartMatchPayload | ListMatchesPayload | DetailMatchPayload | SeasonReportPayload | UpdateMatchPayload | DeleteMatchPayload;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null;
@@ -467,6 +474,34 @@ const handleUpdate = async (payload: UpdateMatchPayload) => {
   return json(200, { matchId, updates });
 };
 
+const handleDelete = async (payload: DeleteMatchPayload) => {
+  const { matchId, userId } = payload;
+
+  if (!matchId) {
+    return json(400, { error: 'Invalid match delete payload' });
+  }
+  if (!await canManageMatch(getClient(), { userId, email: payload.email || '' }, matchId)) {
+    return json(403, { error: 'Not authorized for this match' });
+  }
+
+  await getClient().batch([
+    {
+      sql: 'delete from rally_events where match_id = ?',
+      args: [matchId],
+    },
+    {
+      sql: 'delete from sets where match_id = ?',
+      args: [matchId],
+    },
+    {
+      sql: 'delete from matches where id = ?',
+      args: [matchId],
+    },
+  ], 'write');
+
+  return json(200, { matchId });
+};
+
 export const handler: Handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return json(405, { error: 'Method not allowed' });
@@ -498,6 +533,9 @@ export const handler: Handler = async (event) => {
     }
     if (payload.action === 'update') {
       return await handleUpdate(payload);
+    }
+    if (payload.action === 'delete') {
+      return await handleDelete(payload);
     }
     return json(400, { error: 'Unknown action' });
   } catch (error) {

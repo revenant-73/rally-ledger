@@ -41,3 +41,32 @@ export const useUpdateMatch = () => {
     },
   });
 };
+
+export const useDeleteMatch = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ userId, matchId }: { userId: string; matchId: string }) => {
+      await apiPost('/.netlify/functions/matches', { action: 'delete', userId, matchId });
+      return { userId, matchId };
+    },
+    onSuccess: ({ matchId }) => {
+      queryClient.invalidateQueries({ queryKey: ['matches'] });
+      queryClient.removeQueries({ queryKey: ['rallies'] });
+      queryClient.removeQueries({ queryKey: ['sets'] });
+      const savedMatch = localStorage.getItem('activeMatch');
+      if (savedMatch) {
+        try {
+          const match = JSON.parse(savedMatch) as { id?: string };
+          if (match.id === matchId) {
+            localStorage.removeItem('activeMatch');
+            localStorage.removeItem('activeSet');
+          }
+        } catch {
+          localStorage.removeItem('activeMatch');
+          localStorage.removeItem('activeSet');
+        }
+      }
+    },
+  });
+};

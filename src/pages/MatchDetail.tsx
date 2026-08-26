@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Zap, Calendar, MapPin, Trophy, Copy, Download, FileSpreadsheet, Printer } from 'lucide-react';
+import { ArrowLeft, Zap, Calendar, MapPin, Trophy, Copy, Download, FileSpreadsheet, Printer, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { Match, Set, RallyEvent, Player } from '../types';
 import { useMatch } from '../hooks/useMatch';
@@ -15,7 +15,7 @@ const MatchDetail: React.FC = () => {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { teams, isSyncing } = useMatch();
+  const { teams, isSyncing, canManageTeam, deleteMatch } = useMatch();
   
   const [match, setMatch] = useState<Match | null>(null);
   const [sets, setSets] = useState<Set[]>([]);
@@ -53,6 +53,21 @@ const MatchDetail: React.FC = () => {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDeleteMatch = async () => {
+    if (!match) return;
+    const confirmed = window.confirm(`Delete match vs ${match.opponentName}? This will permanently delete its sets, rallies, and stats from reports.`);
+    if (!confirmed) return;
+
+    try {
+      await deleteMatch(match.id);
+      toast.success('Match deleted');
+      navigate('/history');
+    } catch (error) {
+      console.error('Failed to delete match:', error);
+      toast.error('Unable to delete match');
+    }
   };
 
   useEffect(() => {
@@ -114,6 +129,8 @@ const MatchDetail: React.FC = () => {
     );
   }
 
+  const canDeleteMatch = canManageTeam(match.teamId);
+
   return (
     <div className="print-report min-h-screen bg-brand-bg text-brand-text p-6 max-w-lg mx-auto pb-24">
       <header className="flex items-center justify-between mb-8">
@@ -124,7 +141,17 @@ const MatchDetail: React.FC = () => {
           <span className="text-[10px] font-black text-brand-teal uppercase tracking-widest">{match.matchType}</span>
           <h1 className="text-2xl font-bold">vs {match.opponentName}</h1>
         </div>
-        <div className="w-6" />
+        <div className="print-hide flex w-6 justify-end">
+          {canDeleteMatch && (
+            <button
+              onClick={handleDeleteMatch}
+              className="text-brand-text-secondary hover:text-brand-red"
+              aria-label="Delete match"
+            >
+              <Trash2 size={22} />
+            </button>
+          )}
+        </div>
       </header>
 
       <div className="space-y-6">

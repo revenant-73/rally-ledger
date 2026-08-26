@@ -1,4 +1,5 @@
 import type { Match, Player, RallyEvent, Set as MatchSet } from '../types';
+import { getReceiveResult, getServeResult } from './rallyResults';
 
 export interface PlayerServeReport {
   playerId: string;
@@ -126,15 +127,15 @@ export const calculateReportStats = (
   sets: MatchSet[] = []
 ): ReportStats => {
   const playerMap = new Map(players.map(player => [player.id, player]));
-  const ourServeRallies = rallies.filter(rally => rally.servingTeam === 'Us' && rally.serveResult);
-  const ourReceiveRallies = rallies.filter(rally => rally.servingTeam === 'Opponent' && rally.receiveResult);
+  const ourServeRallies = rallies.filter(rally => rally.servingTeam === 'Us' && getServeResult(rally));
+  const ourReceiveRallies = rallies.filter(rally => rally.servingTeam === 'Opponent' && getReceiveResult(rally));
 
   const serve = {
     attempts: ourServeRallies.length,
-    aces: ourServeRallies.filter(rally => rally.serveResult === 'Ace').length,
-    errors: ourServeRallies.filter(rally => rally.serveResult === 'Error').length,
-    inSystem: ourServeRallies.filter(rally => rally.serveResult === 'In-System').length,
-    outOfSystem: ourServeRallies.filter(rally => rally.serveResult === 'Out-of-System').length,
+    aces: ourServeRallies.filter(rally => getServeResult(rally) === 'Ace').length,
+    errors: ourServeRallies.filter(rally => getServeResult(rally) === 'Error').length,
+    inSystem: ourServeRallies.filter(rally => getServeResult(rally) === 'In-System').length,
+    outOfSystem: ourServeRallies.filter(rally => getServeResult(rally) === 'Out-of-System').length,
     servePct: 0,
     koPct: 0,
   };
@@ -143,10 +144,10 @@ export const calculateReportStats = (
 
   const receive = {
     attempts: ourReceiveRallies.length,
-    errors: ourReceiveRallies.filter(rally => rally.receiveResult === 'Error').length,
-    overpass: ourReceiveRallies.filter(rally => rally.receiveResult === 'Overpass').length,
-    inSystem: ourReceiveRallies.filter(rally => rally.receiveResult === 'In-System').length,
-    outOfSystem: ourReceiveRallies.filter(rally => rally.receiveResult === 'Out-of-System').length,
+    errors: ourReceiveRallies.filter(rally => getReceiveResult(rally) === 'Error').length,
+    overpass: ourReceiveRallies.filter(rally => getReceiveResult(rally) === 'Overpass').length,
+    inSystem: ourReceiveRallies.filter(rally => getReceiveResult(rally) === 'In-System').length,
+    outOfSystem: ourReceiveRallies.filter(rally => getReceiveResult(rally) === 'Out-of-System').length,
     score: 0,
   };
   receive.score = passScore(receive);
@@ -158,6 +159,7 @@ export const calculateReportStats = (
     if (!rally.serverPlayerId) return;
     const player = playerMap.get(rally.serverPlayerId);
     if (!player) return;
+    const result = getServeResult(rally);
     const current = playerServing.get(player.id) ?? {
       playerId: player.id,
       name: playerName(player),
@@ -169,10 +171,10 @@ export const calculateReportStats = (
       outOfSystem: 0,
     };
     current.attempts += 1;
-    if (rally.serveResult === 'Ace') current.aces += 1;
-    if (rally.serveResult === 'Error') current.errors += 1;
-    if (rally.serveResult === 'In-System') current.inSystem += 1;
-    if (rally.serveResult === 'Out-of-System') current.outOfSystem += 1;
+    if (result === 'Ace') current.aces += 1;
+    if (result === 'Error') current.errors += 1;
+    if (result === 'In-System') current.inSystem += 1;
+    if (result === 'Out-of-System') current.outOfSystem += 1;
     playerServing.set(player.id, current);
   });
 
@@ -180,6 +182,7 @@ export const calculateReportStats = (
     if (!rally.receivePlayerId) return;
     const player = playerMap.get(rally.receivePlayerId);
     if (!player) return;
+    const result = getReceiveResult(rally);
     const current = playerReceiving.get(player.id) ?? {
       playerId: player.id,
       name: playerName(player),
@@ -191,10 +194,10 @@ export const calculateReportStats = (
       outOfSystem: 0,
     };
     current.attempts += 1;
-    if (rally.receiveResult === 'Error') current.errors += 1;
-    if (rally.receiveResult === 'Overpass') current.overpass += 1;
-    if (rally.receiveResult === 'In-System') current.inSystem += 1;
-    if (rally.receiveResult === 'Out-of-System') current.outOfSystem += 1;
+    if (result === 'Error') current.errors += 1;
+    if (result === 'Overpass') current.overpass += 1;
+    if (result === 'In-System') current.inSystem += 1;
+    if (result === 'Out-of-System') current.outOfSystem += 1;
     playerReceiving.set(player.id, current);
   });
 
@@ -207,16 +210,16 @@ export const calculateReportStats = (
 
   const setReports = sets.map((set) => {
     const setRallies = rallies.filter(rally => rally.setId === set.id);
-    const setServes = setRallies.filter(rally => rally.servingTeam === 'Us' && rally.serveResult);
-    const setServeErrors = setServes.filter(rally => rally.serveResult === 'Error').length;
-    const setServeKos = setServes.filter(rally => rally.serveResult === 'Ace' || rally.serveResult === 'Out-of-System').length;
-    const setReceive = setRallies.filter(rally => rally.servingTeam === 'Opponent' && rally.receiveResult);
+    const setServes = setRallies.filter(rally => rally.servingTeam === 'Us' && getServeResult(rally));
+    const setServeErrors = setServes.filter(rally => getServeResult(rally) === 'Error').length;
+    const setServeKos = setServes.filter(rally => getServeResult(rally) === 'Ace' || getServeResult(rally) === 'Out-of-System').length;
+    const setReceive = setRallies.filter(rally => rally.servingTeam === 'Opponent' && getReceiveResult(rally));
     const setReceiveStats = {
       attempts: setReceive.length,
-      errors: setReceive.filter(rally => rally.receiveResult === 'Error').length,
-      overpass: setReceive.filter(rally => rally.receiveResult === 'Overpass').length,
-      inSystem: setReceive.filter(rally => rally.receiveResult === 'In-System').length,
-      outOfSystem: setReceive.filter(rally => rally.receiveResult === 'Out-of-System').length,
+      errors: setReceive.filter(rally => getReceiveResult(rally) === 'Error').length,
+      overpass: setReceive.filter(rally => getReceiveResult(rally) === 'Overpass').length,
+      inSystem: setReceive.filter(rally => getReceiveResult(rally) === 'In-System').length,
+      outOfSystem: setReceive.filter(rally => getReceiveResult(rally) === 'Out-of-System').length,
     };
 
     return {

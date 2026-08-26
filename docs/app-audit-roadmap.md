@@ -86,6 +86,8 @@ Last updated: 2026-08-09
 - Done: roster and new-match screens use permission-aware controls so coaches can view shared rosters but only edit/start matches for assigned teams.
 - Done: admins can delete rosters through a server-side cascade that removes related players, matches, sets, rallies, and coach assignments.
 - Done: historical match details include report copy/download controls, and `/reports` shows initial cumulative season stats using shared report helpers.
+- Done: coaches/admins can delete individual matches through a server-side cascade that removes related sets and rallies from history and reports.
+- Done: serve reports infer one-tap ACE/ERR entries from outcome-only rally rows so older tracked scrimmages are counted correctly.
 - Remaining: consider cookie-backed sessions and durable/distributed rate limiting before public launch.
 - Remaining: add print-friendly report styling, filtered rally logs, and richer season trend charts.
 

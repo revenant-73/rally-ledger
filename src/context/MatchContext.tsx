@@ -4,7 +4,7 @@ import { MatchContext } from './MatchContext.context';
 import { useAuth } from '../hooks/useAuth';
 import { useTeams, useAddTeam, useUpdateTeam, useDeleteTeam } from '../hooks/queries/useTeams';
 import { usePlayers, useAddPlayer, useDeletePlayer } from '../hooks/queries/usePlayers';
-import { useMatches, useStartMatch, useUpdateMatch } from '../hooks/queries/useMatches';
+import { useMatches, useStartMatch, useUpdateMatch, useDeleteMatch } from '../hooks/queries/useMatches';
 import { useActiveSet, useStartSet, useUpdateSet } from '../hooks/queries/useSets';
 import { useRallies, useAddRally, useUndoLastRally } from '../hooks/queries/useRallies';
 import { useAccess } from '../hooks/queries/useAccess';
@@ -53,6 +53,7 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const deletePlayerMutation = useDeletePlayer();
   const startMatchMutation = useStartMatch();
   const updateMatchMutation = useUpdateMatch();
+  const deleteMatchMutation = useDeleteMatch();
   const startSetMutation = useStartSet();
   const updateSetMutation = useUpdateSet();
   const addRallyMutation = useAddRally();
@@ -64,7 +65,8 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                     addPlayerMutation.isPending || 
                     deletePlayerMutation.isPending || 
                     startMatchMutation.isPending || 
-                    updateMatchMutation.isPending || 
+                    updateMatchMutation.isPending ||
+                    deleteMatchMutation.isPending ||
                     startSetMutation.isPending || 
                     updateSetMutation.isPending || 
                     addRallyMutation.isPending || 
@@ -142,6 +144,14 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setActiveTeam(null);
     }
     if (activeMatch?.teamId === teamId) {
+      setActiveMatch(null);
+    }
+  };
+
+  const deleteMatch = async (matchId: string) => {
+    if (!user) throw new Error('User missing');
+    await deleteMatchMutation.mutateAsync({ userId: user.id, matchId });
+    if (activeMatch?.id === matchId) {
       setActiveMatch(null);
     }
   };
@@ -240,6 +250,7 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       removePlayer,
       addTeam,
       deleteTeam,
+      deleteMatch,
       selectTeam,
       endSet,
       updateSet,

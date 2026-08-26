@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { RallyEvent, Player } from '../types';
+import { getReceiveResult, getServeResult } from '../utils/rallyResults';
 
 interface PlayerServeStat {
   aces: number;
@@ -74,43 +75,48 @@ export const useMatchDetailMetrics = (
     const playerReceiveStats: Record<string, PlayerReceiveStat> = {};
 
     rallies.forEach(r => {
-      if (r.serveResult && r.serverPlayerId) {
+      const serveResult = getServeResult(r);
+      const receiveResult = getReceiveResult(r);
+
+      if (serveResult && r.serverPlayerId) {
         if (!playerServeStats[r.serverPlayerId]) {
           playerServeStats[r.serverPlayerId] = { aces: 0, errors: 0, inSystem: 0, outOfSystem: 0, total: 0 };
         }
         playerServeStats[r.serverPlayerId].total++;
-        if (r.serveResult === 'Ace') playerServeStats[r.serverPlayerId].aces++;
-        if (r.serveResult === 'Error') playerServeStats[r.serverPlayerId].errors++;
-        if (r.serveResult === 'In-System') playerServeStats[r.serverPlayerId].inSystem++;
-        if (r.serveResult === 'Out-of-System') playerServeStats[r.serverPlayerId].outOfSystem++;
+        if (serveResult === 'Ace') playerServeStats[r.serverPlayerId].aces++;
+        if (serveResult === 'Error') playerServeStats[r.serverPlayerId].errors++;
+        if (serveResult === 'In-System') playerServeStats[r.serverPlayerId].inSystem++;
+        if (serveResult === 'Out-of-System') playerServeStats[r.serverPlayerId].outOfSystem++;
       }
-      if (r.receiveResult && r.receivePlayerId) {
+      if (receiveResult && r.receivePlayerId) {
         if (!playerReceiveStats[r.receivePlayerId]) {
           playerReceiveStats[r.receivePlayerId] = { errors: 0, overpass: 0, inSystem: 0, outOfSystem: 0, total: 0 };
         }
         playerReceiveStats[r.receivePlayerId].total++;
-        if (r.receiveResult === 'Error') playerReceiveStats[r.receivePlayerId].errors++;
-        if (r.receiveResult === 'Overpass') playerReceiveStats[r.receivePlayerId].overpass++;
-        if (r.receiveResult === 'In-System') playerReceiveStats[r.receivePlayerId].inSystem++;
-        if (r.receiveResult === 'Out-of-System') playerReceiveStats[r.receivePlayerId].outOfSystem++;
+        if (receiveResult === 'Error') playerReceiveStats[r.receivePlayerId].errors++;
+        if (receiveResult === 'Overpass') playerReceiveStats[r.receivePlayerId].overpass++;
+        if (receiveResult === 'In-System') playerReceiveStats[r.receivePlayerId].inSystem++;
+        if (receiveResult === 'Out-of-System') playerReceiveStats[r.receivePlayerId].outOfSystem++;
       }
     });
 
     // Serve & Receive Stats
+    const serveResults = rallies.map(getServeResult).filter(Boolean);
+    const receiveResults = rallies.map(getReceiveResult).filter(Boolean);
     const serveStats = {
-      aces: rallies.filter(r => r.serveResult === 'Ace').length,
-      errors: rallies.filter(r => r.serveResult === 'Error').length,
-      inSystem: rallies.filter(r => r.serveResult === 'In-System').length,
-      outOfSystem: rallies.filter(r => r.serveResult === 'Out-of-System').length,
-      total: rallies.filter(r => r.serveResult).length
+      aces: serveResults.filter(result => result === 'Ace').length,
+      errors: serveResults.filter(result => result === 'Error').length,
+      inSystem: serveResults.filter(result => result === 'In-System').length,
+      outOfSystem: serveResults.filter(result => result === 'Out-of-System').length,
+      total: serveResults.length
     };
 
     const receiveStats = {
-      errors: rallies.filter(r => r.receiveResult === 'Error').length,
-      overpass: rallies.filter(r => r.receiveResult === 'Overpass').length,
-      inSystem: rallies.filter(r => r.receiveResult === 'In-System').length,
-      outOfSystem: rallies.filter(r => r.receiveResult === 'Out-of-System').length,
-      total: rallies.filter(r => r.receiveResult).length
+      errors: receiveResults.filter(result => result === 'Error').length,
+      overpass: receiveResults.filter(result => result === 'Overpass').length,
+      inSystem: receiveResults.filter(result => result === 'In-System').length,
+      outOfSystem: receiveResults.filter(result => result === 'Out-of-System').length,
+      total: receiveResults.length
     };
 
     return {
