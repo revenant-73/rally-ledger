@@ -21,6 +21,7 @@ All notable changes to this project are documented here. Format loosely follows 
 - Added per-set opponent earned/gifted splits to match reports and set CSV exports so point-source totals are easier to audit.
 - Added a visible `SUB` marker on live court tiles when the current player differs from the starting player for that rotation slot.
 - Added a live gym readability plan and tightened the live match view with a more compact scoreboard, stronger contrast, clearer court tiles, and larger rally-entry controls.
+- Added screen wake-lock support while an active match set is open, with graceful fallback for unsupported browsers.
 
 ### Fixed
 - Fixed serve reporting for one-tap ACE/ERR entries by persisting inferred serve results on new rallies and inferring serve aces/errors from older outcome-only rally rows in reports and dashboards.

@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import { useMatch } from '../hooks/useMatch';
 import { useLiveMatchLogic } from '../hooks/useLiveMatchLogic';
 import { useAuth } from '../hooks/useAuth';
+import { useScreenWakeLock } from '../hooks/useScreenWakeLock';
 import { useMatchSets } from '../hooks/queries/useSets';
 import { getMatchFormatSettings, getSetTarget, isMatchCompleteAfterSet } from '../utils/matchFormat';
 import { classifyTerminalOutcome, isEarnedOutcome } from '../utils/pointClassification';
@@ -70,6 +71,7 @@ const LiveMatch: React.FC = () => {
   const [showLineupEditor, setShowLineupEditor] = useState(false);
   const [selectedPositionIdx, setSelectedPositionIdx] = useState<number | null>(null);
   const { data: matchSets = [] } = useMatchSets(user?.id, activeMatch?.id);
+  useScreenWakeLock(Boolean(activeMatch && activeSet));
 
   useEffect(() => {
     if (!activeMatch) {
