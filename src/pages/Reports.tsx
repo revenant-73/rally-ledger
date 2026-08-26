@@ -45,6 +45,17 @@ const pct = (value: number) => `${value}%`;
 
 const dateKey = (date: string) => date.split('T')[0] ?? date;
 
+const playerName = (player: Player) => `${player.firstName} ${player.lastName}`.trim();
+
+const jerseySort = (a: { jersey: string }, b: { jersey: string }) => {
+  const aNumber = Number(a.jersey);
+  const bNumber = Number(b.jersey);
+  if (Number.isFinite(aNumber) && Number.isFinite(bNumber) && aNumber !== bNumber) {
+    return aNumber - bNumber;
+  }
+  return a.jersey.localeCompare(b.jersey);
+};
+
 const scoreTone = (value: number, strong: number, caution: number) => {
   if (value >= strong) return 'text-brand-green';
   if (value >= caution) return 'text-brand-teal';
@@ -134,6 +145,8 @@ const Reports: React.FC = () => {
   const [matchTypeFilter, setMatchTypeFilter] = useState('all');
   const [opponentFilter, setOpponentFilter] = useState('all');
   const [resultFilter, setResultFilter] = useState('all');
+  const [showAllServing, setShowAllServing] = useState(false);
+  const [showAllReceiving, setShowAllReceiving] = useState(false);
 
   const effectiveTeamId = useMemo(() => {
     if (teams.length === 0) return '';
@@ -243,6 +256,51 @@ const Reports: React.FC = () => {
       filteredReportData.players
     );
   }, [filteredReportData]);
+
+  const allServingRows = useMemo(() => {
+    if (!stats || !filteredReportData) return [];
+    const servingByPlayer = new Map(stats.playerServing.map(player => [player.playerId, player]));
+
+    return filteredReportData.players
+      .map((player) => {
+        const serving = servingByPlayer.get(player.id);
+        return {
+          playerId: player.id,
+          jersey: player.jerseyNumber,
+          name: playerName(player),
+          attempts: serving?.attempts ?? 0,
+          aces: serving?.aces ?? 0,
+          errors: serving?.errors ?? 0,
+          inSystem: serving?.inSystem ?? 0,
+          outOfSystem: serving?.outOfSystem ?? 0,
+          servePct: serving?.servePct ?? 0,
+          koPct: serving?.koPct ?? 0,
+        };
+      })
+      .sort(jerseySort);
+  }, [filteredReportData, stats]);
+
+  const allReceivingRows = useMemo(() => {
+    if (!stats || !filteredReportData) return [];
+    const receivingByPlayer = new Map(stats.playerReceiving.map(player => [player.playerId, player]));
+
+    return filteredReportData.players
+      .map((player) => {
+        const receiving = receivingByPlayer.get(player.id);
+        return {
+          playerId: player.id,
+          jersey: player.jerseyNumber,
+          name: playerName(player),
+          attempts: receiving?.attempts ?? 0,
+          errors: receiving?.errors ?? 0,
+          overpass: receiving?.overpass ?? 0,
+          inSystem: receiving?.inSystem ?? 0,
+          outOfSystem: receiving?.outOfSystem ?? 0,
+          score: receiving?.score ?? 0,
+        };
+      })
+      .sort(jerseySort);
+  }, [filteredReportData, stats]);
 
   const handleTeamChange = (teamId: string) => {
     setSelectedTeamId(teamId);
@@ -621,6 +679,48 @@ const Reports: React.FC = () => {
                     </div>
                   </div>
                 ))}
+                {allServingRows.length > stats.playerServing.slice(0, 6).length && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllServing(current => !current)}
+                    className="print-hide mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-brand-teal/20 bg-brand-teal/5 px-4 py-3 text-xs font-black uppercase tracking-wide text-brand-teal transition-colors hover:bg-brand-teal/10 focus:outline-none focus:ring-2 focus:ring-brand-teal/50"
+                  >
+                    {showAllServing ? 'Hide All Serving' : `Show All Serving (${allServingRows.length})`}
+                    <ChevronDown size={16} className={`transition-transform ${showAllServing ? 'rotate-180' : ''}`} />
+                  </button>
+                )}
+                {showAllServing && (
+                  <div className="mt-3 overflow-x-auto rounded-2xl border border-brand-gray/10 bg-brand-bg">
+                    <table className="w-full min-w-[520px] text-left text-xs">
+                      <thead className="text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">
+                        <tr>
+                          <th className="px-3 py-3">Player</th>
+                          <th className="px-3 py-3 text-right">Att</th>
+                          <th className="px-3 py-3 text-right">Ace</th>
+                          <th className="px-3 py-3 text-right">Err</th>
+                          <th className="px-3 py-3 text-right">InSys</th>
+                          <th className="px-3 py-3 text-right">KO</th>
+                          <th className="px-3 py-3 text-right">In%</th>
+                          <th className="px-3 py-3 text-right">KO%</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allServingRows.map(player => (
+                          <tr key={player.playerId} className="border-t border-brand-gray/10 font-bold">
+                            <td className="px-3 py-3">#{player.jersey} {player.name}</td>
+                            <td className="px-3 py-3 text-right">{player.attempts}</td>
+                            <td className="px-3 py-3 text-right text-brand-green">{player.aces}</td>
+                            <td className="px-3 py-3 text-right text-brand-red">{player.errors}</td>
+                            <td className="px-3 py-3 text-right">{player.inSystem}</td>
+                            <td className="px-3 py-3 text-right">{player.outOfSystem}</td>
+                            <td className="px-3 py-3 text-right text-brand-green">{pct(player.servePct)}</td>
+                            <td className="px-3 py-3 text-right text-brand-teal">{pct(player.koPct)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </Leaderboard>
 
               <Leaderboard title="Receiving Leaders" icon={<Target size={18} />} emptyText="No receiving attempts tracked.">
@@ -645,6 +745,46 @@ const Reports: React.FC = () => {
                     </div>
                   </div>
                 ))}
+                {allReceivingRows.length > stats.playerReceiving.slice(0, 6).length && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllReceiving(current => !current)}
+                    className="print-hide mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-brand-teal/20 bg-brand-teal/5 px-4 py-3 text-xs font-black uppercase tracking-wide text-brand-teal transition-colors hover:bg-brand-teal/10 focus:outline-none focus:ring-2 focus:ring-brand-teal/50"
+                  >
+                    {showAllReceiving ? 'Hide All Receiving' : `Show All Receiving (${allReceivingRows.length})`}
+                    <ChevronDown size={16} className={`transition-transform ${showAllReceiving ? 'rotate-180' : ''}`} />
+                  </button>
+                )}
+                {showAllReceiving && (
+                  <div className="mt-3 overflow-x-auto rounded-2xl border border-brand-gray/10 bg-brand-bg">
+                    <table className="w-full min-w-[500px] text-left text-xs">
+                      <thead className="text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">
+                        <tr>
+                          <th className="px-3 py-3">Player</th>
+                          <th className="px-3 py-3 text-right">Att</th>
+                          <th className="px-3 py-3 text-right">3s</th>
+                          <th className="px-3 py-3 text-right">2s</th>
+                          <th className="px-3 py-3 text-right">Over</th>
+                          <th className="px-3 py-3 text-right">Err</th>
+                          <th className="px-3 py-3 text-right">Avg</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allReceivingRows.map(player => (
+                          <tr key={player.playerId} className="border-t border-brand-gray/10 font-bold">
+                            <td className="px-3 py-3">#{player.jersey} {player.name}</td>
+                            <td className="px-3 py-3 text-right">{player.attempts}</td>
+                            <td className="px-3 py-3 text-right text-brand-green">{player.inSystem}</td>
+                            <td className="px-3 py-3 text-right text-brand-teal">{player.outOfSystem}</td>
+                            <td className="px-3 py-3 text-right text-brand-amber">{player.overpass}</td>
+                            <td className="px-3 py-3 text-right text-brand-red">{player.errors}</td>
+                            <td className={`px-3 py-3 text-right ${scoreTone(player.score, 2.3, 1.9)}`}>{player.score.toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </Leaderboard>
             </div>
 

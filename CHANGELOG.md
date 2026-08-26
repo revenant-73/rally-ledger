@@ -10,6 +10,7 @@ All notable changes to this project are documented here. Format loosely follows 
 - Expanded season downloads into a coach-ready CSV package with summary, match trends, player totals, serving, receiving, opponent breakdown, and practice plan files.
 - Added cumulative report filters for date range, match type, opponent, and result, with filtered stats/export behavior and a clear-filters action.
 - Added match deletion from History and match detail, with authorized server-side deletion of match sets and rallies.
+- Added expandable all-player serving and receiving stat tables to the cumulative Reports page.
 
 ### Fixed
 - Fixed serve reporting for one-tap ACE/ERR entries by persisting inferred serve results on new rallies and inferring serve aces/errors from older outcome-only rally rows in reports and dashboards.

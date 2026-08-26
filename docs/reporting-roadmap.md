@@ -76,6 +76,7 @@ Core season report sections:
 - Team trends: earned points per match, gifted points per match, serve-in percentage, serve KO percentage, and pass score by match.
 - Serve season report: team serve percentage, KO percentage, aces, errors, pressure serves, and player leaderboard.
 - Receive season report: team pass score, 3-pass/2-pass/overpass/error counts, and player leaderboard.
+- Expandable all-player serving and receiving tables for roster-complete stat review.
 - Earned/gifted report: top scoring sources and top leaks.
 - Player development view: per-player recent form compared with season average.
 - Practice planning view: auto-generated focus areas from the season trends.
@@ -100,7 +101,8 @@ Completed report filters:
 7. Done: add print styles and native print controls for browser save-to-PDF.
 8. Done: expand season downloads into a coach-ready CSV package with player totals, opponent breakdown, and practice plan files.
 9. Done: add cumulative report filters for date range, match type, opponent, and result.
-10. Add richer dedicated print/export report layouts if coaches need more polished packets later.
+10. Done: add expandable all-player serving and receiving stat tables to cumulative reports.
+11. Add richer dedicated print/export report layouts if coaches need more polished packets later.
 
 ## Validation
 
