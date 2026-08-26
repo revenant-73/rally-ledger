@@ -16,7 +16,7 @@ const makePlayer = (n: number): Player => ({
 });
 
 describe('RotationDisplay rotation math', () => {
-  const players = [1, 2, 3, 4, 5, 6].map(makePlayer);
+  const players = [1, 2, 3, 4, 5, 6, 7].map(makePlayer);
 
   const lineup: Lineup = {
     position1: 'p1',
@@ -86,5 +86,26 @@ describe('RotationDisplay rotation math', () => {
     // Physical zone 1 in rotation 2 holds player index 2.
     screen.getByLabelText(/Position 1: #2 /).click();
     expect(onPlayerClick).toHaveBeenCalledWith(2);
+  });
+
+  it('marks players who are substituted in for the original starter', () => {
+    const currentLineup: Lineup = {
+      ...lineup,
+      position3: 'p7',
+    };
+
+    render(
+      <RotationDisplay
+        lineup={currentLineup}
+        startingLineup={lineup}
+        players={players}
+        currentRotation={1}
+        servingTeam="Opponent"
+      />
+    );
+
+    expect(screen.getByLabelText(/Position 3: #7 .*substituted for #3/)).toBeInTheDocument();
+    expect(screen.getByText('Sub')).toBeInTheDocument();
+    expect(screen.getByText('for #3')).toBeInTheDocument();
   });
 });

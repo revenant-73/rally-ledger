@@ -369,6 +369,7 @@ const LiveMatch: React.FC = () => {
         <div className="px-4 pb-1">
           <RotationDisplay 
             lineup={currentLineup}
+            startingLineup={activeSet.metadata?.startingLineup}
             players={matchPlayers}
             currentRotation={currentRotation}
             servingTeam={servingTeam}

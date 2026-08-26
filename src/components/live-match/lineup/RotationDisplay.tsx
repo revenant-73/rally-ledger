@@ -4,6 +4,7 @@ import { RotateCw } from 'lucide-react';
 
 interface RotationDisplayProps {
   lineup: Lineup;
+  startingLineup?: Lineup | null;
   players: Player[];
   currentRotation: number;
   servingTeam: 'Us' | 'Opponent';
@@ -14,6 +15,7 @@ interface RotationDisplayProps {
 
 const RotationDisplay: React.FC<RotationDisplayProps> = ({ 
   lineup, 
+  startingLineup,
   players, 
   currentRotation,
   servingTeam,
@@ -90,18 +92,24 @@ const RotationDisplay: React.FC<RotationDisplayProps> = ({
           const isServer = servingTeam === 'Us' && pos === 1;
           const isLibero = player?.position === 'L' || player?.position === 'DS'; // Simplification for UI
           const isLiberoServing = isServer && playerIdx === liberoServingPosition;
+          const startingPlayerId = startingLineup?.[`position${playerIdx}` as keyof Lineup] as string | undefined;
+          const starter = players.find(p => p.id === startingPlayerId);
+          const isSubstitution = Boolean(player && startingPlayerId && player.id !== startingPlayerId && !isLibero);
           
           const playerLabel = player ? `#${player.jerseyNumber} ${player.firstName} ${player.lastName}` : 'empty';
+          const starterLabel = starter ? ` for #${starter.jerseyNumber} ${starter.firstName} ${starter.lastName}` : '';
 
           return (
             <button
               key={pos}
               onClick={() => onPlayerClick?.(playerIdx)}
               disabled={!onPlayerClick}
-              aria-label={`Position ${pos}: ${playerLabel}${isServer ? ', serving' : ''}${isLiberoServing ? ', libero serving' : ''}`}
+              aria-label={`Position ${pos}: ${playerLabel}${isSubstitution ? `, substituted${starterLabel}` : ''}${isServer ? ', serving' : ''}${isLiberoServing ? ', libero serving' : ''}`}
               className={`relative rounded flex flex-col items-center justify-center border transition-all ${
                 isServer 
                   ? 'bg-brand-teal/20 border-brand-teal shadow-inner' 
+                  : isSubstitution
+                    ? 'bg-brand-green/10 border-brand-green/40'
                   : 'bg-brand-bg border-brand-gray/10'
               } ${onPlayerClick ? 'active:scale-95' : ''}`}
             >
@@ -115,9 +123,21 @@ const RotationDisplay: React.FC<RotationDisplayProps> = ({
                 </div>
               )}
 
+              {isSubstitution && (
+                <div className="absolute top-0.5 left-0.5 rounded-[2px] bg-brand-green px-1 py-0.5 text-[5px] font-black uppercase leading-none text-brand-bg">
+                  Sub
+                </div>
+              )}
+
               <span className={`text-lg font-black leading-none ${isServer ? 'text-brand-teal' : 'text-brand-text'} ${isLibero ? 'text-brand-amber' : ''}`}>
                 {player?.jerseyNumber || '?'}
               </span>
+
+              {isSubstitution && starter && (
+                <span className="mt-0.5 text-[5px] font-black uppercase leading-none text-brand-green">
+                  for #{starter.jerseyNumber}
+                </span>
+              )}
               
               {isLiberoServing && (
                 <div className="absolute -bottom-0.5 bg-brand-amber text-brand-bg text-[4px] font-black px-0.5 rounded uppercase">Libero</div>
