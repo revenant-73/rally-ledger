@@ -116,6 +116,17 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   };
 
+  const endMatch = async (result: 'Win' | 'Loss') => {
+    if (!activeMatch) return;
+    if (!user) throw new Error('User missing');
+    await updateMatchMutation.mutateAsync({
+      userId: user.id,
+      matchId: activeMatch.id,
+      updates: { status: 'completed', result },
+    });
+    setActiveMatch(null);
+  };
+
   const updateSet = async (setId: string, updates: Partial<Set>) => {
     if (!user) throw new Error('User missing');
     await updateSetMutation.mutateAsync({ userId: user.id, setId, updates, matchId: activeMatch?.id });
@@ -253,6 +264,7 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       deleteMatch,
       selectTeam,
       endSet,
+      endMatch,
       updateSet,
       updateMatch,
       updateTeam,

@@ -34,7 +34,8 @@ const LiveMatch: React.FC = () => {
     players, 
     endSet, 
     updateMatch, 
-    updateSet 
+    updateSet,
+    endMatch,
   } = useMatch();
   
   const {
@@ -101,6 +102,11 @@ const LiveMatch: React.FC = () => {
         rallies={rallies}
         players={matchPlayers}
         onBackToHome={() => navigate('/')}
+        onEndMatch={async (result) => {
+          await endMatch(result);
+          toast.success(`Match completed as a ${result.toLowerCase()}.`);
+          navigate('/');
+        }}
         onStartSet={async (setNumber, lineup) => {
           const newSet: Set = {
             id: uuidv4(),
@@ -304,6 +310,13 @@ const LiveMatch: React.FC = () => {
           await endSet(winner);
           setShowMoreMenu(false);
           toast.success(`Set ${activeSet.setNumber} completed!`);
+        }}
+        onEndMatch={async (winner) => {
+          await endSet(winner);
+          await endMatch(winner);
+          setShowMoreMenu(false);
+          toast.success(`Match completed as a ${winner.toLowerCase()}.`);
+          navigate('/');
         }}
         onAbandonMatch={() => navigate('/')}
       />

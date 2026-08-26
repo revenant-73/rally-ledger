@@ -9,6 +9,7 @@ interface MoreMenuModalProps {
   ourScore: number;
   opponentScore: number;
   onEndSet: (winner: 'Win' | 'Loss') => Promise<void>;
+  onEndMatch: (winner: 'Win' | 'Loss') => Promise<void>;
   onAbandonMatch: () => void;
 }
 
@@ -19,6 +20,7 @@ const MoreMenuModal: React.FC<MoreMenuModalProps> = ({
   ourScore,
   opponentScore,
   onEndSet,
+  onEndMatch,
   onAbandonMatch,
 }) => {
   const dialogRef = useFocusTrap<HTMLDivElement>(isOpen, onClose);
@@ -52,6 +54,22 @@ const MoreMenuModal: React.FC<MoreMenuModalProps> = ({
           <div className="flex items-center gap-3">
             <Trophy size={20} />
             <span>End Set {setNumber}</span>
+          </div>
+          <span className="text-xs uppercase opacity-60">{ourScore} - {opponentScore}</span>
+        </button>
+
+        <button
+          onClick={() => {
+            const winner = ourScore > opponentScore ? 'Win' : 'Loss';
+            if (window.confirm(`End Set ${setNumber} as a ${winner} and finish the match?`)) {
+              onEndMatch(winner);
+            }
+          }}
+          className="w-full flex items-center justify-between p-4 bg-brand-green/10 text-brand-green rounded-2xl font-bold"
+        >
+          <div className="flex items-center gap-3">
+            <Trophy size={20} />
+            <span>End Match</span>
           </div>
           <span className="text-xs uppercase opacity-60">{ourScore} - {opponentScore}</span>
         </button>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trophy, ArrowLeft } from 'lucide-react';
+import { Trophy, ArrowLeft, CheckCircle } from 'lucide-react';
 import type { RallyEvent, Player, Lineup } from '../../types';
 import LineupSelection from './lineup/LineupSelection';
 
@@ -7,6 +7,7 @@ interface NextSetScreenProps {
   rallies: RallyEvent[];
   players: Player[];
   onStartSet: (setNumber: number, lineup?: Lineup) => Promise<void>;
+  onEndMatch: (result: 'Win' | 'Loss') => Promise<void>;
   onBackToHome: () => void;
 }
 
@@ -14,6 +15,7 @@ const NextSetScreen: React.FC<NextSetScreenProps> = ({
   rallies,
   players,
   onStartSet,
+  onEndMatch,
   onBackToHome,
 }) => {
   const [pendingSetNumber, setPendingSetNumber] = useState(1);
@@ -101,6 +103,31 @@ const NextSetScreen: React.FC<NextSetScreenProps> = ({
       >
         Set Lineup & Start
       </button>
+
+      <div className="mt-5 grid w-full max-w-xs grid-cols-2 gap-3">
+        <button
+          onClick={() => {
+            if (window.confirm('Finish this match as a win?')) {
+              onEndMatch('Win');
+            }
+          }}
+          className="flex items-center justify-center gap-2 rounded-2xl bg-brand-green/10 px-4 py-4 text-sm font-black uppercase tracking-wide text-brand-green"
+        >
+          <CheckCircle size={18} />
+          Finish Win
+        </button>
+        <button
+          onClick={() => {
+            if (window.confirm('Finish this match as a loss?')) {
+              onEndMatch('Loss');
+            }
+          }}
+          className="flex items-center justify-center gap-2 rounded-2xl bg-brand-red/10 px-4 py-4 text-sm font-black uppercase tracking-wide text-brand-red"
+        >
+          <CheckCircle size={18} />
+          Finish Loss
+        </button>
+      </div>
       
       <button 
         onClick={onBackToHome}

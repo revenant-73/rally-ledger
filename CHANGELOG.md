@@ -10,6 +10,7 @@ All notable changes to this project are documented here. Format loosely follows 
 - Expanded season downloads into a coach-ready CSV package with summary, match trends, player totals, serving, receiving, opponent breakdown, and practice plan files.
 - Added cumulative report filters for date range, match type, opponent, and result, with filtered stats/export behavior and a clear-filters action.
 - Added match deletion from History and match detail, with authorized server-side deletion of match sets and rallies.
+- Added explicit match-finish actions so coaches can complete a match as a win or loss without needing a best-of-five set count.
 - Added expandable all-player serving and receiving stat tables to the cumulative Reports page.
 - Added kill reporting to match and season reports, including kills vs attack errors, kill/error net, all-player cumulative rows, and dedicated kill-report CSV exports.
 - Added a stats audit document covering source fields, formulas, live dashboard derivations, and report/export coverage.
