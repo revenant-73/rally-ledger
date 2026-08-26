@@ -284,6 +284,24 @@ export const buildSeasonTextSummary = (team: Team, stats: SeasonReportStats) => 
       ? stats.playerAttacking.slice(0, 8).map(player => `#${player.jersey} ${player.name}: ${player.kills} kills, ${player.errors} errors (${player.net >= 0 ? '+' : ''}${player.net})`)
       : ['No kills or attack errors tracked.']),
     '',
+    'Point Earners',
+    ...(stats.playerPoints.filter(player => player.earned > 0).length > 0
+      ? [...stats.playerPoints]
+        .filter(player => player.earned > 0)
+        .sort((a, b) => b.earned - a.earned || b.net - a.net || a.gifted - b.gifted || a.jersey.localeCompare(b.jersey))
+        .slice(0, 8)
+        .map(player => `#${player.jersey} ${player.name}: ${player.earned} earned, ${player.gifted} gifted (${player.net >= 0 ? '+' : ''}${player.net})`)
+      : ['No earned points attributed.']),
+    '',
+    'Point Gifters',
+    ...(stats.playerPoints.filter(player => player.gifted > 0).length > 0
+      ? [...stats.playerPoints]
+        .filter(player => player.gifted > 0)
+        .sort((a, b) => b.gifted - a.gifted || a.net - b.net || b.earned - a.earned || a.jersey.localeCompare(b.jersey))
+        .slice(0, 8)
+        .map(player => `#${player.jersey} ${player.name}: ${player.gifted} gifted, ${player.earned} earned (${player.net >= 0 ? '+' : ''}${player.net})`)
+      : ['No gifted points attributed.']),
+    '',
     'Match Trends',
     ...(stats.matchRows.length > 0
       ? stats.matchRows.map(row => `${formatReportDate(row.matchDate)} vs ${row.opponentName}: ${row.result || 'Open'}, ${row.earnedGifted}, ${row.servePct}% serve, ${row.serveKoPct}% KO, ${row.passScore.toFixed(2)} pass, ${row.kills} kills/${row.attackErrors} errors`)
@@ -298,7 +316,8 @@ export const buildSeasonCsvFiles = (team: Team, stats: SeasonReportStats) => {
   const playerServing = new Map(stats.playerServing.map(player => [player.playerId, player]));
   const playerReceiving = new Map(stats.playerReceiving.map(player => [player.playerId, player]));
   const playerAttacking = new Map(stats.playerAttacking.map(player => [player.playerId, player]));
-  const playerIds = Array.from(new Set([...playerServing.keys(), ...playerReceiving.keys(), ...playerAttacking.keys()]));
+  const playerPoints = new Map(stats.playerPoints.map(player => [player.playerId, player]));
+  const playerIds = Array.from(new Set([...playerServing.keys(), ...playerReceiving.keys(), ...playerAttacking.keys(), ...playerPoints.keys()]));
   const opponentRows = Array.from(
     stats.matchRows.reduce((opponents, row) => {
       const current = opponents.get(row.opponentName) ?? {
@@ -453,14 +472,18 @@ export const buildSeasonCsvFiles = (team: Team, stats: SeasonReportStats) => {
           'Kill/Error Net',
           'Kill %',
           'Error %',
+          'Point Earned',
+          'Point Gifted',
+          'Point Net',
         ],
         playerIds.map(playerId => {
           const serving = playerServing.get(playerId);
           const receiving = playerReceiving.get(playerId);
           const attacking = playerAttacking.get(playerId);
+          const points = playerPoints.get(playerId);
           return [
-            serving?.jersey ?? receiving?.jersey ?? attacking?.jersey ?? '',
-            serving?.name ?? receiving?.name ?? attacking?.name ?? '',
+            serving?.jersey ?? receiving?.jersey ?? attacking?.jersey ?? points?.jersey ?? '',
+            serving?.name ?? receiving?.name ?? attacking?.name ?? points?.name ?? '',
             serving?.attempts ?? 0,
             serving?.aces ?? 0,
             serving?.errors ?? 0,
@@ -479,8 +502,25 @@ export const buildSeasonCsvFiles = (team: Team, stats: SeasonReportStats) => {
             attacking?.net ?? 0,
             attacking?.killPct ?? 0,
             attacking?.errorPct ?? 0,
+            points?.earned ?? 0,
+            points?.gifted ?? 0,
+            points?.net ?? 0,
           ];
         })
+      ),
+    },
+    {
+      filename: `${baseName}-point-leaders.csv`,
+      contents: toCsv(
+        ['Jersey', 'Player', 'Earned Points', 'Gifted Points', 'Net', 'Total Attributed'],
+        stats.playerPoints.map(player => [
+          player.jersey,
+          player.name,
+          player.earned,
+          player.gifted,
+          player.net,
+          player.total,
+        ])
       ),
     },
     {

@@ -93,6 +93,10 @@ describe('report stats', () => {
       expect.objectContaining({ jersey: '07', kills: 1, errors: 0, net: 1, killPct: 100 }),
       expect.objectContaining({ jersey: '12', kills: 0, errors: 1, net: -1, errorPct: 100 }),
     ]);
+    expect(stats.playerPoints).toEqual([
+      expect.objectContaining({ jersey: '07', earned: 2, gifted: 1, net: 1, total: 3 }),
+      expect.objectContaining({ jersey: '12', earned: 0, gifted: 1, net: -1, total: 1 }),
+    ]);
     expect(stats.setReports[0]).toMatchObject({ setNumber: 1, score: '25-20', servePct: 50, passScore: 2.5 });
   });
 
@@ -105,6 +109,7 @@ describe('report stats', () => {
 
     expect(stats.serve).toMatchObject({ attempts: 3, aces: 1, errors: 2, servePct: 33, koPct: 33 });
     expect(stats.playerServing[0]).toMatchObject({ jersey: '07', attempts: 3, errors: 2, ko: 1, servePct: 33 });
+    expect(stats.playerPoints[0]).toMatchObject({ jersey: '07', earned: 1, gifted: 2, net: -1, total: 3 });
     expect(stats.setReports[0]).toMatchObject({ servePct: 33, serveKoPct: 33 });
   });
 

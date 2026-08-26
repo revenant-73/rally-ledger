@@ -47,6 +47,7 @@ This prevents stray metadata from counting on the wrong serving side.
 - Attack errors: gifted `Attack Error` outcomes won by the opponent.
 - Kill/error net: `kills - attack errors`.
 - Kill percentage: `kills / (kills + attack errors)`.
+- Player point earners/gifters: attributed earned points are our `Earned` rallies; attributed gifted points are opponent points with our `Gifted` classification. Attribution uses `playerId` first, with server/passer fallback for older serve and receive rows.
 
 The current attack report is a kill/error report, not a full hitting percentage, because non-terminal attack attempts are not tracked.
 
@@ -69,8 +70,8 @@ Current report surfaces include:
 
 - Individual match page: match info, sets, earned/gifted balance, serve report, receive report, kill report, top earner, and top gifter.
 - Individual match text/CSV exports: summary, serving, receiving, kill report, set breakdown, and rally log.
-- Season Reports page: season snapshot, skill snapshot, serving leaders, receiving leaders, kill report, all-player tables, and match trends.
-- Season CSV package: summary, match trends, player totals, serving, receiving, kill report, opponent breakdown, and practice plan.
+- Season Reports page: season snapshot, skill snapshot, point earners/gifters, serving leaders, receiving leaders, kill report, all-player tables, and match trends.
+- Season CSV package: summary, match trends, player totals, point leaders, serving, receiving, kill report, opponent breakdown, and practice plan.
 
 ## Validation
 

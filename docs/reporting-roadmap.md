@@ -82,7 +82,7 @@ Core season report sections:
 - Kill season report: team kills, attack errors, kill/error net, kill percentage, and player leaderboard.
 - Expandable all-player serving and receiving tables for roster-complete stat review.
 - Expandable all-player kill report table for roster-complete attacking review.
-- Earned/gifted report: top scoring sources and top leaks.
+- Earned/gifted report: top scoring sources, top leaks, and cumulative player point earners/gifters.
 - Player development view: per-player recent form compared with season average.
 - Practice planning view: auto-generated focus areas from the season trends.
 
@@ -109,7 +109,8 @@ Completed report filters:
 10. Done: add expandable all-player serving and receiving stat tables to cumulative reports.
 11. Done: add kill reports with kills, attack errors, kill/error net, individual-match cards, match-trend columns, all-player season rows, and CSV export files.
 12. Done: add a stats audit document covering report formulas, live dashboard formulas, and coverage boundaries.
-13. Add richer dedicated print/export report layouts if coaches need more polished packets later.
+13. Done: add cumulative player point earner/gifter leaderboards and point-leaders CSV exports.
+14. Add richer dedicated print/export report layouts if coaches need more polished packets later.
 
 ## Validation
 

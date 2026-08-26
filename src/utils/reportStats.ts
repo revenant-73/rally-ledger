@@ -39,6 +39,16 @@ export interface PlayerAttackReport {
   errorPct: number;
 }
 
+export interface PlayerPointReport {
+  playerId: string;
+  name: string;
+  jersey: string;
+  earned: number;
+  gifted: number;
+  net: number;
+  total: number;
+}
+
 export interface SetReport {
   setId: string;
   setNumber: number;
@@ -87,6 +97,7 @@ export interface ReportStats {
   playerServing: PlayerServeReport[];
   playerReceiving: PlayerReceiveReport[];
   playerAttacking: PlayerAttackReport[];
+  playerPoints: PlayerPointReport[];
   setReports: SetReport[];
   focus: string;
 }
@@ -131,6 +142,25 @@ const countOutcomes = (rallies: RallyEvent[]) => {
 
 const topOutcome = (rallies: RallyEvent[]) => {
   return Object.entries(countOutcomes(rallies)).sort((a, b) => b[1] - a[1])[0]?.[0] || 'None';
+};
+
+const attributedPlayerId = (rally: RallyEvent) => {
+  if (rally.playerId) return rally.playerId;
+
+  const serveResult = getServeResult(rally);
+  if (
+    rally.servingTeam === 'Us' &&
+    (serveResult === 'Ace' || serveResult === 'Error' || rally.outcomeType === 'Ace' || rally.outcomeType === 'Serve Error')
+  ) {
+    return rally.serverPlayerId;
+  }
+
+  const receiveResult = getReceiveResult(rally);
+  if (rally.servingTeam === 'Opponent' && receiveResult === 'Error') {
+    return rally.receivePlayerId;
+  }
+
+  return undefined;
 };
 
 const buildFocus = (stats: Pick<ReportStats, 'ourEarned' | 'ourGifted' | 'biggestLeak' | 'biggestWeapon' | 'serve' | 'receive'>) => {
@@ -193,6 +223,7 @@ export const calculateReportStats = (
   const playerServing = new Map<string, Omit<PlayerServeReport, 'ko' | 'servePct' | 'koPct'>>();
   const playerReceiving = new Map<string, Omit<PlayerReceiveReport, 'score'>>();
   const playerAttacking = new Map<string, Omit<PlayerAttackReport, 'attempts' | 'net' | 'killPct' | 'errorPct'>>();
+  const playerPoints = new Map<string, Omit<PlayerPointReport, 'net' | 'total'>>();
 
   ourServeRallies.forEach((rally) => {
     if (!rally.serverPlayerId) return;
@@ -270,6 +301,32 @@ export const calculateReportStats = (
     playerAttacking.set(player.id, current);
   });
 
+  rallies.forEach((rally) => {
+    if (rally.classification !== 'Earned' && rally.classification !== 'Gifted') return;
+    const playerId = attributedPlayerId(rally);
+    if (!playerId) return;
+    const player = playerMap.get(playerId);
+    if (!player) return;
+    const current = playerPoints.get(player.id) ?? {
+      playerId: player.id,
+      name: playerName(player),
+      jersey: player.jerseyNumber,
+      earned: 0,
+      gifted: 0,
+    };
+
+    if (rally.pointWinner === 'Us' && rally.classification === 'Earned') {
+      current.earned += 1;
+    }
+    if (rally.pointWinner === 'Opponent' && rally.classification === 'Gifted') {
+      current.gifted += 1;
+    }
+
+    if (current.earned > 0 || current.gifted > 0) {
+      playerPoints.set(player.id, current);
+    }
+  });
+
   const ourEarned = rallies.filter(rally => rally.pointWinner === 'Us' && rally.classification === 'Earned').length;
   const ourGifted = rallies.filter(rally => rally.pointWinner === 'Opponent' && rally.classification === 'Gifted').length;
   const opponentEarned = rallies.filter(rally => rally.pointWinner === 'Opponent' && rally.classification === 'Earned').length;
@@ -338,6 +395,13 @@ export const calculateReportStats = (
         };
       })
       .sort((a, b) => b.net - a.net || b.kills - a.kills || a.errors - b.errors || b.attempts - a.attempts),
+    playerPoints: Array.from(playerPoints.values())
+      .map(stats => ({
+        ...stats,
+        net: stats.earned - stats.gifted,
+        total: stats.earned + stats.gifted,
+      }))
+      .sort((a, b) => b.net - a.net || b.earned - a.earned || a.gifted - b.gifted || b.total - a.total),
     setReports,
   };
 
