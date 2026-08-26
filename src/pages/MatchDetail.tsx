@@ -262,20 +262,44 @@ const MatchDetail: React.FC = () => {
           <div className="space-y-3">
             {sets.length === 0 ? (
               <p className="text-sm text-brand-text-secondary italic text-center py-4">No sets recorded for this match.</p>
-            ) : sets.sort((a, b) => a.setNumber - b.setNumber).map((set) => (
-              <div key={set.id} className="flex items-center justify-between p-3 bg-brand-bg rounded-xl border border-brand-gray/10">
-                <div className="flex items-center gap-3">
-                  <span className="w-6 h-6 bg-brand-gray/10 rounded-lg flex items-center justify-center text-[10px] font-black">
-                    {set.setNumber}
-                  </span>
-                  <span className={`text-sm font-bold ${set.finalResult === 'Win' ? 'text-brand-teal' : 'text-brand-red'}`}>
-                    {set.finalResult || 'In Progress'}
-                  </span>
+            ) : reportStats.setReports.map((set) => (
+              <div key={set.setId} className="space-y-3 rounded-xl border border-brand-gray/10 bg-brand-bg p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="w-6 h-6 bg-brand-gray/10 rounded-lg flex items-center justify-center text-[10px] font-black">
+                      {set.setNumber}
+                    </span>
+                    <span className={`text-sm font-bold ${set.result === 'Win' ? 'text-brand-teal' : 'text-brand-red'}`}>
+                      {set.result || 'In Progress'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 font-black">
+                    <span className={Number(set.score.split('-')[0]) > Number(set.score.split('-')[1]) ? 'text-brand-teal' : 'text-brand-text'}>
+                      {set.score.split('-')[0]}
+                    </span>
+                    <span className="text-brand-text-secondary">-</span>
+                    <span className={Number(set.score.split('-')[1]) > Number(set.score.split('-')[0]) ? 'text-brand-red' : 'text-brand-text'}>
+                      {set.score.split('-')[1]}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 font-black">
-                  <span className={set.ourScore > set.opponentScore ? 'text-brand-teal' : 'text-brand-text'}>{set.ourScore}</span>
-                  <span className="text-brand-text-secondary">-</span>
-                  <span className={set.opponentScore > set.ourScore ? 'text-brand-red' : 'text-brand-text'}>{set.opponentScore}</span>
+                <div className="grid grid-cols-2 gap-2 border-t border-brand-gray/10 pt-3 text-xs font-black">
+                  <div>
+                    <p className="text-[9px] uppercase tracking-widest text-brand-text-secondary">Us</p>
+                    <p className="mt-1">
+                      <span className="text-brand-green">+{set.ourEarned}</span>
+                      <span className="mx-1 text-brand-text-secondary">/</span>
+                      <span className="text-brand-red">-{set.ourGifted}</span>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] uppercase tracking-widest text-brand-text-secondary">Them</p>
+                    <p className="mt-1">
+                      <span className="text-brand-text">+{set.opponentEarned}</span>
+                      <span className="mx-1 text-brand-text-secondary">/</span>
+                      <span className="text-brand-gray">-{set.opponentGifted}</span>
+                    </p>
+                  </div>
                 </div>
               </div>
             ))}

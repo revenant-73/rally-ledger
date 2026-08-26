@@ -7,6 +7,7 @@ import { useLiveMatchLogic } from '../hooks/useLiveMatchLogic';
 import { useAuth } from '../hooks/useAuth';
 import { useMatchSets } from '../hooks/queries/useSets';
 import { getMatchFormatSettings, getSetTarget, isMatchCompleteAfterSet } from '../utils/matchFormat';
+import { classifyTerminalOutcome, isEarnedOutcome } from '../utils/pointClassification';
 import type { OutcomeType, Classification, Set } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -190,9 +191,7 @@ const LiveMatch: React.FC = () => {
     if (matchPlayers.length > 0) {
       setShowReceivePlayerSelection(true);
     } else if (quality === 'Error') {
-      setPointWinner('Opponent');
-      setOutcome('Ace');
-      setShowClassification(true);
+      handleCompleteRally('Earned', 'Opponent', 'Ace');
     }
   };
 
@@ -202,9 +201,7 @@ const LiveMatch: React.FC = () => {
     setSelectedPlayerId(pId);
     setShowReceivePlayerSelection(false);
     if (receiveResult === 'Error') {
-      setPointWinner('Opponent');
-      setOutcome('Ace');
-      setShowClassification(true);
+      handleCompleteRally('Earned', 'Opponent', 'Ace', pId);
     }
   };
 
@@ -220,8 +217,8 @@ const LiveMatch: React.FC = () => {
 
   const handleOutcomeClick = (type: OutcomeType) => {
     setOutcome(type);
-    const isPositive = positiveOutcomes.includes(type);
-    const classification = isPositive ? 'Earned' : 'Gifted';
+    const isPositive = isEarnedOutcome(type);
+    const classification = classifyTerminalOutcome(type);
     const shouldSelectPlayer = (pointWinner === 'Us' && isPositive) || (pointWinner === 'Opponent' && !isPositive);
 
     if (matchPlayers.length > 0 && shouldSelectPlayer) {
@@ -237,7 +234,7 @@ const LiveMatch: React.FC = () => {
     setShowPlayerSelection(false);
     
     if (outcome) {
-      const classification = positiveOutcomes.includes(outcome) ? 'Earned' : 'Gifted';
+      const classification = classifyTerminalOutcome(outcome);
       handleCompleteRally(classification, undefined, undefined, pId);
     }
   };

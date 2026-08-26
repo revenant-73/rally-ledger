@@ -78,6 +78,8 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
 
   const predictedServerId = getPredictedServerId();
   const predictedServer = players.find(p => p.id === predictedServerId);
+  const earnedOutcomeLabel = pointWinner === 'Opponent' ? 'They Earned It' : 'We Earned It';
+  const errorOutcomeLabel = pointWinner === 'Opponent' ? 'We Gifted It' : 'They Gifted It';
 
   const containerVariants = {
     initial: { opacity: 0, x: 20 },
@@ -338,7 +340,7 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
         </div>
         <div className="flex-1 overflow-y-auto space-y-4">
           <div>
-            <p className="text-[9px] font-black text-brand-teal uppercase tracking-widest mb-2 px-1">Earned Points</p>
+            <p className="text-[9px] font-black text-brand-teal uppercase tracking-widest mb-2 px-1">{earnedOutcomeLabel}</p>
             <div className="grid grid-cols-2 gap-2">
               {positiveOutcomes.map((type) => (
                 <button
@@ -353,7 +355,7 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
           </div>
 
           <div>
-            <p className="text-[9px] font-black text-brand-red uppercase tracking-widest mb-2 px-1">Errors</p>
+            <p className="text-[9px] font-black text-brand-red uppercase tracking-widest mb-2 px-1">{errorOutcomeLabel}</p>
             <div className="grid grid-cols-2 gap-2">
               {errorOutcomes.map((type) => (
                 <button

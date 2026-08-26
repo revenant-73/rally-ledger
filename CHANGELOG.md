@@ -18,11 +18,13 @@ All notable changes to this project are documented here. Format loosely follows 
 - Added a stats audit document covering source fields, formulas, live dashboard derivations, and report/export coverage.
 - Added visible individual-match kill performance and match-trend kill/error columns to season reports.
 - Added match format setup for best-of-three, best-of-five, two-set scrimmages, and single-set matches, including set target and deciding-set target tracking.
+- Added per-set opponent earned/gifted splits to match reports and set CSV exports so point-source totals are easier to audit.
 
 ### Fixed
 - Fixed serve reporting for one-tap ACE/ERR entries by persisting inferred serve results on new rallies and inferring serve aces/errors from older outcome-only rally rows in reports and dashboards.
 - Fixed serve/receive result helpers so stored quality metadata is ignored when it belongs to the wrong serving side.
 - Fixed expanded serving reports so the `KO` count matches `KO%` by showing pressure serves as aces plus out-of-system serves, while preserving out-of-system as its own column.
+- Fixed opponent serve-receive errors so opponent aces are saved as opponent earned points automatically instead of asking for a manual earned/gifted classification.
 - Fixed the `react-hooks/set-state-in-effect` lint warning in `useLiveMatchLogic` by moving the activeSet-metadata sync out of a `useEffect` and into the render body, guarded by a `prevMetadata` comparison - React's documented pattern for "adjusting state when a prop changes," which avoids the extra commit-then-effect render pass.
 
 ### Security

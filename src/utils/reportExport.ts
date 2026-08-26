@@ -63,7 +63,7 @@ export const buildMatchTextSummary = (match: Match, stats: ReportStats) => {
     '',
     'Score By Set',
     ...(stats.setReports.length > 0
-      ? stats.setReports.map(set => `Set ${set.setNumber}: ${set.score}${set.result ? ` ${set.result}` : ''}`)
+      ? stats.setReports.map(set => `Set ${set.setNumber}: ${set.score}${set.result ? ` ${set.result}` : ''} (Us +${set.ourEarned}/-${set.ourGifted}, Opp +${set.opponentEarned}/-${set.opponentGifted})`)
       : ['No sets recorded.']),
     '',
     'Coach Takeaway',
@@ -206,13 +206,15 @@ export const buildMatchCsvFiles = (
     {
       filename: `${fileSafe(match.opponentName)}-sets.csv`,
       contents: toCsv(
-        ['Set', 'Score', 'Result', 'Our Earned', 'Our Gifted', 'Serve %', 'Serve KO %', 'Pass Score'],
+        ['Set', 'Score', 'Result', 'Our Earned', 'Our Gifted', 'Opponent Earned', 'Opponent Gifted', 'Serve %', 'Serve KO %', 'Pass Score'],
         stats.setReports.map(set => [
           set.setNumber,
           set.score,
           set.result || '',
           set.ourEarned,
           set.ourGifted,
+          set.opponentEarned,
+          set.opponentGifted,
           set.servePct,
           set.serveKoPct,
           set.passScore,

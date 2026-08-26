@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { SeasonReportStats } from './reportStats';
-import type { Team } from '../types';
-import { buildSeasonCsvFiles, buildSeasonTextSummary } from './reportExport';
+import type { ReportStats, SeasonReportStats } from './reportStats';
+import type { Match, Team } from '../types';
+import { buildMatchCsvFiles, buildMatchTextSummary, buildSeasonCsvFiles, buildSeasonTextSummary } from './reportExport';
 
 const team: Team = {
   id: 't1',
@@ -133,6 +133,46 @@ const stats: SeasonReportStats = {
 };
 
 describe('report export', () => {
+  it('includes opponent earned and gifted splits in match set exports', () => {
+    const match: Match = {
+      id: 'm1',
+      teamId: 't1',
+      opponentName: 'Liberty',
+      matchDate: '2026-08-20T00:00:00.000Z',
+      location: 'Home',
+      matchType: 'League',
+      status: 'completed',
+      result: 'Win',
+      createdAt: '2026-08-20T00:00:00.000Z',
+      updatedAt: '2026-08-20T00:00:00.000Z',
+    };
+    const matchStats: ReportStats = {
+      ...stats,
+      setReports: [
+        {
+          setId: 's1',
+          setNumber: 1,
+          score: '25-20',
+          result: 'Win',
+          ourEarned: 8,
+          ourGifted: 4,
+          opponentEarned: 6,
+          opponentGifted: 7,
+          servePct: 88,
+          serveKoPct: 50,
+          passScore: 2.1,
+        },
+      ],
+    };
+
+    const summary = buildMatchTextSummary(match, matchStats);
+    const setCsv = buildMatchCsvFiles(match, matchStats, [], [])[4].contents;
+
+    expect(summary).toContain('Set 1: 25-20 Win (Us +8/-4, Opp +6/-7)');
+    expect(setCsv).toContain('Set,Score,Result,Our Earned,Our Gifted,Opponent Earned,Opponent Gifted,Serve %,Serve KO %,Pass Score');
+    expect(setCsv).toContain('1,25-20,Win,8,4,6,7,88,50,2.1');
+  });
+
   it('builds a season text summary coaches can paste elsewhere', () => {
     const summary = buildSeasonTextSummary(team, stats);
 

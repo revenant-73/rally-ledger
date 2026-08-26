@@ -97,7 +97,34 @@ describe('report stats', () => {
       expect.objectContaining({ jersey: '07', earned: 2, gifted: 1, net: 1, total: 3 }),
       expect.objectContaining({ jersey: '12', earned: 0, gifted: 1, net: -1, total: 1 }),
     ]);
-    expect(stats.setReports[0]).toMatchObject({ setNumber: 1, score: '25-20', servePct: 50, passScore: 2.5 });
+    expect(stats.setReports[0]).toMatchObject({
+      setNumber: 1,
+      score: '25-20',
+      ourEarned: 2,
+      ourGifted: 2,
+      opponentEarned: 0,
+      opponentGifted: 0,
+      servePct: 50,
+      passScore: 2.5,
+    });
+  });
+
+  it('separates opponent earned points from our gifted points in set reports', () => {
+    const stats = calculateReportStats([
+      rally({ rallyNumber: 1, pointWinner: 'Opponent', outcomeType: 'Kill', classification: 'Earned' }),
+      rally({ rallyNumber: 2, pointWinner: 'Opponent', outcomeType: 'Attack Error', classification: 'Gifted' }),
+      rally({ rallyNumber: 3, pointWinner: 'Us', outcomeType: 'Serve Error', classification: 'Gifted' }),
+    ], players, [sets[0]]);
+
+    expect(stats.opponentEarned).toBe(1);
+    expect(stats.ourGifted).toBe(1);
+    expect(stats.opponentGifted).toBe(1);
+    expect(stats.setReports[0]).toMatchObject({
+      ourEarned: 0,
+      ourGifted: 1,
+      opponentEarned: 1,
+      opponentGifted: 1,
+    });
   });
 
   it('infers serve attempts from ace and serve error outcomes when serveResult is missing', () => {

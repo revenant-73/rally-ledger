@@ -56,6 +56,8 @@ export interface SetReport {
   result?: 'Win' | 'Loss';
   ourEarned: number;
   ourGifted: number;
+  opponentEarned: number;
+  opponentGifted: number;
   servePct: number;
   serveKoPct: number;
   passScore: number;
@@ -355,6 +357,8 @@ export const calculateReportStats = (
       result: set.finalResult,
       ourEarned: setRallies.filter(rally => rally.pointWinner === 'Us' && rally.classification === 'Earned').length,
       ourGifted: setRallies.filter(rally => rally.pointWinner === 'Opponent' && rally.classification === 'Gifted').length,
+      opponentEarned: setRallies.filter(rally => rally.pointWinner === 'Opponent' && rally.classification === 'Earned').length,
+      opponentGifted: setRallies.filter(rally => rally.pointWinner === 'Us' && rally.classification === 'Gifted').length,
       servePct: pct(setServes.length - setServeErrors, setServes.length),
       serveKoPct: pct(setServeKos, setServes.length),
       passScore: passScore(setReceiveStats),
