@@ -43,7 +43,15 @@ type DeletePlayerPayload = {
   playerId: string;
 };
 
-type PlayerPayload = AddPlayerPayload | ListPlayersPayload | DeletePlayerPayload;
+type UpdatePlayerPayload = {
+  action: 'update';
+  userId: string;
+  email?: string;
+  playerId: string;
+  updates: Partial<Pick<Player, 'firstName' | 'lastName' | 'jerseyNumber' | 'position'>>;
+};
+
+type PlayerPayload = AddPlayerPayload | ListPlayersPayload | DeletePlayerPayload | UpdatePlayerPayload;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null;
@@ -174,6 +182,71 @@ const handleDelete = async (payload: DeletePlayerPayload) => {
   return json(200, { playerId });
 };
 
+const handleUpdate = async (payload: UpdatePlayerPayload) => {
+  const { playerId, updates, userId } = payload;
+
+  if (!playerId || !updates || typeof updates !== 'object') {
+    return json(400, { error: 'Invalid player update payload' });
+  }
+  if (!await canManagePlayer(getClient(), { userId, email: payload.email || '' }, playerId)) {
+    return json(403, { error: 'Not authorized for this player' });
+  }
+
+  const trimmedUpdates = {
+    firstName: updates.firstName?.trim(),
+    lastName: updates.lastName?.trim(),
+    jerseyNumber: updates.jerseyNumber?.trim(),
+    position: updates.position,
+  };
+
+  if (
+    trimmedUpdates.firstName === '' ||
+    trimmedUpdates.lastName === '' ||
+    trimmedUpdates.jerseyNumber === '' ||
+    trimmedUpdates.position === ''
+  ) {
+    return json(400, { error: 'Player name, number, and position are required' });
+  }
+
+  const columnMap = {
+    firstName: 'first_name',
+    lastName: 'last_name',
+    jerseyNumber: 'jersey_number',
+    position: 'position',
+  } as const;
+  const setClauses: string[] = [];
+  const args: Array<string | number> = [];
+
+  (Object.keys(columnMap) as Array<keyof typeof columnMap>).forEach((key) => {
+    const value = trimmedUpdates[key];
+    if (value !== undefined) {
+      setClauses.push(`${columnMap[key]} = ?`);
+      args.push(value);
+    }
+  });
+
+  if (setClauses.length === 0) {
+    return json(400, { error: 'No player updates provided' });
+  }
+
+  const updatedAt = new Date().toISOString();
+  setClauses.push('updated_at = ?');
+  args.push(updatedAt, playerId);
+
+  await getClient().execute({
+    sql: `update players set ${setClauses.join(', ')} where id = ?`,
+    args,
+  });
+
+  return json(200, {
+    playerId,
+    updates: {
+      ...trimmedUpdates,
+      updatedAt,
+    },
+  });
+};
+
 export const handler: Handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return json(405, { error: 'Method not allowed' });
@@ -199,6 +272,9 @@ export const handler: Handler = async (event) => {
     }
     if (payload.action === 'delete') {
       return await handleDelete(payload);
+    }
+    if (payload.action === 'update') {
+      return await handleUpdate(payload);
     }
     return json(400, { error: 'Unknown action' });
   } catch (error) {

@@ -41,3 +41,26 @@ export const useDeletePlayer = () => {
     },
   });
 };
+
+export const useUpdatePlayer = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      userId,
+      playerId,
+      updates,
+    }: {
+      userId: string;
+      playerId: string;
+      updates: Partial<Pick<Player, 'firstName' | 'lastName' | 'jerseyNumber' | 'position'>>;
+    }) => {
+      await apiPost('/.netlify/functions/players', { action: 'update', userId, playerId, updates });
+      return { playerId, updates };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['players'] });
+      queryClient.invalidateQueries({ queryKey: ['matches'] });
+    },
+  });
+};

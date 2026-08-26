@@ -6,10 +6,11 @@ import { v4 as uuidv4 } from 'uuid';
 import toast from 'react-hot-toast';
 
 const Roster: React.FC = () => {
-  const { players, addPlayer, removePlayer, teams, activeTeam, addTeam, deleteTeam, selectTeam, updateTeam, canManageTeam, isAdmin } = useMatch();
+  const { players, addPlayer, updatePlayer, removePlayer, teams, activeTeam, addTeam, deleteTeam, selectTeam, updateTeam, canManageTeam, isAdmin } = useMatch();
   const [showAddPlayerForm, setShowAddPlayerForm] = useState(false);
   const [showAddTeamForm, setShowAddTeamForm] = useState(false);
   const [isEditingTeam, setIsEditingTeam] = useState(false);
+  const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
   
   const [newTeam, setNewTeam] = useState({
     name: '',
@@ -18,6 +19,12 @@ const Roster: React.FC = () => {
   });
 
   const [newPlayer, setNewPlayer] = useState({
+    firstName: '',
+    lastName: '',
+    jerseyNumber: '',
+    position: 'OH' as PlayerPosition
+  });
+  const [editPlayer, setEditPlayer] = useState({
     firstName: '',
     lastName: '',
     jerseyNumber: '',
@@ -78,6 +85,40 @@ const Roster: React.FC = () => {
     await addPlayer(player);
     setNewPlayer({ firstName: '', lastName: '', jerseyNumber: '', position: 'OH' });
     setShowAddPlayerForm(false);
+  };
+
+  const startEditPlayer = (player: Player) => {
+    setEditingPlayerId(player.id);
+    setEditPlayer({
+      firstName: player.firstName,
+      lastName: player.lastName,
+      jerseyNumber: player.jerseyNumber,
+      position: player.position,
+    });
+  };
+
+  const cancelEditPlayer = () => {
+    setEditingPlayerId(null);
+    setEditPlayer({ firstName: '', lastName: '', jerseyNumber: '', position: 'OH' });
+  };
+
+  const handleUpdatePlayer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPlayerId) return;
+
+    try {
+      await updatePlayer(editingPlayerId, {
+        firstName: editPlayer.firstName.trim(),
+        lastName: editPlayer.lastName.trim(),
+        jerseyNumber: editPlayer.jerseyNumber.trim(),
+        position: editPlayer.position,
+      });
+      toast.success('Player updated');
+      cancelEditPlayer();
+    } catch (error) {
+      console.error('Failed to update player:', error);
+      toast.error(error instanceof Error ? error.message : 'Unable to update player');
+    }
   };
 
   const handleDeleteTeam = async () => {
@@ -327,23 +368,101 @@ const Roster: React.FC = () => {
               key={player.id}
               className="flex items-center justify-between bg-brand-gray/5 border border-brand-gray/10 p-4 rounded-2xl hover:border-brand-teal/30 transition-all"
             >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-brand-gray/10 rounded-full flex items-center justify-center text-brand-text-secondary font-black text-lg">
-                  #{player.jerseyNumber}
-                </div>
-                <div>
-                  <p className="font-bold text-lg">{player.firstName} {player.lastName}</p>
-                  <p className="text-xs font-bold text-brand-text-secondary uppercase">{player.position}</p>
-                </div>
-              </div>
-              {canManageActiveTeam && (
-                <button
-                  onClick={() => removePlayer(player.id)}
-                  className="text-brand-gray hover:text-brand-red p-2 transition-colors"
-                  aria-label={`Remove ${player.firstName} ${player.lastName}`}
-                >
-                  <Trash2 size={20} />
-                </button>
+              {editingPlayerId === player.id ? (
+                <form onSubmit={handleUpdatePlayer} className="w-full space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-brand-text-secondary uppercase">First</label>
+                      <input
+                        required
+                        type="text"
+                        value={editPlayer.firstName}
+                        onChange={(e) => setEditPlayer({ ...editPlayer, firstName: e.target.value })}
+                        className="w-full bg-brand-bg border border-brand-gray/20 rounded-xl p-3 focus:outline-none focus:border-brand-teal"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-brand-text-secondary uppercase">Last</label>
+                      <input
+                        required
+                        type="text"
+                        value={editPlayer.lastName}
+                        onChange={(e) => setEditPlayer({ ...editPlayer, lastName: e.target.value })}
+                        className="w-full bg-brand-bg border border-brand-gray/20 rounded-xl p-3 focus:outline-none focus:border-brand-teal"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-brand-text-secondary uppercase">Jersey #</label>
+                      <input
+                        required
+                        type="text"
+                        value={editPlayer.jerseyNumber}
+                        onChange={(e) => setEditPlayer({ ...editPlayer, jerseyNumber: e.target.value })}
+                        className="w-full bg-brand-bg border border-brand-gray/20 rounded-xl p-3 focus:outline-none focus:border-brand-teal"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-brand-text-secondary uppercase">Position</label>
+                      <select
+                        value={editPlayer.position}
+                        onChange={(e) => setEditPlayer({ ...editPlayer, position: e.target.value as PlayerPosition })}
+                        className="w-full bg-brand-bg border border-brand-gray/20 rounded-xl p-3 focus:outline-none focus:border-brand-teal"
+                      >
+                        {positions.map(pos => (
+                          <option key={pos} value={pos} className="bg-brand-bg">{pos}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={cancelEditPlayer}
+                      className="rounded-xl border border-brand-gray/20 py-3 text-sm font-black uppercase text-brand-text-secondary active:scale-[0.98] transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex items-center justify-center gap-2 rounded-xl bg-brand-teal py-3 text-sm font-black uppercase text-brand-bg active:scale-[0.98] transition-all"
+                    >
+                      <Save size={17} />
+                      Save
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-brand-gray/10 rounded-full flex items-center justify-center text-brand-text-secondary font-black text-lg">
+                      #{player.jerseyNumber}
+                    </div>
+                    <div>
+                      <p className="font-bold text-lg">{player.firstName} {player.lastName}</p>
+                      <p className="text-xs font-bold text-brand-text-secondary uppercase">{player.position}</p>
+                    </div>
+                  </div>
+                  {canManageActiveTeam && (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => startEditPlayer(player)}
+                        className="text-brand-gray hover:text-brand-teal p-2 transition-colors"
+                        aria-label={`Edit ${player.firstName} ${player.lastName}`}
+                      >
+                        <Edit2 size={20} />
+                      </button>
+                      <button
+                        onClick={() => removePlayer(player.id)}
+                        className="text-brand-gray hover:text-brand-red p-2 transition-colors"
+                        aria-label={`Remove ${player.firstName} ${player.lastName}`}
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           ))

@@ -18,6 +18,7 @@ export interface MatchContextType {
   addRally: (rally: RallyEvent, setMetadataUpdates?: Set['metadata']) => Promise<void>;
   undoLastRally: (setMetadataUpdates?: Set['metadata']) => Promise<void>;
   addPlayer: (player: Player) => Promise<void>;
+  updatePlayer: (playerId: string, updates: Partial<Pick<Player, 'firstName' | 'lastName' | 'jerseyNumber' | 'position'>>) => Promise<void>;
   removePlayer: (playerId: string) => Promise<void>;
   addTeam: (team: Team) => Promise<void>;
   deleteTeam: (teamId: string) => Promise<void>;
