@@ -34,6 +34,8 @@ type SeasonReportResponse = {
   players: Player[];
 };
 
+type PointEarnerSort = 'earned' | 'net';
+
 const formatDate = (date: string) => {
   const [year, month, day] = date.split('T')[0]?.split('-').map(Number) ?? [];
   const parsed = year && month && day ? new Date(year, month - 1, day) : new Date(date);
@@ -148,6 +150,7 @@ const Reports: React.FC = () => {
   const [showAllServing, setShowAllServing] = useState(false);
   const [showAllReceiving, setShowAllReceiving] = useState(false);
   const [showAllAttacking, setShowAllAttacking] = useState(false);
+  const [pointEarnerSort, setPointEarnerSort] = useState<PointEarnerSort>('earned');
 
   const effectiveTeamId = useMemo(() => {
     if (teams.length === 0) return '';
@@ -330,9 +333,14 @@ const Reports: React.FC = () => {
     if (!stats) return [];
     return [...stats.playerPoints]
       .filter(player => player.earned > 0)
-      .sort((a, b) => b.earned - a.earned || b.net - a.net || a.gifted - b.gifted || a.jersey.localeCompare(b.jersey))
+      .sort((a, b) => {
+        if (pointEarnerSort === 'net') {
+          return b.net - a.net || b.earned - a.earned || a.gifted - b.gifted || a.jersey.localeCompare(b.jersey);
+        }
+        return b.earned - a.earned || b.net - a.net || a.gifted - b.gifted || a.jersey.localeCompare(b.jersey);
+      })
       .slice(0, 6);
-  }, [stats]);
+  }, [pointEarnerSort, stats]);
 
   const topPointGifters = useMemo(() => {
     if (!stats) return [];
@@ -702,67 +710,98 @@ const Reports: React.FC = () => {
               </div>
             </section>
 
-            <div className="grid gap-6 lg:grid-cols-2">
-              <Leaderboard title="Point Earners" icon={<Trophy size={18} />} emptyText="No earned points attributed yet.">
-                {topPointEarners.map(player => (
-                  <div
-                    key={player.playerId}
-                    className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-3 rounded-2xl border border-brand-gray/10 bg-brand-bg px-4 py-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-black">#{player.jersey} {player.name}</p>
-                      <p className="text-[11px] font-bold uppercase tracking-wide text-brand-text-secondary">
-                        {player.total} earned/gifted rallies
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-black text-brand-green">{player.earned}</p>
-                      <p className="text-[10px] font-bold uppercase text-brand-text-secondary">Earn</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-black text-brand-red">{player.gifted}</p>
-                      <p className="text-[10px] font-bold uppercase text-brand-text-secondary">Gift</p>
-                    </div>
-                    <div className="text-right">
-                      <p className={`text-sm font-black ${player.net >= 0 ? 'text-brand-teal' : 'text-brand-red'}`}>
-                        {player.net >= 0 ? '+' : ''}{player.net}
-                      </p>
-                      <p className="text-[10px] font-bold uppercase text-brand-text-secondary">Net</p>
-                    </div>
+            <section className="space-y-4">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-brand-teal/10 text-brand-teal">
+                    <Trophy size={18} />
                   </div>
-                ))}
-              </Leaderboard>
+                  <h2 className="text-sm font-black uppercase tracking-widest text-brand-text-secondary">Point Leaders</h2>
+                </div>
+                <div className="print-hide inline-grid grid-cols-2 rounded-2xl border border-brand-gray/10 bg-brand-bg p-1 text-[10px] font-black uppercase tracking-wide">
+                  <button
+                    type="button"
+                    onClick={() => setPointEarnerSort('earned')}
+                    className={`rounded-xl px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-teal/50 ${
+                      pointEarnerSort === 'earned' ? 'bg-brand-teal text-brand-bg' : 'text-brand-text-secondary hover:text-brand-text'
+                    }`}
+                  >
+                    Earned
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPointEarnerSort('net')}
+                    className={`rounded-xl px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-teal/50 ${
+                      pointEarnerSort === 'net' ? 'bg-brand-teal text-brand-bg' : 'text-brand-text-secondary hover:text-brand-text'
+                    }`}
+                  >
+                    Net
+                  </button>
+                </div>
+              </div>
 
-              <Leaderboard title="Point Gifters" icon={<AlertTriangle size={18} />} emptyText="No gifted points attributed yet.">
-                {topPointGifters.map(player => (
-                  <div
-                    key={player.playerId}
-                    className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-3 rounded-2xl border border-brand-gray/10 bg-brand-bg px-4 py-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-black">#{player.jersey} {player.name}</p>
-                      <p className="text-[11px] font-bold uppercase tracking-wide text-brand-text-secondary">
-                        {player.total} earned/gifted rallies
-                      </p>
+              <div className="grid gap-6 lg:grid-cols-2">
+                <Leaderboard title="Point Earners" icon={<Trophy size={18} />} emptyText="No earned points attributed yet.">
+                  {topPointEarners.map(player => (
+                    <div
+                      key={player.playerId}
+                      className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-3 rounded-2xl border border-brand-gray/10 bg-brand-bg px-4 py-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black">#{player.jersey} {player.name}</p>
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-brand-text-secondary">
+                          {player.total} earned/gifted rallies
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-black text-brand-green">{player.earned}</p>
+                        <p className="text-[10px] font-bold uppercase text-brand-text-secondary">Earn</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-black text-brand-red">{player.gifted}</p>
+                        <p className="text-[10px] font-bold uppercase text-brand-text-secondary">Gift</p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-sm font-black ${player.net >= 0 ? 'text-brand-teal' : 'text-brand-red'}`}>
+                          {player.net >= 0 ? '+' : ''}{player.net}
+                        </p>
+                        <p className="text-[10px] font-bold uppercase text-brand-text-secondary">Net</p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-black text-brand-red">{player.gifted}</p>
-                      <p className="text-[10px] font-bold uppercase text-brand-text-secondary">Gift</p>
+                  ))}
+                </Leaderboard>
+
+                <Leaderboard title="Point Gifters" icon={<AlertTriangle size={18} />} emptyText="No gifted points attributed yet.">
+                  {topPointGifters.map(player => (
+                    <div
+                      key={player.playerId}
+                      className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-3 rounded-2xl border border-brand-gray/10 bg-brand-bg px-4 py-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black">#{player.jersey} {player.name}</p>
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-brand-text-secondary">
+                          {player.total} earned/gifted rallies
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-black text-brand-red">{player.gifted}</p>
+                        <p className="text-[10px] font-bold uppercase text-brand-text-secondary">Gift</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-black text-brand-green">{player.earned}</p>
+                        <p className="text-[10px] font-bold uppercase text-brand-text-secondary">Earn</p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-sm font-black ${player.net >= 0 ? 'text-brand-teal' : 'text-brand-red'}`}>
+                          {player.net >= 0 ? '+' : ''}{player.net}
+                        </p>
+                        <p className="text-[10px] font-bold uppercase text-brand-text-secondary">Net</p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-black text-brand-green">{player.earned}</p>
-                      <p className="text-[10px] font-bold uppercase text-brand-text-secondary">Earn</p>
-                    </div>
-                    <div className="text-right">
-                      <p className={`text-sm font-black ${player.net >= 0 ? 'text-brand-teal' : 'text-brand-red'}`}>
-                        {player.net >= 0 ? '+' : ''}{player.net}
-                      </p>
-                      <p className="text-[10px] font-bold uppercase text-brand-text-secondary">Net</p>
-                    </div>
-                  </div>
-                ))}
-              </Leaderboard>
-            </div>
+                  ))}
+                </Leaderboard>
+              </div>
+            </section>
 
             <div className="grid gap-6 lg:grid-cols-2">
               <Leaderboard title="Serving Leaders" icon={<Zap size={18} />} emptyText="No serving attempts tracked.">

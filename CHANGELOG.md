@@ -14,6 +14,7 @@ All notable changes to this project are documented here. Format loosely follows 
 - Added expandable all-player serving and receiving stat tables to the cumulative Reports page.
 - Added kill reporting to match and season reports, including kills vs attack errors, kill/error net, all-player cumulative rows, and dedicated kill-report CSV exports.
 - Added cumulative point earner and point gifter leaderboards across all attributed earned/gifted rallies, including a dedicated point-leaders CSV export.
+- Added an earned/net sort toggle to the cumulative point earners report.
 - Added a stats audit document covering source fields, formulas, live dashboard derivations, and report/export coverage.
 - Added visible individual-match kill performance and match-trend kill/error columns to season reports.
 
