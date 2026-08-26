@@ -910,7 +910,7 @@ const Reports: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-4 gap-2 text-center">
+                    <div className="grid grid-cols-5 gap-2 text-center">
                       <div>
                         <p className="text-[9px] font-black uppercase text-brand-text-secondary">E/G</p>
                         <p className="mt-1 text-sm font-black text-brand-teal">{row.earnedGifted}</p>
@@ -926,6 +926,12 @@ const Reports: React.FC = () => {
                       <div>
                         <p className="text-[9px] font-black uppercase text-brand-text-secondary">Pass</p>
                         <p className={`mt-1 text-sm font-black ${scoreTone(row.passScore, 2.3, 1.9)}`}>{row.passScore.toFixed(2)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-black uppercase text-brand-text-secondary">K/Err</p>
+                        <p className={`mt-1 text-sm font-black ${row.attackNet >= 0 ? 'text-brand-green' : 'text-brand-red'}`}>
+                          {row.kills}/{row.attackErrors}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -943,6 +949,8 @@ const Reports: React.FC = () => {
                       <th className="px-3 py-2">Serve</th>
                       <th className="px-3 py-2">KO</th>
                       <th className="px-3 py-2">Pass</th>
+                      <th className="px-3 py-2">K/Err</th>
+                      <th className="px-3 py-2">K Net</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -956,7 +964,15 @@ const Reports: React.FC = () => {
                         <td className="px-3 py-3 text-brand-teal">{row.earnedGifted}</td>
                         <td className={`px-3 py-3 ${scoreTone(row.servePct, 90, 82)}`}>{pct(row.servePct)}</td>
                         <td className={`px-3 py-3 ${scoreTone(row.serveKoPct, 35, 22)}`}>{pct(row.serveKoPct)}</td>
-                        <td className={`rounded-r-2xl px-3 py-3 ${scoreTone(row.passScore, 2.3, 1.9)}`}>{row.passScore.toFixed(2)}</td>
+                        <td className={`px-3 py-3 ${scoreTone(row.passScore, 2.3, 1.9)}`}>{row.passScore.toFixed(2)}</td>
+                        <td className="px-3 py-3">
+                          <span className="text-brand-green">{row.kills}</span>
+                          <span className="mx-1 text-brand-text-secondary">/</span>
+                          <span className="text-brand-red">{row.attackErrors}</span>
+                        </td>
+                        <td className={`rounded-r-2xl px-3 py-3 ${row.attackNet >= 0 ? 'text-brand-green' : 'text-brand-red'}`}>
+                          {row.attackNet >= 0 ? '+' : ''}{row.attackNet}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

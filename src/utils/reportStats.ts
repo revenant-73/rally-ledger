@@ -106,6 +106,9 @@ export interface SeasonReportStats extends ReportStats {
     servePct: number;
     serveKoPct: number;
     passScore: number;
+    kills: number;
+    attackErrors: number;
+    attackNet: number;
   }>;
 }
 
@@ -373,6 +376,9 @@ export const calculateSeasonReportStats = (
         servePct: matchStats.serve.servePct,
         serveKoPct: matchStats.serve.koPct,
         passScore: matchStats.receive.score,
+        kills: matchStats.attack.kills,
+        attackErrors: matchStats.attack.errors,
+        attackNet: matchStats.attack.net,
       };
     }),
   };

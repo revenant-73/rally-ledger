@@ -148,6 +148,6 @@ describe('report stats', () => {
     expect(stats.setsLost).toBe(1);
     expect(stats.matchRows).toHaveLength(2);
     expect(stats.matchRows[0]).toMatchObject({ opponentName: 'Liberty', servePct: 100, serveKoPct: 100 });
-    expect(stats.matchRows[1]).toMatchObject({ opponentName: 'Central', passScore: 0 });
+    expect(stats.matchRows[1]).toMatchObject({ opponentName: 'Central', passScore: 0, kills: 0, attackErrors: 0, attackNet: 0 });
   });
 });

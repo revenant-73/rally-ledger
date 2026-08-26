@@ -12,9 +12,12 @@ All notable changes to this project are documented here. Format loosely follows 
 - Added match deletion from History and match detail, with authorized server-side deletion of match sets and rallies.
 - Added expandable all-player serving and receiving stat tables to the cumulative Reports page.
 - Added kill reporting to match and season reports, including kills vs attack errors, kill/error net, all-player cumulative rows, and dedicated kill-report CSV exports.
+- Added a stats audit document covering source fields, formulas, live dashboard derivations, and report/export coverage.
+- Added visible individual-match kill performance and match-trend kill/error columns to season reports.
 
 ### Fixed
 - Fixed serve reporting for one-tap ACE/ERR entries by persisting inferred serve results on new rallies and inferring serve aces/errors from older outcome-only rally rows in reports and dashboards.
+- Fixed serve/receive result helpers so stored quality metadata is ignored when it belongs to the wrong serving side.
 - Fixed the `react-hooks/set-state-in-effect` lint warning in `useLiveMatchLogic` by moving the activeSet-metadata sync out of a `useEffect` and into the render body, guarded by a `prevMetadata` comparison - React's documented pattern for "adjusting state when a prop changes," which avoids the extra commit-then-effect render pass.
 
 ### Security

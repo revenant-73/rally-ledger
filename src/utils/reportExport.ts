@@ -285,7 +285,7 @@ export const buildSeasonTextSummary = (team: Team, stats: SeasonReportStats) => 
     '',
     'Match Trends',
     ...(stats.matchRows.length > 0
-      ? stats.matchRows.map(row => `${formatReportDate(row.matchDate)} vs ${row.opponentName}: ${row.result || 'Open'}, ${row.earnedGifted}, ${row.servePct}% serve, ${row.serveKoPct}% KO, ${row.passScore.toFixed(2)} pass`)
+      ? stats.matchRows.map(row => `${formatReportDate(row.matchDate)} vs ${row.opponentName}: ${row.result || 'Open'}, ${row.earnedGifted}, ${row.servePct}% serve, ${row.serveKoPct}% KO, ${row.passScore.toFixed(2)} pass, ${row.kills} kills/${row.attackErrors} errors`)
       : ['No matches recorded.']),
   ];
 
@@ -412,7 +412,7 @@ export const buildSeasonCsvFiles = (team: Team, stats: SeasonReportStats) => {
     {
       filename: `${baseName}-match-trends.csv`,
       contents: toCsv(
-        ['Date', 'Opponent', 'Result', 'Rallies', 'Earned/Gifted', 'Serve %', 'Serve KO %', 'Pass Score'],
+        ['Date', 'Opponent', 'Result', 'Rallies', 'Earned/Gifted', 'Serve %', 'Serve KO %', 'Pass Score', 'Kills', 'Attack Errors', 'Attack Net'],
         stats.matchRows.map(row => [
           formatReportDate(row.matchDate),
           row.opponentName,
@@ -422,6 +422,9 @@ export const buildSeasonCsvFiles = (team: Team, stats: SeasonReportStats) => {
           row.servePct,
           row.serveKoPct,
           row.passScore,
+          row.kills,
+          row.attackErrors,
+          row.attackNet,
         ])
       ),
     },

@@ -404,6 +404,55 @@ const MatchDetail: React.FC = () => {
               </div>
             </div>
 
+            <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-6">
+              <h3 className="text-sm font-bold text-brand-text-secondary uppercase mb-4 tracking-widest flex items-center gap-2">
+                <Trophy size={16} className="text-brand-teal" />
+                Kill Performance
+              </h3>
+              <div className="grid grid-cols-4 gap-2 mb-6">
+                <div className="text-center">
+                  <p className="text-xl font-black text-brand-green">{reportStats.attack.kills}</p>
+                  <p className="text-[8px] font-bold text-brand-text-secondary uppercase">Kills</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xl font-black text-brand-red">{reportStats.attack.errors}</p>
+                  <p className="text-[8px] font-bold text-brand-text-secondary uppercase">Err</p>
+                </div>
+                <div className="text-center">
+                  <p className={`text-xl font-black ${reportStats.attack.net >= 0 ? 'text-brand-teal' : 'text-brand-red'}`}>
+                    {reportStats.attack.net >= 0 ? '+' : ''}{reportStats.attack.net}
+                  </p>
+                  <p className="text-[8px] font-bold text-brand-text-secondary uppercase">Net</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xl font-black text-brand-teal">{reportStats.attack.killPct}%</p>
+                  <p className="text-[8px] font-bold text-brand-text-secondary uppercase">Kill%</p>
+                </div>
+              </div>
+
+              {reportStats.playerAttacking.length > 0 ? (
+                <div className="space-y-2 pt-4 border-t border-brand-gray/10">
+                  <p className="text-[10px] font-black text-brand-text-secondary uppercase mb-2">Top Killers (Net)</p>
+                  {reportStats.playerAttacking.slice(0, 3).map(player => (
+                    <div key={player.playerId} className="flex justify-between items-center text-xs">
+                      <span className="font-bold">#{player.jersey} {player.name}</span>
+                      <div className="flex gap-4">
+                        <span className="text-brand-green font-black">{player.kills} K</span>
+                        <span className="text-brand-red font-black">{player.errors} E</span>
+                        <span className={player.net >= 0 ? 'text-brand-teal font-black' : 'text-brand-red font-black'}>
+                          {player.net >= 0 ? '+' : ''}{player.net}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="pt-4 border-t border-brand-gray/10 text-center text-xs font-semibold text-brand-text-secondary">
+                  No kills or attack errors tracked.
+                </p>
+              )}
+            </div>
+
             {/* Key Leaders */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-6">

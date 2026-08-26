@@ -107,8 +107,9 @@ Completed report filters:
 8. Done: expand season downloads into a coach-ready CSV package with player totals, opponent breakdown, and practice plan files.
 9. Done: add cumulative report filters for date range, match type, opponent, and result.
 10. Done: add expandable all-player serving and receiving stat tables to cumulative reports.
-11. Done: add cumulative kill reports with kills, attack errors, kill/error net, all-player table rows, and CSV export files.
-12. Add richer dedicated print/export report layouts if coaches need more polished packets later.
+11. Done: add kill reports with kills, attack errors, kill/error net, individual-match cards, match-trend columns, all-player season rows, and CSV export files.
+12. Done: add a stats audit document covering report formulas, live dashboard formulas, and coverage boundaries.
+13. Add richer dedicated print/export report layouts if coaches need more polished packets later.
 
 ## Validation
 
