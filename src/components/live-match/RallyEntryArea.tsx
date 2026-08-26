@@ -126,7 +126,7 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
               <button
                 key={player.id}
                 onClick={() => onServerClick(player.id)}
-                className="bg-brand-gray/10 border border-brand-gray/20 py-2 rounded-xl flex flex-col items-center justify-center active:scale-[0.95] transition-all"
+                className="bg-brand-bg border border-brand-gray/50 py-2.5 rounded-xl flex flex-col items-center justify-center active:scale-[0.95] transition-all"
               >
                 <span className="text-base font-black text-brand-teal leading-none">#{player.jerseyNumber}</span>
                 <span className="text-[8px] font-bold uppercase mt-0.5 truncate w-full px-1 text-center">{player.firstName}</span>
@@ -156,20 +156,20 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
           <div className="flex-1 grid grid-cols-1 gap-2">
             {servingTeam === 'Us' ? (
               <>
-                <button onClick={() => onServeQualityClick('Ace')} className="bg-brand-green/20 border border-brand-green/50 py-3 rounded-xl font-black text-brand-green text-lg shadow-sm active:scale-95 transition-all">ACE</button>
-                <button onClick={() => onServeQualityClick('In-System')} className="bg-brand-teal/10 border border-brand-teal/30 py-3 rounded-xl font-bold text-lg active:scale-95 transition-all">InSys</button>
-                <button onClick={() => onServeQualityClick('Out-of-System')} className="bg-brand-amber/10 border border-brand-amber/30 py-3 rounded-xl font-bold text-lg active:scale-95 transition-all">KO</button>
-                <button onClick={() => onServeQualityClick('Error')} className="bg-brand-red/20 border border-brand-red/50 py-3 rounded-xl font-black text-brand-red text-lg shadow-sm active:scale-95 transition-all">ERR</button>
+                <button onClick={() => onServeQualityClick('Ace')} className="bg-brand-green/25 border-2 border-brand-green/70 py-4 rounded-xl font-black text-brand-green text-xl shadow-sm active:scale-95 transition-all">ACE</button>
+                <button onClick={() => onServeQualityClick('In-System')} className="bg-brand-teal/20 border-2 border-brand-teal/60 py-4 rounded-xl font-black text-brand-teal text-xl active:scale-95 transition-all">InSys</button>
+                <button onClick={() => onServeQualityClick('Out-of-System')} className="bg-brand-amber/20 border-2 border-brand-amber/60 py-4 rounded-xl font-black text-brand-amber text-xl active:scale-95 transition-all">KO</button>
+                <button onClick={() => onServeQualityClick('Error')} className="bg-brand-red/25 border-2 border-brand-red/70 py-4 rounded-xl font-black text-brand-red text-xl shadow-sm active:scale-95 transition-all">ERR</button>
               </>
             ) : (
               <>
-                <button onClick={() => onReceiveQualityClick('In-System')} className="bg-brand-teal/10 border border-brand-teal/30 py-3 rounded-xl font-bold text-lg active:scale-95 transition-all">InSys</button>
-                <button onClick={() => onReceiveQualityClick('Out-of-System')} className="bg-brand-amber/10 border border-brand-amber/30 py-3 rounded-xl font-bold text-lg active:scale-95 transition-all">KO</button>
-                <button onClick={() => onReceiveQualityClick('Overpass')} className="bg-brand-orange/10 border border-brand-orange/30 py-3 rounded-xl font-bold text-lg active:scale-95 transition-all">OVER</button>
-                <button onClick={() => onReceiveQualityClick('Error')} className="bg-brand-red/20 border border-brand-red/50 py-3 rounded-xl font-black text-brand-red text-lg shadow-sm active:scale-95 transition-all">ACE</button>
+                <button onClick={() => onReceiveQualityClick('In-System')} className="bg-brand-teal/20 border-2 border-brand-teal/60 py-4 rounded-xl font-black text-brand-teal text-xl active:scale-95 transition-all">InSys</button>
+                <button onClick={() => onReceiveQualityClick('Out-of-System')} className="bg-brand-amber/20 border-2 border-brand-amber/60 py-4 rounded-xl font-black text-brand-amber text-xl active:scale-95 transition-all">KO</button>
+                <button onClick={() => onReceiveQualityClick('Overpass')} className="bg-brand-amber/15 border-2 border-brand-amber/50 py-4 rounded-xl font-black text-brand-amber text-xl active:scale-95 transition-all">OVER</button>
+                <button onClick={() => onReceiveQualityClick('Error')} className="bg-brand-red/25 border-2 border-brand-red/70 py-4 rounded-xl font-black text-brand-red text-xl shadow-sm active:scale-95 transition-all">ACE</button>
                 <button 
                   onClick={() => onCompleteRally('Gifted', 'Us', 'Serve Error', null)} 
-                  className="mt-1 bg-brand-gray/10 border border-brand-gray/30 py-3 rounded-xl font-black text-brand-text-secondary text-lg active:scale-95 transition-all flex items-center justify-center gap-2"
+                  className="mt-1 bg-brand-gray/20 border-2 border-brand-gray/50 py-3.5 rounded-xl font-black text-brand-text text-lg active:scale-95 transition-all flex items-center justify-center gap-2"
                 >
                   <X size={18} />
                   OPP SERVE ERR
@@ -203,7 +203,7 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
               <button
                 key={player.id}
                 onClick={() => onReceivePlayerClick(player.id)}
-                className="bg-brand-gray/10 border border-brand-gray/20 py-2 rounded-xl flex flex-col items-center justify-center active:scale-[0.95] transition-all"
+                className="bg-brand-bg border border-brand-gray/50 py-2.5 rounded-xl flex flex-col items-center justify-center active:scale-[0.95] transition-all"
               >
                 <span className="text-base font-black text-brand-teal leading-none">#{player.jerseyNumber}</span>
                 <span className="text-[8px] font-bold uppercase mt-0.5 truncate w-full px-1 text-center">{player.firstName}</span>
@@ -234,14 +234,14 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
           <div className="flex-1 grid grid-cols-1 gap-3">
             <button
               onClick={() => onPointClick('Us')}
-              className="bg-brand-teal text-brand-bg text-2xl font-black rounded-3xl active:scale-[0.96] transition-all flex flex-col items-center justify-center gap-1 py-6 shadow-xl active:shadow-inner"
+              className="bg-brand-teal text-brand-bg text-2xl font-black rounded-2xl active:scale-[0.96] transition-all flex flex-col items-center justify-center gap-1 py-7 shadow-xl active:shadow-inner"
             >
               <Trophy size={24} />
               WE WON
             </button>
             <button
               onClick={() => onPointClick('Opponent')}
-              className="bg-brand-red text-brand-bg text-2xl font-black rounded-3xl active:scale-[0.96] transition-all flex flex-col items-center justify-center gap-1 py-6 shadow-xl active:shadow-inner"
+              className="bg-brand-red text-brand-bg text-2xl font-black rounded-2xl active:scale-[0.96] transition-all flex flex-col items-center justify-center gap-1 py-7 shadow-xl active:shadow-inner"
             >
               <X size={24} />
               THEY WON
@@ -273,7 +273,7 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
               <button
                 key={player.id}
                 onClick={() => onPlayerClick(player.id)}
-                className="bg-brand-gray/10 border border-brand-gray/20 py-3 rounded-xl flex flex-col items-center justify-center active:scale-[0.95] transition-all"
+                className="bg-brand-bg border border-brand-gray/50 py-3 rounded-xl flex flex-col items-center justify-center active:scale-[0.95] transition-all"
               >
                 <span className="text-base font-black text-brand-teal leading-none">#{player.jerseyNumber}</span>
                 <span className="text-[8px] font-bold uppercase mt-0.5 truncate w-full px-1 text-center">{player.firstName}</span>
@@ -346,7 +346,7 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
                 <button
                   key={type}
                   onClick={() => onOutcomeClick(type)}
-                  className="bg-brand-teal/10 border border-brand-teal/20 py-3 rounded-xl font-black text-brand-teal text-sm active:scale-[0.95] transition-all"
+                  className="bg-brand-teal/20 border-2 border-brand-teal/50 py-4 rounded-xl font-black text-brand-teal text-sm active:scale-[0.95] transition-all"
                 >
                   {type}
                 </button>
@@ -361,7 +361,7 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
                 <button
                   key={type}
                   onClick={() => onOutcomeClick(type)}
-                  className="bg-brand-red/10 border border-brand-red/20 py-3 rounded-xl font-black text-brand-red text-sm active:scale-[0.95] transition-all"
+                  className="bg-brand-red/20 border-2 border-brand-red/50 py-4 rounded-xl font-black text-brand-red text-sm active:scale-[0.95] transition-all"
                 >
                   {type}
                 </button>
@@ -374,7 +374,7 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
   };
 
   return (
-    <div className="flex-1 bg-brand-gray/5 rounded-3xl p-3 flex flex-col min-h-0 overflow-hidden relative">
+    <div className="flex-1 bg-[#0f1117] rounded-2xl p-3 flex flex-col min-h-0 overflow-hidden relative border border-brand-gray/40">
       <AnimatePresence mode="wait">
         {renderContent()}
       </AnimatePresence>

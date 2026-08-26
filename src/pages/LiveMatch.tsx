@@ -366,7 +366,7 @@ const LiveMatch: React.FC = () => {
       />
 
       {currentLineup ? (
-        <div className="px-4 pb-1">
+        <div className="px-3 pb-1">
           <RotationDisplay 
             lineup={currentLineup}
             startingLineup={activeSet.metadata?.startingLineup}
@@ -389,7 +389,7 @@ const LiveMatch: React.FC = () => {
           />
         </div>
       ) : (
-        <div className="px-4 pb-2">
+        <div className="px-3 pb-2">
           <button 
             onClick={() => setShowLineupEditor(true)}
             className="w-full py-2 bg-brand-gray/5 border border-brand-gray/10 rounded-xl text-brand-text-secondary text-xs font-bold uppercase"
@@ -474,17 +474,17 @@ const LiveMatch: React.FC = () => {
       )}
 
       {/* Action Bar */}
-      <div className="grid grid-cols-2 gap-2 p-3">
+      <div className="grid grid-cols-2 gap-2 p-2">
         <button
           onClick={undoWithFeedback}
-          className="flex flex-col items-center gap-0.5 p-2 bg-brand-gray/5 rounded-xl text-brand-text-secondary active:text-brand-teal"
+          className="flex flex-col items-center gap-0.5 rounded-xl border border-brand-gray/40 bg-[#0f1117] p-2 text-brand-text active:border-brand-teal active:text-brand-teal"
         >
           <RotateCcw size={18} />
           <span className="text-[9px] font-bold uppercase">Undo</span>
         </button>
         <button
           onClick={() => setShowNoteModal(true)}
-          className="flex flex-col items-center gap-0.5 p-2 bg-brand-gray/5 rounded-xl text-brand-text-secondary active:text-brand-teal"
+          className="flex flex-col items-center gap-0.5 rounded-xl border border-brand-gray/40 bg-[#0f1117] p-2 text-brand-text active:border-brand-teal active:text-brand-teal"
         >
           <MessageSquare size={18} />
           <span className="text-[9px] font-bold uppercase">Note</span>

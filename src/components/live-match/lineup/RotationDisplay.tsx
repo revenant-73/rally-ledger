@@ -53,7 +53,7 @@ const RotationDisplay: React.FC<RotationDisplayProps> = ({
   const positions = [4, 3, 2, 5, 6, 1];
 
   return (
-    <div className="bg-brand-gray/5 rounded-xl p-2 border border-brand-gray/10">
+    <div className="rounded-xl border border-brand-gray/40 bg-[#0f1117] p-2">
       <div className="flex items-center justify-between mb-1">
         <h4 className="text-[10px] font-black uppercase text-brand-teal tracking-widest">Rotation {currentRotation}</h4>
         <div className="flex items-center gap-2">
@@ -61,7 +61,7 @@ const RotationDisplay: React.FC<RotationDisplayProps> = ({
             {[1, 2, 3, 4, 5, 6].map(r => (
               <div 
                 key={r} 
-                className={`w-1 h-1 rounded-full ${r === currentRotation ? 'bg-brand-teal' : 'bg-brand-gray/20'}`} 
+                className={`h-1.5 w-1.5 rounded-full ${r === currentRotation ? 'bg-brand-teal' : 'bg-brand-gray/40'}`}
               />
             ))}
           </div>
@@ -105,16 +105,16 @@ const RotationDisplay: React.FC<RotationDisplayProps> = ({
               onClick={() => onPlayerClick?.(playerIdx)}
               disabled={!onPlayerClick}
               aria-label={`Position ${pos}: ${playerLabel}${isSubstitution ? `, substituted${starterLabel}` : ''}${isServer ? ', serving' : ''}${isLiberoServing ? ', libero serving' : ''}`}
-              className={`relative rounded flex flex-col items-center justify-center border transition-all ${
+              className={`relative rounded-md flex flex-col items-center justify-center border transition-all ${
                 isServer 
-                  ? 'bg-brand-teal/20 border-brand-teal shadow-inner' 
+                  ? 'bg-brand-teal/25 border-brand-teal shadow-inner'
                   : isSubstitution
-                    ? 'bg-brand-green/10 border-brand-green/40'
-                  : 'bg-brand-bg border-brand-gray/10'
+                    ? 'bg-brand-green/15 border-brand-green/60'
+                  : 'bg-brand-bg border-brand-gray/40'
               } ${onPlayerClick ? 'active:scale-95' : ''}`}
             >
-              <div className="absolute top-0.5 right-0.5 px-0.5 bg-brand-gray/10 rounded-[2px]">
-                <span className="text-[5px] font-black text-brand-text-secondary opacity-60">{pos}</span>
+              <div className="absolute top-0.5 right-0.5 rounded-[2px] bg-brand-gray/30 px-0.5">
+                <span className="text-[6px] font-black text-brand-text">{pos}</span>
               </div>
               
               {isLibero && (
@@ -129,7 +129,7 @@ const RotationDisplay: React.FC<RotationDisplayProps> = ({
                 </div>
               )}
 
-              <span className={`text-lg font-black leading-none ${isServer ? 'text-brand-teal' : 'text-brand-text'} ${isLibero ? 'text-brand-amber' : ''}`}>
+              <span className={`text-xl font-black leading-none ${isServer ? 'text-brand-teal' : 'text-brand-text'} ${isLibero ? 'text-brand-amber' : ''}`}>
                 {player?.jerseyNumber || '?'}
               </span>
 

@@ -19,28 +19,28 @@ const LiveMatchHeader: React.FC<LiveMatchHeaderProps> = ({
   onShowMore,
 }) => {
   return (
-    <header className="p-4 flex items-center justify-between border-b border-brand-gray/10">
-      <button onClick={onBack} aria-label="Back" className="text-brand-text-secondary">
-        <ArrowLeft size={24} />
+    <header className="flex items-center justify-between border-b border-brand-gray/30 bg-[#0f1117] px-3 py-2">
+      <button onClick={onBack} aria-label="Back" className="rounded-lg p-1 text-brand-text">
+        <ArrowLeft size={22} />
       </button>
       <div className="text-center">
-        <h2 className="text-sm font-medium text-brand-text-secondary uppercase tracking-wider">Set {setNumber}</h2>
-        <p className="font-bold">vs {opponentName}</p>
+        <h2 className="text-[10px] font-black text-brand-teal uppercase tracking-widest">Set {setNumber}</h2>
+        <p className="max-w-32 truncate text-sm font-black text-brand-text">vs {opponentName}</p>
       </div>
       <div className="flex gap-2">
         <button 
           onClick={onShowTimeout} 
-          className="text-brand-text-secondary active:text-brand-teal p-1 flex flex-col items-center"
+          className="flex flex-col items-center rounded-lg p-1 text-brand-text active:text-brand-teal"
         >
-          <RotateCcw size={20} className="rotate-90" />
+          <RotateCcw size={18} className="rotate-90" />
           <span className="text-[8px] font-black uppercase mt-0.5">Timeout</span>
         </button>
-        <button onClick={onShowStats} className="text-brand-text-secondary active:text-brand-teal p-1 flex flex-col items-center">
-          <BarChart2 size={24} />
+        <button onClick={onShowStats} className="flex flex-col items-center rounded-lg p-1 text-brand-text active:text-brand-teal">
+          <BarChart2 size={22} />
           <span className="text-[8px] font-black uppercase mt-0.5">Stats</span>
         </button>
-        <button onClick={onShowMore} className="text-brand-text-secondary active:text-brand-teal p-1 flex flex-col items-center">
-          <MoreVertical size={24} />
+        <button onClick={onShowMore} className="flex flex-col items-center rounded-lg p-1 text-brand-text active:text-brand-teal">
+          <MoreVertical size={22} />
           <span className="text-[8px] font-black uppercase mt-0.5">More</span>
         </button>
       </div>
