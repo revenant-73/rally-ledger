@@ -342,7 +342,7 @@ const MatchDetail: React.FC = () => {
                         const p = players.find(player => player.id === pid);
                         return p ? (
                           <div key={pid} className="flex justify-between items-center text-xs">
-                            <span className="font-bold">#{p.jerseyNumber} {p.lastName}</span>
+                            <span className="font-bold">#{p.jerseyNumber} {p.firstName}</span>
                             <div className="flex gap-4">
                               <span className="text-brand-teal font-black">KO {Math.round(((stats.aces + stats.outOfSystem) / stats.total) * 100)}%</span>
                               <span className="text-brand-text-secondary">In {Math.round(((stats.total - stats.errors) / stats.total) * 100)}%</span>
@@ -392,7 +392,7 @@ const MatchDetail: React.FC = () => {
                         const p = players.find(player => player.id === pid);
                         return p ? (
                           <div key={pid} className="flex justify-between items-center text-xs">
-                            <span className="font-bold">#{p.jerseyNumber} {p.lastName}</span>
+                            <span className="font-bold">#{p.jerseyNumber} {p.firstName}</span>
                             <span className={`font-black ${score >= 2.2 ? 'text-brand-green' : score >= 1.8 ? 'text-brand-teal' : 'text-brand-amber'}`}>
                               {score} Avg
                             </span>
