@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   getAvailableNextSetNumbers,
+  getDefaultMatchFormatForType,
   getMatchFormatSettings,
   getSetTarget,
   isMatchCompleteAfterSet,
@@ -32,6 +33,37 @@ describe('matchFormat', () => {
     expect(settings.setsToWin).toBe(3);
     expect(getSetTarget(settings, 4)).toBe(21);
     expect(getSetTarget(settings, 5)).toBe(11);
+  });
+
+  it('defaults match formats from match type', () => {
+    expect(getDefaultMatchFormatForType('Tournament')).toBe('best-of-3');
+    expect(getDefaultMatchFormatForType('League')).toBe('best-of-5');
+    expect(getDefaultMatchFormatForType('Scrimmage')).toBe('fixed-2');
+  });
+
+  it('uses best-of-5 for league matches without format metadata', () => {
+    const settings = getMatchFormatSettings({
+      matchType: 'League',
+      metadata: {},
+    });
+
+    expect(settings).toMatchObject({
+      format: 'best-of-5',
+      maxSets: 5,
+      setsToWin: 3,
+    });
+  });
+
+  it('corrects league matches accidentally saved as best-of-3', () => {
+    const settings = getMatchFormatSettings({
+      matchType: 'League',
+      metadata: {
+        matchFormat: 'best-of-3',
+      },
+    });
+
+    expect(settings.maxSets).toBe(5);
+    expect(getAvailableNextSetNumbers(settings, [1, 2, 3])).toEqual([4, 5]);
   });
 
   it('offers only unplayed sets within the selected format', () => {

@@ -58,9 +58,19 @@ const isMatchFormat = (value: unknown): value is MatchFormat =>
 const asPositiveNumber = (value: unknown, fallback: number) =>
   typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback;
 
-export const getMatchFormatSettings = (match?: Pick<Match, 'metadata'> | null): MatchFormatSettings => {
+export const getDefaultMatchFormatForType = (matchType?: string): MatchFormat => {
+  if (matchType === 'League') return 'best-of-5';
+  if (matchType === 'Scrimmage') return 'fixed-2';
+  return DEFAULT_SETTINGS.format;
+};
+
+export const getMatchFormatSettings = (match?: Partial<Pick<Match, 'metadata' | 'matchType'>> | null): MatchFormatSettings => {
   const metadata = match?.metadata ?? {};
-  const format = isMatchFormat(metadata.matchFormat) ? metadata.matchFormat : DEFAULT_SETTINGS.format;
+  const inferredFormat = getDefaultMatchFormatForType(match?.matchType);
+  const metadataFormat = isMatchFormat(metadata.matchFormat) ? metadata.matchFormat : undefined;
+  const format = match?.matchType === 'League' && metadataFormat === 'best-of-3'
+    ? 'best-of-5'
+    : metadataFormat ?? inferredFormat;
   const limits = FORMAT_LIMITS[format];
 
   return {

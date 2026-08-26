@@ -25,6 +25,7 @@ All notable changes to this project are documented here. Format loosely follows 
 - Fixed serve/receive result helpers so stored quality metadata is ignored when it belongs to the wrong serving side.
 - Fixed expanded serving reports so the `KO` count matches `KO%` by showing pressure serves as aces plus out-of-system serves, while preserving out-of-system as its own column.
 - Fixed opponent serve-receive errors so opponent aces are saved as opponent earned points automatically instead of asking for a manual earned/gifted classification.
+- Fixed match format defaults so League matches offer best-of-five set prep while Tournament matches default to best-of-three.
 - Fixed the `react-hooks/set-state-in-effect` lint warning in `useLiveMatchLogic` by moving the activeSet-metadata sync out of a `useEffect` and into the render body, guarded by a `prevMetadata` comparison - React's documented pattern for "adjusting state when a prop changes," which avoids the extra commit-then-effect render pass.
 
 ### Security

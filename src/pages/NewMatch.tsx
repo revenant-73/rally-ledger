@@ -6,7 +6,7 @@ import { useMatch } from '../hooks/useMatch';
 import type { Match } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import toast from 'react-hot-toast';
-import { MATCH_FORMAT_OPTIONS, type MatchFormat } from '../utils/matchFormat';
+import { MATCH_FORMAT_OPTIONS, getDefaultMatchFormatForType, type MatchFormat } from '../utils/matchFormat';
 
 const NewMatch: React.FC = () => {
   const navigate = useNavigate();
@@ -63,6 +63,14 @@ const NewMatch: React.FC = () => {
       ...formData, 
       teamId,
       level: selectedTeam?.level || formData.level
+    });
+  };
+
+  const handleMatchTypeChange = (matchType: string) => {
+    setFormData({
+      ...formData,
+      matchType,
+      matchFormat: getDefaultMatchFormatForType(matchType),
     });
   };
 
@@ -192,7 +200,7 @@ const NewMatch: React.FC = () => {
             <label className="text-[10px] font-black uppercase text-brand-text-secondary tracking-widest px-1">Match Type</label>
             <select
               value={formData.matchType}
-              onChange={(e) => setFormData({ ...formData, matchType: e.target.value })}
+              onChange={(e) => handleMatchTypeChange(e.target.value)}
               className="w-full bg-brand-bg border border-brand-gray/20 rounded-xl p-4 focus:outline-none focus:border-brand-teal transition-colors font-bold"
             >
               <option value="Tournament" className="bg-brand-bg">Tournament</option>
