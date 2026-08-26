@@ -101,6 +101,11 @@ export default defineConfig(({ mode }) => {
       localNetlifyFunctions(env),
       VitePWA({
         registerType: 'autoUpdate',
+        workbox: {
+          clientsClaim: true,
+          skipWaiting: true,
+          cleanupOutdatedCaches: true,
+        },
         manifest: {
           name: 'Century Matchbook',
           short_name: 'Matchbook',
