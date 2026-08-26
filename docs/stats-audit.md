@@ -48,6 +48,7 @@ This prevents stray metadata from counting on the wrong serving side.
 - Kill/error net: `kills - attack errors`.
 - Kill percentage: `kills / (kills + attack errors)`.
 - Player point earners/gifters: attributed earned points are our `Earned` rallies; attributed gifted points are opponent points with our `Gifted` classification. Attribution uses `playerId` first, with server/passer fallback for older serve and receive rows.
+- Team gift context: our unforced-error gifts are `pointWinner === 'Opponent' && classification === 'Gifted'`, grouped without player detail by `outcomeType`, `servingTeam`, score phase, score state, and `metadata.rotation` when present.
 
 The current attack report is a kill/error report, not a full hitting percentage, because non-terminal attack attempts are not tracked.
 
@@ -68,10 +69,10 @@ Known limitation: live dashboard set summaries infer set order from available ac
 
 Current report surfaces include:
 
-- Individual match page: match info, sets, earned/gifted balance, serve report, receive report, kill report, top earner, and top gifter.
-- Individual match text/CSV exports: summary, serving, receiving, kill report, set breakdown, and rally log.
-- Season Reports page: season snapshot, skill snapshot, point earners/gifters, serving leaders, receiving leaders, kill report, all-player tables, and match trends.
-- Season CSV package: summary, match trends, player totals, point leaders, serving, receiving, kill report, opponent breakdown, and practice plan.
+- Individual match page: match info, sets, earned/gifted balance, team gift context, serve report, receive report, kill report, top earner, and top gifter.
+- Individual match text/CSV exports: summary, serving, receiving, kill report, team gift context, set breakdown, and rally log.
+- Season Reports page: season snapshot, skill snapshot, team gift context, point earners/gifters, serving leaders, receiving leaders, kill report, all-player tables, and match trends.
+- Season CSV package: summary, match trends, player totals, team gift context, point leaders, serving, receiving, kill report, opponent breakdown, and practice plan.
 
 ## Validation
 

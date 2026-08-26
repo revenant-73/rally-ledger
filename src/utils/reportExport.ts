@@ -53,6 +53,22 @@ const parseEarnedGifted = (value: string) => {
   };
 };
 
+const giftContextLines = (stats: ReportStats) => [
+  `Total gifts: ${stats.giftContext.total}`,
+  `Practice cue: ${stats.giftContext.practiceCue}`,
+  ...(stats.giftContext.byType.length > 0
+    ? stats.giftContext.byType.map(row => `${row.label}: ${row.count} (${row.pct}%)`)
+    : ['No team gifts tracked.']),
+];
+
+const giftContextCsvRows = (stats: ReportStats) => [
+  ...stats.giftContext.byType.map(row => ['Error Type', row.label, row.count, row.pct, row.detail ?? '']),
+  ...stats.giftContext.byServingState.map(row => ['Serving State', row.label, row.count, row.pct, row.detail ?? '']),
+  ...stats.giftContext.byScorePhase.map(row => ['Score Phase', row.label, row.count, row.pct, row.detail ?? '']),
+  ...stats.giftContext.byScoreState.map(row => ['Score State', row.label, row.count, row.pct, row.detail ?? '']),
+  ...stats.giftContext.byRotation.map(row => ['Rotation', row.label, row.count, row.pct, row.detail ?? '']),
+];
+
 export const buildMatchTextSummary = (match: Match, stats: ReportStats) => {
   const result = match.result ? ` (${match.result})` : '';
   const lines = [
@@ -74,6 +90,9 @@ export const buildMatchTextSummary = (match: Match, stats: ReportStats) => {
     'Earned / Gifted',
     `Us: +${stats.ourEarned} earned / -${stats.ourGifted} gifted`,
     `Opponent: +${stats.opponentEarned} earned / -${stats.opponentGifted} gifted`,
+    '',
+    'Team Gift Context',
+    ...giftContextLines(stats),
     '',
     'Serve',
     `Attempts: ${stats.serve.attempts}`,
@@ -141,6 +160,7 @@ export const buildMatchCsvFiles = (
           ['Opponent gifted', stats.opponentGifted],
           ['Biggest weapon', stats.biggestWeapon],
           ['Biggest leak', stats.biggestLeak],
+          ['Gift context cue', stats.giftContext.practiceCue],
           ['Serve attempts', stats.serve.attempts],
           ['Serve in %', stats.serve.servePct],
           ['Serve KO %', stats.serve.koPct],
@@ -201,6 +221,13 @@ export const buildMatchCsvFiles = (
           player.killPct,
           player.errorPct,
         ])
+      ),
+    },
+    {
+      filename: `${fileSafe(match.opponentName)}-gift-context.csv`,
+      contents: toCsv(
+        ['Context', 'Label', 'Count', 'Percent', 'Detail'],
+        giftContextCsvRows(stats)
       ),
     },
     {
@@ -270,6 +297,9 @@ export const buildSeasonTextSummary = (team: Team, stats: SeasonReportStats) => 
     `Top weapon: ${stats.biggestWeapon}`,
     `Top leak: ${stats.biggestLeak}`,
     `Practice focus: ${stats.focus}`,
+    '',
+    'Team Gift Context',
+    ...giftContextLines(stats),
     '',
     'Top Servers',
     ...(stats.playerServing.length > 0
@@ -416,6 +446,7 @@ export const buildSeasonCsvFiles = (team: Team, stats: SeasonReportStats) => {
           ['Opponent gifted', stats.opponentGifted],
           ['Biggest weapon', stats.biggestWeapon],
           ['Biggest leak', stats.biggestLeak],
+          ['Gift context cue', stats.giftContext.practiceCue],
           ['Serve attempts', stats.serve.attempts],
           ['Serve aces', stats.serve.aces],
           ['Serve errors', stats.serve.errors],
@@ -509,6 +540,13 @@ export const buildSeasonCsvFiles = (team: Team, stats: SeasonReportStats) => {
             points?.net ?? 0,
           ];
         })
+      ),
+    },
+    {
+      filename: `${baseName}-gift-context.csv`,
+      contents: toCsv(
+        ['Context', 'Label', 'Count', 'Percent', 'Detail'],
+        giftContextCsvRows(stats)
       ),
     },
     {

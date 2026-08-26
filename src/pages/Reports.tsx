@@ -26,6 +26,7 @@ import { apiPost } from '../utils/api';
 import { normalizeRallies } from '../utils/rallies';
 import { calculateSeasonReportStats, type SeasonReportStats } from '../utils/reportStats';
 import { buildSeasonCsvFiles, buildSeasonTextSummary, downloadTextFile, fileSafe } from '../utils/reportExport';
+import GiftContextCard from '../components/reports/GiftContextCard';
 
 type SeasonReportResponse = {
   matches: Match[];
@@ -709,6 +710,8 @@ const Reports: React.FC = () => {
                 />
               </div>
             </section>
+
+            <GiftContextCard giftContext={stats.giftContext} />
 
             <section className="space-y-4">
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

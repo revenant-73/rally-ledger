@@ -97,6 +97,15 @@ describe('report stats', () => {
       expect.objectContaining({ jersey: '07', earned: 2, gifted: 1, net: 1, total: 3 }),
       expect.objectContaining({ jersey: '12', earned: 0, gifted: 1, net: -1, total: 1 }),
     ]);
+    expect(stats.giftContext.total).toBe(2);
+    expect(stats.giftContext.byType).toEqual([
+      expect.objectContaining({ label: 'Attack Error', count: 1, pct: 50 }),
+      expect.objectContaining({ label: 'Serve Error', count: 1, pct: 50 }),
+    ]);
+    expect(stats.giftContext.byServingState).toEqual([
+      expect.objectContaining({ label: 'While receiving', count: 1, pct: 50 }),
+      expect.objectContaining({ label: 'While serving', count: 1, pct: 50 }),
+    ]);
     expect(stats.setReports[0]).toMatchObject({
       setNumber: 1,
       score: '25-20',
@@ -107,6 +116,49 @@ describe('report stats', () => {
       servePct: 50,
       passScore: 2.5,
     });
+  });
+
+  it('groups team gifts by match circumstance without player detail', () => {
+    const stats = calculateReportStats([
+      rally({
+        rallyNumber: 1,
+        scoreBeforeUs: 23,
+        scoreBeforeOpponent: 23,
+        pointWinner: 'Opponent',
+        servingTeam: 'Us',
+        outcomeType: 'Serve Error',
+        classification: 'Gifted',
+        metadata: { rotation: 2 },
+      }),
+      rally({
+        rallyNumber: 2,
+        scoreBeforeUs: 20,
+        scoreBeforeOpponent: 21,
+        pointWinner: 'Opponent',
+        servingTeam: 'Opponent',
+        outcomeType: 'Attack Error',
+        classification: 'Gifted',
+        metadata: { rotation: 2 },
+      }),
+      rally({
+        rallyNumber: 3,
+        scoreBeforeUs: 20,
+        scoreBeforeOpponent: 22,
+        pointWinner: 'Opponent',
+        servingTeam: 'Opponent',
+        outcomeType: 'Attack Error',
+        classification: 'Gifted',
+        metadata: { rotation: 5 },
+      }),
+    ], players, [sets[0]]);
+
+    expect(stats.giftContext.total).toBe(3);
+    expect(stats.giftContext.byType[0]).toMatchObject({ label: 'Attack Error', count: 2, pct: 67 });
+    expect(stats.giftContext.byServingState[0]).toMatchObject({ label: 'While receiving', count: 2, pct: 67 });
+    expect(stats.giftContext.byScorePhase[0]).toMatchObject({ label: 'Late set', count: 2, pct: 67 });
+    expect(stats.giftContext.byScoreState[0]).toMatchObject({ label: 'Trailing', count: 2, pct: 67 });
+    expect(stats.giftContext.byRotation[0]).toMatchObject({ label: 'Rotation 2', count: 2, pct: 67 });
+    expect(stats.giftContext.practiceCue).toContain('Attack Error');
   });
 
   it('separates opponent earned points from our gifted points in set reports', () => {

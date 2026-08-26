@@ -10,6 +10,7 @@ import { normalizeRallies } from '../utils/rallies';
 import { apiPost } from '../utils/api';
 import { calculateReportStats } from '../utils/reportStats';
 import { buildMatchCsvFiles, buildMatchTextSummary, downloadTextFile, fileSafe } from '../utils/reportExport';
+import GiftContextCard from '../components/reports/GiftContextCard';
 
 const MatchDetail: React.FC = () => {
   const { matchId } = useParams<{ matchId: string }>();
@@ -305,6 +306,10 @@ const MatchDetail: React.FC = () => {
             ))}
           </div>
         </div>
+
+        {reportStats.giftContext.total > 0 && (
+          <GiftContextCard giftContext={reportStats.giftContext} title="Match Gift Context" />
+        )}
 
         {metrics && (
           <>

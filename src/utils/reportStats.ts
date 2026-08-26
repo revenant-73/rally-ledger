@@ -49,6 +49,23 @@ export interface PlayerPointReport {
   total: number;
 }
 
+export interface GiftContextRow {
+  label: string;
+  count: number;
+  pct: number;
+  detail?: string;
+}
+
+export interface GiftContextReport {
+  total: number;
+  byType: GiftContextRow[];
+  byServingState: GiftContextRow[];
+  byScorePhase: GiftContextRow[];
+  byScoreState: GiftContextRow[];
+  byRotation: GiftContextRow[];
+  practiceCue: string;
+}
+
 export interface SetReport {
   setId: string;
   setNumber: number;
@@ -100,6 +117,7 @@ export interface ReportStats {
   playerReceiving: PlayerReceiveReport[];
   playerAttacking: PlayerAttackReport[];
   playerPoints: PlayerPointReport[];
+  giftContext: GiftContextReport;
   setReports: SetReport[];
   focus: string;
 }
@@ -144,6 +162,93 @@ const countOutcomes = (rallies: RallyEvent[]) => {
 
 const topOutcome = (rallies: RallyEvent[]) => {
   return Object.entries(countOutcomes(rallies)).sort((a, b) => b[1] - a[1])[0]?.[0] || 'None';
+};
+
+const rowsFromCounts = (counts: Map<string, { count: number; detail?: string }>, total: number): GiftContextRow[] => {
+  return Array.from(counts.entries())
+    .map(([label, value]) => ({
+      label,
+      count: value.count,
+      pct: pct(value.count, total),
+      detail: value.detail,
+    }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+};
+
+const incrementContext = (counts: Map<string, { count: number; detail?: string }>, label: string, detail?: string) => {
+  const current = counts.get(label) ?? { count: 0, detail };
+  current.count += 1;
+  current.detail = current.detail ?? detail;
+  counts.set(label, current);
+};
+
+const scorePhase = (rally: RallyEvent) => {
+  const highScore = Math.max(rally.scoreBeforeUs, rally.scoreBeforeOpponent);
+  if (highScore >= 23) return { label: 'Closing points', detail: '23+ or deuce pressure' };
+  if (highScore >= 19) return { label: 'Late set', detail: '19-22' };
+  if (highScore >= 10) return { label: 'Middle set', detail: '10-18' };
+  return { label: 'Early set', detail: '0-9' };
+};
+
+const scoreState = (rally: RallyEvent) => {
+  const margin = rally.scoreBeforeUs - rally.scoreBeforeOpponent;
+  if (margin === 0) return { label: 'Tied', detail: 'Even score' };
+  if (margin > 0) return { label: 'Leading', detail: `Ahead by ${margin}` };
+  return { label: 'Trailing', detail: `Behind by ${Math.abs(margin)}` };
+};
+
+const buildGiftContextReport = (rallies: RallyEvent[]): GiftContextReport => {
+  const giftRallies = rallies.filter(rally => rally.pointWinner === 'Opponent' && rally.classification === 'Gifted');
+  const total = giftRallies.length;
+  const byType = new Map<string, { count: number; detail?: string }>();
+  const byServingState = new Map<string, { count: number; detail?: string }>();
+  const byScorePhase = new Map<string, { count: number; detail?: string }>();
+  const byScoreState = new Map<string, { count: number; detail?: string }>();
+  const byRotation = new Map<string, { count: number; detail?: string }>();
+
+  giftRallies.forEach((rally) => {
+    incrementContext(byType, rally.outcomeType);
+    incrementContext(
+      byServingState,
+      rally.servingTeam === 'Us' ? 'While serving' : 'While receiving',
+      rally.servingTeam === 'Us' ? 'We had serve' : 'Opponent had serve'
+    );
+
+    const phase = scorePhase(rally);
+    incrementContext(byScorePhase, phase.label, phase.detail);
+
+    const state = scoreState(rally);
+    incrementContext(byScoreState, state.label, state.detail);
+
+    const rotation = typeof rally.metadata?.rotation === 'number' ? rally.metadata.rotation : undefined;
+    if (rotation) {
+      incrementContext(byRotation, `Rotation ${rotation}`, 'Current rotation when rally was entered');
+    }
+  });
+
+  const typeRows = rowsFromCounts(byType, total);
+  const stateRows = rowsFromCounts(byServingState, total);
+  const phaseRows = rowsFromCounts(byScorePhase, total);
+  const scoreRows = rowsFromCounts(byScoreState, total);
+  const rotationRows = rowsFromCounts(byRotation, total);
+  const practiceParts = [
+    typeRows[0]?.label,
+    stateRows[0]?.label?.toLowerCase(),
+    phaseRows[0]?.label?.toLowerCase(),
+    scoreRows[0]?.label?.toLowerCase(),
+  ].filter(Boolean);
+
+  return {
+    total,
+    byType: typeRows,
+    byServingState: stateRows,
+    byScorePhase: phaseRows,
+    byScoreState: scoreRows,
+    byRotation: rotationRows,
+    practiceCue: practiceParts.length > 0
+      ? `Recreate ${practiceParts.join(' / ')} situations in practice.`
+      : 'No team gifts tracked yet.',
+  };
 };
 
 const attributedPlayerId = (rally: RallyEvent) => {
@@ -335,6 +440,7 @@ export const calculateReportStats = (
   const opponentGifted = rallies.filter(rally => rally.pointWinner === 'Us' && rally.classification === 'Gifted').length;
   const biggestWeapon = topOutcome(rallies.filter(rally => rally.pointWinner === 'Us' && rally.classification === 'Earned'));
   const biggestLeak = topOutcome(rallies.filter(rally => rally.pointWinner === 'Opponent' && rally.classification === 'Gifted'));
+  const giftContext = buildGiftContextReport(rallies);
 
   const setReports = sets.map((set) => {
     const setRallies = rallies.filter(rally => rally.setId === set.id);
@@ -406,6 +512,7 @@ export const calculateReportStats = (
         total: stats.earned + stats.gifted,
       }))
       .sort((a, b) => b.net - a.net || b.earned - a.earned || a.gifted - b.gifted || b.total - a.total),
+    giftContext,
     setReports,
   };
 
