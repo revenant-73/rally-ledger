@@ -76,8 +76,8 @@ describe('report stats', () => {
     const stats = calculateReportStats([
       rally({ rallyNumber: 1, serverPlayerId: 'p1', serveResult: 'Ace' }),
       rally({ rallyNumber: 2, serverPlayerId: 'p1', serveResult: 'Error', pointWinner: 'Opponent', outcomeType: 'Serve Error', classification: 'Gifted' }),
-      rally({ rallyNumber: 3, servingTeam: 'Opponent', receivePlayerId: 'p2', receiveResult: 'In-System', outcomeType: 'Kill' }),
-      rally({ rallyNumber: 4, servingTeam: 'Opponent', receivePlayerId: 'p2', receiveResult: 'Out-of-System', pointWinner: 'Opponent', outcomeType: 'Attack Error', classification: 'Gifted' }),
+      rally({ rallyNumber: 3, servingTeam: 'Opponent', receivePlayerId: 'p2', receiveResult: 'In-System', playerId: 'p1', outcomeType: 'Kill' }),
+      rally({ rallyNumber: 4, servingTeam: 'Opponent', receivePlayerId: 'p2', receiveResult: 'Out-of-System', playerId: 'p2', pointWinner: 'Opponent', outcomeType: 'Attack Error', classification: 'Gifted' }),
     ], players, [sets[0]]);
 
     expect(stats.ourEarned).toBe(2);
@@ -86,8 +86,13 @@ describe('report stats', () => {
     expect(stats.biggestLeak).toBe('Serve Error');
     expect(stats.serve).toMatchObject({ attempts: 2, aces: 1, errors: 1, servePct: 50, koPct: 50 });
     expect(stats.receive).toMatchObject({ attempts: 2, inSystem: 1, outOfSystem: 1, score: 2.5 });
+    expect(stats.attack).toMatchObject({ attempts: 2, kills: 1, errors: 1, net: 0, killPct: 50, errorPct: 50 });
     expect(stats.playerServing[0]).toMatchObject({ jersey: '07', attempts: 2, servePct: 50, koPct: 50 });
     expect(stats.playerReceiving[0]).toMatchObject({ jersey: '12', attempts: 2, score: 2.5 });
+    expect(stats.playerAttacking).toEqual([
+      expect.objectContaining({ jersey: '07', kills: 1, errors: 0, net: 1, killPct: 100 }),
+      expect.objectContaining({ jersey: '12', kills: 0, errors: 1, net: -1, errorPct: 100 }),
+    ]);
     expect(stats.setReports[0]).toMatchObject({ setNumber: 1, score: '25-20', servePct: 50, passScore: 2.5 });
   });
 

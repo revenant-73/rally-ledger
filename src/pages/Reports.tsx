@@ -147,6 +147,7 @@ const Reports: React.FC = () => {
   const [resultFilter, setResultFilter] = useState('all');
   const [showAllServing, setShowAllServing] = useState(false);
   const [showAllReceiving, setShowAllReceiving] = useState(false);
+  const [showAllAttacking, setShowAllAttacking] = useState(false);
 
   const effectiveTeamId = useMemo(() => {
     if (teams.length === 0) return '';
@@ -297,6 +298,28 @@ const Reports: React.FC = () => {
           inSystem: receiving?.inSystem ?? 0,
           outOfSystem: receiving?.outOfSystem ?? 0,
           score: receiving?.score ?? 0,
+        };
+      })
+      .sort(jerseySort);
+  }, [filteredReportData, stats]);
+
+  const allAttackingRows = useMemo(() => {
+    if (!stats || !filteredReportData) return [];
+    const attackingByPlayer = new Map(stats.playerAttacking.map(player => [player.playerId, player]));
+
+    return filteredReportData.players
+      .map((player) => {
+        const attacking = attackingByPlayer.get(player.id);
+        return {
+          playerId: player.id,
+          jersey: player.jerseyNumber,
+          name: playerName(player),
+          kills: attacking?.kills ?? 0,
+          errors: attacking?.errors ?? 0,
+          attempts: attacking?.attempts ?? 0,
+          net: attacking?.net ?? 0,
+          killPct: attacking?.killPct ?? 0,
+          errorPct: attacking?.errorPct ?? 0,
         };
       })
       .sort(jerseySort);
@@ -622,7 +645,7 @@ const Reports: React.FC = () => {
                 <ShieldCheck size={24} className="text-brand-teal" />
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                 <SkillCard
                   label="Serve In"
                   value={pct(stats.serve.servePct)}
@@ -640,6 +663,12 @@ const Reports: React.FC = () => {
                   value={stats.receive.score.toFixed(2)}
                   detail={`${stats.receive.attempts} receive attempts`}
                   tone={scoreTone(stats.receive.score, 2.3, 1.9)}
+                />
+                <SkillCard
+                  label="Kill Net"
+                  value={`${stats.attack.net >= 0 ? '+' : ''}${stats.attack.net}`}
+                  detail={`${stats.attack.kills} kills / ${stats.attack.errors} errors`}
+                  tone={stats.attack.net >= 0 ? 'text-brand-green' : 'text-brand-red'}
                 />
                 <SkillCard
                   label="Weapon"
@@ -787,6 +816,78 @@ const Reports: React.FC = () => {
                 )}
               </Leaderboard>
             </div>
+
+            <Leaderboard title="Kill Report" icon={<Trophy size={18} />} emptyText="No kills or attack errors tracked.">
+              {stats.playerAttacking.slice(0, 6).map(player => (
+                <div
+                  key={player.playerId}
+                  className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-3 rounded-2xl border border-brand-gray/10 bg-brand-bg px-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black">#{player.jersey} {player.name}</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-brand-text-secondary">
+                      {player.attempts} kill/error attempts
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-black text-brand-green">{player.kills}</p>
+                    <p className="text-[10px] font-bold uppercase text-brand-text-secondary">Kills</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-black text-brand-red">{player.errors}</p>
+                    <p className="text-[10px] font-bold uppercase text-brand-text-secondary">Err</p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-sm font-black ${player.net >= 0 ? 'text-brand-teal' : 'text-brand-red'}`}>
+                      {player.net >= 0 ? '+' : ''}{player.net}
+                    </p>
+                    <p className="text-[10px] font-bold uppercase text-brand-text-secondary">Net</p>
+                  </div>
+                </div>
+              ))}
+              {allAttackingRows.length > stats.playerAttacking.slice(0, 6).length && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllAttacking(current => !current)}
+                  className="print-hide mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-brand-teal/20 bg-brand-teal/5 px-4 py-3 text-xs font-black uppercase tracking-wide text-brand-teal transition-colors hover:bg-brand-teal/10 focus:outline-none focus:ring-2 focus:ring-brand-teal/50"
+                >
+                  {showAllAttacking ? 'Hide All Kill Report' : `Show All Kill Report (${allAttackingRows.length})`}
+                  <ChevronDown size={16} className={`transition-transform ${showAllAttacking ? 'rotate-180' : ''}`} />
+                </button>
+              )}
+              {showAllAttacking && (
+                <div className="mt-3 overflow-x-auto rounded-2xl border border-brand-gray/10 bg-brand-bg">
+                  <table className="w-full min-w-[560px] text-left text-xs">
+                    <thead className="text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">
+                      <tr>
+                        <th className="px-3 py-3">Player</th>
+                        <th className="px-3 py-3 text-right">Kills</th>
+                        <th className="px-3 py-3 text-right">Err</th>
+                        <th className="px-3 py-3 text-right">Att</th>
+                        <th className="px-3 py-3 text-right">Net</th>
+                        <th className="px-3 py-3 text-right">K%</th>
+                        <th className="px-3 py-3 text-right">Err%</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allAttackingRows.map(player => (
+                        <tr key={player.playerId} className="border-t border-brand-gray/10 font-bold">
+                          <td className="px-3 py-3">#{player.jersey} {player.name}</td>
+                          <td className="px-3 py-3 text-right text-brand-green">{player.kills}</td>
+                          <td className="px-3 py-3 text-right text-brand-red">{player.errors}</td>
+                          <td className="px-3 py-3 text-right">{player.attempts}</td>
+                          <td className={`px-3 py-3 text-right ${player.net >= 0 ? 'text-brand-teal' : 'text-brand-red'}`}>
+                            {player.net >= 0 ? '+' : ''}{player.net}
+                          </td>
+                          <td className="px-3 py-3 text-right text-brand-green">{pct(player.killPct)}</td>
+                          <td className="px-3 py-3 text-right text-brand-red">{pct(player.errorPct)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Leaderboard>
 
             <section className="rounded-3xl border border-brand-gray/10 bg-brand-gray/5 p-5">
               <div className="mb-4 flex items-center gap-2">

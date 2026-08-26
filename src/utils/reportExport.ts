@@ -90,11 +90,22 @@ export const buildMatchTextSummary = (match: Match, stats: ReportStats) => {
     `Errors/Aces allowed: ${stats.receive.errors}`,
     `Pass score: ${stats.receive.score}`,
     '',
+    'Attack',
+    `Kills: ${stats.attack.kills}`,
+    `Attack errors: ${stats.attack.errors}`,
+    `Kill/error net: ${stats.attack.net >= 0 ? '+' : ''}${stats.attack.net}`,
+    `Kill rate: ${stats.attack.killPct}%`,
+    '',
     'Top Servers',
     ...(stats.playerServing.slice(0, 5).map(player => `#${player.jersey} ${player.name}: ${player.koPct}% KO, ${player.servePct}% in (${player.attempts} attempts)`) || []),
     '',
     'Top Passers',
     ...(stats.playerReceiving.slice(0, 5).map(player => `#${player.jersey} ${player.name}: ${player.score} pass score (${player.attempts} attempts)`) || []),
+    '',
+    'Top Killers',
+    ...(stats.playerAttacking.length > 0
+      ? stats.playerAttacking.slice(0, 5).map(player => `#${player.jersey} ${player.name}: ${player.kills} kills, ${player.errors} errors (${player.net >= 0 ? '+' : ''}${player.net})`)
+      : ['No kills or attack errors tracked.']),
   ];
 
   return lines.join('\n');
@@ -134,6 +145,10 @@ export const buildMatchCsvFiles = (
           ['Serve in %', stats.serve.servePct],
           ['Serve KO %', stats.serve.koPct],
           ['Pass score', stats.receive.score],
+          ['Kills', stats.attack.kills],
+          ['Attack errors', stats.attack.errors],
+          ['Kill/error net', stats.attack.net],
+          ['Kill %', stats.attack.killPct],
           ['Practice focus', stats.focus],
         ]
       ),
@@ -168,6 +183,22 @@ export const buildMatchCsvFiles = (
           player.overpass,
           player.errors,
           player.score,
+        ])
+      ),
+    },
+    {
+      filename: `${fileSafe(match.opponentName)}-kill-report.csv`,
+      contents: toCsv(
+        ['Jersey', 'Player', 'Kills', 'Attack Errors', 'Attempts', 'Net', 'Kill %', 'Error %'],
+        stats.playerAttacking.map(player => [
+          player.jersey,
+          player.name,
+          player.kills,
+          player.errors,
+          player.attempts,
+          player.net,
+          player.killPct,
+          player.errorPct,
         ])
       ),
     },
@@ -230,6 +261,9 @@ export const buildSeasonTextSummary = (team: Team, stats: SeasonReportStats) => 
     `Serve errors: ${stats.serve.errors}`,
     `Pass score: ${stats.receive.score}`,
     `Receive attempts: ${stats.receive.attempts}`,
+    `Kills: ${stats.attack.kills}`,
+    `Attack errors: ${stats.attack.errors}`,
+    `Kill/error net: ${stats.attack.net >= 0 ? '+' : ''}${stats.attack.net}`,
     `Top weapon: ${stats.biggestWeapon}`,
     `Top leak: ${stats.biggestLeak}`,
     `Practice focus: ${stats.focus}`,
@@ -244,6 +278,11 @@ export const buildSeasonTextSummary = (team: Team, stats: SeasonReportStats) => 
       ? stats.playerReceiving.slice(0, 8).map(player => `#${player.jersey} ${player.name}: ${player.score} pass score (${player.attempts} attempts)`)
       : ['No receiving attempts tracked.']),
     '',
+    'Top Killers',
+    ...(stats.playerAttacking.length > 0
+      ? stats.playerAttacking.slice(0, 8).map(player => `#${player.jersey} ${player.name}: ${player.kills} kills, ${player.errors} errors (${player.net >= 0 ? '+' : ''}${player.net})`)
+      : ['No kills or attack errors tracked.']),
+    '',
     'Match Trends',
     ...(stats.matchRows.length > 0
       ? stats.matchRows.map(row => `${formatReportDate(row.matchDate)} vs ${row.opponentName}: ${row.result || 'Open'}, ${row.earnedGifted}, ${row.servePct}% serve, ${row.serveKoPct}% KO, ${row.passScore.toFixed(2)} pass`)
@@ -257,7 +296,8 @@ export const buildSeasonCsvFiles = (team: Team, stats: SeasonReportStats) => {
   const baseName = `${fileSafe(team.name)}-${fileSafe(team.season)}-season`;
   const playerServing = new Map(stats.playerServing.map(player => [player.playerId, player]));
   const playerReceiving = new Map(stats.playerReceiving.map(player => [player.playerId, player]));
-  const playerIds = Array.from(new Set([...playerServing.keys(), ...playerReceiving.keys()]));
+  const playerAttacking = new Map(stats.playerAttacking.map(player => [player.playerId, player]));
+  const playerIds = Array.from(new Set([...playerServing.keys(), ...playerReceiving.keys(), ...playerAttacking.keys()]));
   const opponentRows = Array.from(
     stats.matchRows.reduce((opponents, row) => {
       const current = opponents.get(row.opponentName) ?? {
@@ -329,8 +369,8 @@ export const buildSeasonCsvFiles = (team: Team, stats: SeasonReportStats) => {
     {
       priority: 'Medium',
       area: 'Player Development',
-      evidence: `${stats.playerServing.length} servers and ${stats.playerReceiving.length} passers tracked`,
-      recommendation: 'Use player totals to assign focused serve and receive reps by role.',
+      evidence: `${stats.playerServing.length} servers, ${stats.playerReceiving.length} passers, and ${stats.playerAttacking.length} attackers tracked`,
+      recommendation: 'Use player totals to assign focused serve, receive, and attacking reps by role.',
     },
   ];
 
@@ -361,6 +401,10 @@ export const buildSeasonCsvFiles = (team: Team, stats: SeasonReportStats) => {
           ['Serve KO %', stats.serve.koPct],
           ['Receive attempts', stats.receive.attempts],
           ['Pass score', stats.receive.score],
+          ['Kills', stats.attack.kills],
+          ['Attack errors', stats.attack.errors],
+          ['Kill/error net', stats.attack.net],
+          ['Kill %', stats.attack.killPct],
           ['Practice focus', stats.focus],
         ]
       ),
@@ -398,13 +442,19 @@ export const buildSeasonCsvFiles = (team: Team, stats: SeasonReportStats) => {
           'Overpass',
           'Receive Errors',
           'Pass Score',
+          'Kills',
+          'Attack Errors',
+          'Kill/Error Net',
+          'Kill %',
+          'Error %',
         ],
         playerIds.map(playerId => {
           const serving = playerServing.get(playerId);
           const receiving = playerReceiving.get(playerId);
+          const attacking = playerAttacking.get(playerId);
           return [
-            serving?.jersey ?? receiving?.jersey ?? '',
-            serving?.name ?? receiving?.name ?? '',
+            serving?.jersey ?? receiving?.jersey ?? attacking?.jersey ?? '',
+            serving?.name ?? receiving?.name ?? attacking?.name ?? '',
             serving?.attempts ?? 0,
             serving?.aces ?? 0,
             serving?.errors ?? 0,
@@ -416,6 +466,11 @@ export const buildSeasonCsvFiles = (team: Team, stats: SeasonReportStats) => {
             receiving?.overpass ?? 0,
             receiving?.errors ?? 0,
             receiving?.score ?? 0,
+            attacking?.kills ?? 0,
+            attacking?.errors ?? 0,
+            attacking?.net ?? 0,
+            attacking?.killPct ?? 0,
+            attacking?.errorPct ?? 0,
           ];
         })
       ),
@@ -450,6 +505,22 @@ export const buildSeasonCsvFiles = (team: Team, stats: SeasonReportStats) => {
           player.overpass,
           player.errors,
           player.score,
+        ])
+      ),
+    },
+    {
+      filename: `${baseName}-kill-report.csv`,
+      contents: toCsv(
+        ['Jersey', 'Player', 'Kills', 'Attack Errors', 'Attempts', 'Net', 'Kill %', 'Error %'],
+        stats.playerAttacking.map(player => [
+          player.jersey,
+          player.name,
+          player.kills,
+          player.errors,
+          player.attempts,
+          player.net,
+          player.killPct,
+          player.errorPct,
         ])
       ),
     },

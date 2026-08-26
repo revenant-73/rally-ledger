@@ -21,6 +21,7 @@ The existing match detail screen should become the primary post-match report. It
 - Earned/gifted balance: our earned points, our gifted points, opponent earned points, and opponent gifted points.
 - Serve report: attempts, aces, errors, serve-in percentage, KO percentage, and player serving leaders.
 - Receive report: attempts, 3-pass, 2-pass, overpass, ace/error, average pass score, and player passing leaders.
+- Kill report: kills, attack errors, kill/error net, kill percentage, and player attacking leaders.
 - Set-by-set breakdown: final score, earned/gifted split, serve pressure, and passing score.
 - Player impact: top earners, top gifters, serve leaders, and pass leaders.
 - Rally log: a later enhancement with filters by set, player, outcome type, earned/gifted, and serve/receive.
@@ -41,6 +42,7 @@ Recommended order:
      - Match summary.
      - Player serving.
      - Player receiving.
+     - Kill report.
      - Set summaries.
      - Rally log.
    - Season report CSV files:
@@ -49,6 +51,7 @@ Recommended order:
      - Player totals across serve and receive.
      - Player serving.
      - Player receiving.
+     - Kill report.
      - Opponent breakdown.
      - Practice plan.
 
@@ -76,7 +79,9 @@ Core season report sections:
 - Team trends: earned points per match, gifted points per match, serve-in percentage, serve KO percentage, and pass score by match.
 - Serve season report: team serve percentage, KO percentage, aces, errors, pressure serves, and player leaderboard.
 - Receive season report: team pass score, 3-pass/2-pass/overpass/error counts, and player leaderboard.
+- Kill season report: team kills, attack errors, kill/error net, kill percentage, and player leaderboard.
 - Expandable all-player serving and receiving tables for roster-complete stat review.
+- Expandable all-player kill report table for roster-complete attacking review.
 - Earned/gifted report: top scoring sources and top leaks.
 - Player development view: per-player recent form compared with season average.
 - Practice planning view: auto-generated focus areas from the season trends.
@@ -102,7 +107,8 @@ Completed report filters:
 8. Done: expand season downloads into a coach-ready CSV package with player totals, opponent breakdown, and practice plan files.
 9. Done: add cumulative report filters for date range, match type, opponent, and result.
 10. Done: add expandable all-player serving and receiving stat tables to cumulative reports.
-11. Add richer dedicated print/export report layouts if coaches need more polished packets later.
+11. Done: add cumulative kill reports with kills, attack errors, kill/error net, all-player table rows, and CSV export files.
+12. Add richer dedicated print/export report layouts if coaches need more polished packets later.
 
 ## Validation
 

@@ -43,6 +43,14 @@ const stats: SeasonReportStats = {
     outOfSystem: 1,
     score: 2,
   },
+  attack: {
+    attempts: 5,
+    kills: 4,
+    errors: 1,
+    net: 3,
+    killPct: 80,
+    errorPct: 20,
+  },
   playerServing: [
     {
       playerId: 'p1',
@@ -70,6 +78,19 @@ const stats: SeasonReportStats = {
       score: 2,
     },
   ],
+  playerAttacking: [
+    {
+      playerId: 'p1',
+      name: 'Avery Nguyen',
+      jersey: '07',
+      kills: 4,
+      errors: 1,
+      attempts: 5,
+      net: 3,
+      killPct: 80,
+      errorPct: 20,
+    },
+  ],
   setReports: [],
   matchRows: [
     {
@@ -94,6 +115,7 @@ describe('report export', () => {
     expect(summary).toContain('Rally Ledger Season Report: Century Varsity (2026)');
     expect(summary).toContain('Record: 1-1');
     expect(summary).toContain('#07 Avery Nguyen: 50% KO, 88% in');
+    expect(summary).toContain('#07 Avery Nguyen: 4 kills, 1 errors (+3)');
     expect(summary).toContain('8/20/2026 vs Liberty: Win');
   });
 
@@ -106,13 +128,15 @@ describe('report export', () => {
       'century-varsity-2026-season-player-totals.csv',
       'century-varsity-2026-season-serving.csv',
       'century-varsity-2026-season-receiving.csv',
+      'century-varsity-2026-season-kill-report.csv',
       'century-varsity-2026-season-opponent-breakdown.csv',
       'century-varsity-2026-season-practice-plan.csv',
     ]);
     expect(files[0].contents).toContain('Practice focus,Maintain pressure.');
     expect(files[1].contents).toContain('8/20/2026,Liberty,Win');
-    expect(files[2].contents).toContain('07,Avery Nguyen,8,2,1,88,50,0');
-    expect(files[5].contents).toContain('Liberty,1,1,0,8,5,2,90,45,2.3');
-    expect(files[6].contents).toContain('Earned/Gifted');
+    expect(files[2].contents).toContain('07,Avery Nguyen,8,2,1,88,50,0,0,0,0,0,0,4,1,3,80,20');
+    expect(files[5].contents).toContain('07,Avery Nguyen,4,1,5,3,80,20');
+    expect(files[6].contents).toContain('Liberty,1,1,0,8,5,2,90,45,2.3');
+    expect(files[7].contents).toContain('Earned/Gifted');
   });
 });

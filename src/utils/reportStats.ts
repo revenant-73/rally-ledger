@@ -26,6 +26,18 @@ export interface PlayerReceiveReport {
   score: number;
 }
 
+export interface PlayerAttackReport {
+  playerId: string;
+  name: string;
+  jersey: string;
+  kills: number;
+  errors: number;
+  attempts: number;
+  net: number;
+  killPct: number;
+  errorPct: number;
+}
+
 export interface SetReport {
   setId: string;
   setNumber: number;
@@ -63,8 +75,17 @@ export interface ReportStats {
     outOfSystem: number;
     score: number;
   };
+  attack: {
+    attempts: number;
+    kills: number;
+    errors: number;
+    net: number;
+    killPct: number;
+    errorPct: number;
+  };
   playerServing: PlayerServeReport[];
   playerReceiving: PlayerReceiveReport[];
+  playerAttacking: PlayerAttackReport[];
   setReports: SetReport[];
   focus: string;
 }
@@ -129,6 +150,8 @@ export const calculateReportStats = (
   const playerMap = new Map(players.map(player => [player.id, player]));
   const ourServeRallies = rallies.filter(rally => rally.servingTeam === 'Us' && getServeResult(rally));
   const ourReceiveRallies = rallies.filter(rally => rally.servingTeam === 'Opponent' && getReceiveResult(rally));
+  const ourKillRallies = rallies.filter(rally => rally.outcomeType === 'Kill' && rally.pointWinner === 'Us' && rally.classification === 'Earned');
+  const ourAttackErrorRallies = rallies.filter(rally => rally.outcomeType === 'Attack Error' && rally.pointWinner === 'Opponent' && rally.classification === 'Gifted');
 
   const serve = {
     attempts: ourServeRallies.length,
@@ -152,8 +175,20 @@ export const calculateReportStats = (
   };
   receive.score = passScore(receive);
 
+  const attack = {
+    attempts: ourKillRallies.length + ourAttackErrorRallies.length,
+    kills: ourKillRallies.length,
+    errors: ourAttackErrorRallies.length,
+    net: ourKillRallies.length - ourAttackErrorRallies.length,
+    killPct: 0,
+    errorPct: 0,
+  };
+  attack.killPct = pct(attack.kills, attack.attempts);
+  attack.errorPct = pct(attack.errors, attack.attempts);
+
   const playerServing = new Map<string, Omit<PlayerServeReport, 'servePct' | 'koPct'>>();
   const playerReceiving = new Map<string, Omit<PlayerReceiveReport, 'score'>>();
+  const playerAttacking = new Map<string, Omit<PlayerAttackReport, 'attempts' | 'net' | 'killPct' | 'errorPct'>>();
 
   ourServeRallies.forEach((rally) => {
     if (!rally.serverPlayerId) return;
@@ -201,6 +236,36 @@ export const calculateReportStats = (
     playerReceiving.set(player.id, current);
   });
 
+  ourKillRallies.forEach((rally) => {
+    if (!rally.playerId) return;
+    const player = playerMap.get(rally.playerId);
+    if (!player) return;
+    const current = playerAttacking.get(player.id) ?? {
+      playerId: player.id,
+      name: playerName(player),
+      jersey: player.jerseyNumber,
+      kills: 0,
+      errors: 0,
+    };
+    current.kills += 1;
+    playerAttacking.set(player.id, current);
+  });
+
+  ourAttackErrorRallies.forEach((rally) => {
+    if (!rally.playerId) return;
+    const player = playerMap.get(rally.playerId);
+    if (!player) return;
+    const current = playerAttacking.get(player.id) ?? {
+      playerId: player.id,
+      name: playerName(player),
+      jersey: player.jerseyNumber,
+      kills: 0,
+      errors: 0,
+    };
+    current.errors += 1;
+    playerAttacking.set(player.id, current);
+  });
+
   const ourEarned = rallies.filter(rally => rally.pointWinner === 'Us' && rally.classification === 'Earned').length;
   const ourGifted = rallies.filter(rally => rally.pointWinner === 'Opponent' && rally.classification === 'Gifted').length;
   const opponentEarned = rallies.filter(rally => rally.pointWinner === 'Opponent' && rally.classification === 'Earned').length;
@@ -245,6 +310,7 @@ export const calculateReportStats = (
     biggestLeak,
     serve,
     receive,
+    attack,
     playerServing: Array.from(playerServing.values())
       .map(stats => ({
         ...stats,
@@ -255,6 +321,18 @@ export const calculateReportStats = (
     playerReceiving: Array.from(playerReceiving.values())
       .map(stats => ({ ...stats, score: passScore(stats) }))
       .sort((a, b) => b.score - a.score || b.attempts - a.attempts),
+    playerAttacking: Array.from(playerAttacking.values())
+      .map(stats => {
+        const attempts = stats.kills + stats.errors;
+        return {
+          ...stats,
+          attempts,
+          net: stats.kills - stats.errors,
+          killPct: pct(stats.kills, attempts),
+          errorPct: pct(stats.errors, attempts),
+        };
+      })
+      .sort((a, b) => b.net - a.net || b.kills - a.kills || a.errors - b.errors || b.attempts - a.attempts),
     setReports,
   };
 
