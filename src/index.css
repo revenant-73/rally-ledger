@@ -44,6 +44,10 @@ body {
     display: none !important;
   }
 
+  .print-only {
+    display: block !important;
+  }
+
   main {
     display: block !important;
     overflow: visible !important;
@@ -58,6 +62,38 @@ body {
     padding: 0 !important;
     background: #ffffff !important;
     color: #111827 !important;
+  }
+
+  .print-report-header {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: end !important;
+    gap: 0.25in !important;
+    margin-bottom: 0.24in !important;
+    padding-bottom: 0.16in !important;
+    border-bottom: 2px solid #111827 !important;
+  }
+
+  .print-report-kicker {
+    color: #4b5563 !important;
+    font-size: 9pt !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+  }
+
+  .print-report-title {
+    margin-top: 0.04in !important;
+    color: #111827 !important;
+    font-size: 22pt !important;
+    line-height: 1.1 !important;
+  }
+
+  .print-report-meta {
+    color: #4b5563 !important;
+    font-size: 9pt !important;
+    font-weight: 700 !important;
+    text-align: right !important;
   }
 
   .print-report *,
@@ -114,6 +150,21 @@ body {
     page-break-inside: avoid;
   }
 
+  .print-report section,
+  .print-report [class*="rounded-3xl"] {
+    margin-bottom: 0.18in !important;
+  }
+
+  .print-report .print-player-table {
+    display: block !important;
+    margin-top: 0.18in !important;
+  }
+
+  .print-report .print-player-table table {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
   .print-report .md\:hidden {
     display: none !important;
   }
@@ -130,6 +181,7 @@ body {
   .print-report th,
   .print-report td {
     border-bottom: 1px solid #e5e7eb !important;
+    padding: 5pt 6pt !important;
   }
 
   .print-report a {

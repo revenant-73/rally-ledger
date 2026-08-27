@@ -1,6 +1,6 @@
 # Century Matchbook App Audit Roadmap
 
-Last updated: 2026-08-09
+Last updated: 2026-08-27
 
 ## Current Health
 
@@ -90,5 +90,5 @@ Last updated: 2026-08-09
 - Done: serve reports infer one-tap ACE/ERR entries from outcome-only rally rows so older tracked scrimmages are counted correctly.
 - Remaining: consider cookie-backed sessions and durable/distributed rate limiting before public launch.
 - Done: added richer season trend charts to the Reports page.
-- Remaining: add richer dedicated print/export report layouts if coaches need more polished packets later.
+- Done: added richer print/export report layouts with paper headers, print metadata, and complete player stat tables for coach packets.
 

@@ -13,6 +13,24 @@ import { buildMatchCsvFiles, buildMatchTextSummary, downloadTextFile, fileSafe }
 import GiftContextCard from '../components/reports/GiftContextCard';
 import RallyLogCard from '../components/reports/RallyLogCard';
 
+const PrintReportHeader: React.FC<{
+  title: string;
+  subtitle: string;
+  details: string[];
+}> = ({ title, subtitle, details }) => (
+  <div className="print-only print-report-header hidden">
+    <div>
+      <p className="print-report-kicker">{subtitle}</p>
+      <h1 className="print-report-title">{title}</h1>
+    </div>
+    <div className="print-report-meta">
+      {details.map(detail => (
+        <p key={detail}>{detail}</p>
+      ))}
+    </div>
+  </div>
+);
+
 const MatchDetail: React.FC = () => {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
@@ -132,9 +150,22 @@ const MatchDetail: React.FC = () => {
   }
 
   const canDeleteMatch = canManageTeam(match.teamId);
+  const printedDate = new Date().toLocaleDateString();
+  const matchDate = new Date(match.matchDate).toLocaleDateString();
 
   return (
     <div className="print-report min-h-screen bg-brand-bg text-brand-text p-6 max-w-lg mx-auto pb-24">
+      <PrintReportHeader
+        title={`vs ${match.opponentName}`}
+        subtitle="Match Report"
+        details={[
+          match.matchType,
+          matchDate,
+          match.result ? `Result: ${match.result}` : 'Result: Open',
+          `Printed ${printedDate}`,
+        ]}
+      />
+
       <header className="flex items-center justify-between mb-8">
         <button onClick={() => navigate('/history')} className="print-hide text-brand-text-secondary hover:text-brand-text">
           <ArrowLeft size={24} />
@@ -482,6 +513,108 @@ const MatchDetail: React.FC = () => {
                 </p>
               )}
             </div>
+
+            <section className="print-only print-player-table hidden rounded-3xl border border-brand-gray/10 bg-brand-gray/5 p-6">
+              <h3 className="mb-4 text-sm font-bold uppercase tracking-widest text-brand-text-secondary">Complete Player Skill Tables</h3>
+
+              {reportStats.playerServing.length > 0 && (
+                <div className="mb-5">
+                  <h4 className="mb-2 text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">Serving</h4>
+                  <table className="w-full text-left text-xs">
+                    <thead className="text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">
+                      <tr>
+                        <th className="px-3 py-2">Player</th>
+                        <th className="px-3 py-2 text-right">Att</th>
+                        <th className="px-3 py-2 text-right">Ace</th>
+                        <th className="px-3 py-2 text-right">Err</th>
+                        <th className="px-3 py-2 text-right">KO</th>
+                        <th className="px-3 py-2 text-right">In%</th>
+                        <th className="px-3 py-2 text-right">KO%</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reportStats.playerServing.map(player => (
+                        <tr key={player.playerId} className="border-t border-brand-gray/10 font-bold">
+                          <td className="px-3 py-2">#{player.jersey} {player.name}</td>
+                          <td className="px-3 py-2 text-right">{player.attempts}</td>
+                          <td className="px-3 py-2 text-right text-brand-green">{player.aces}</td>
+                          <td className="px-3 py-2 text-right text-brand-red">{player.errors}</td>
+                          <td className="px-3 py-2 text-right text-brand-teal">{player.ko}</td>
+                          <td className="px-3 py-2 text-right text-brand-green">{player.servePct}%</td>
+                          <td className="px-3 py-2 text-right text-brand-teal">{player.koPct}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {reportStats.playerReceiving.length > 0 && (
+                <div className="mb-5">
+                  <h4 className="mb-2 text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">Receiving</h4>
+                  <table className="w-full text-left text-xs">
+                    <thead className="text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">
+                      <tr>
+                        <th className="px-3 py-2">Player</th>
+                        <th className="px-3 py-2 text-right">Att</th>
+                        <th className="px-3 py-2 text-right">3s</th>
+                        <th className="px-3 py-2 text-right">2s</th>
+                        <th className="px-3 py-2 text-right">Over</th>
+                        <th className="px-3 py-2 text-right">Err</th>
+                        <th className="px-3 py-2 text-right">Avg</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reportStats.playerReceiving.map(player => (
+                        <tr key={player.playerId} className="border-t border-brand-gray/10 font-bold">
+                          <td className="px-3 py-2">#{player.jersey} {player.name}</td>
+                          <td className="px-3 py-2 text-right">{player.attempts}</td>
+                          <td className="px-3 py-2 text-right text-brand-green">{player.inSystem}</td>
+                          <td className="px-3 py-2 text-right text-brand-teal">{player.outOfSystem}</td>
+                          <td className="px-3 py-2 text-right text-brand-amber">{player.overpass}</td>
+                          <td className="px-3 py-2 text-right text-brand-red">{player.errors}</td>
+                          <td className="px-3 py-2 text-right text-brand-teal">{player.score.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {reportStats.playerAttacking.length > 0 && (
+                <div>
+                  <h4 className="mb-2 text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">Kill Report</h4>
+                  <table className="w-full text-left text-xs">
+                    <thead className="text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">
+                      <tr>
+                        <th className="px-3 py-2">Player</th>
+                        <th className="px-3 py-2 text-right">Kills</th>
+                        <th className="px-3 py-2 text-right">Err</th>
+                        <th className="px-3 py-2 text-right">Att</th>
+                        <th className="px-3 py-2 text-right">Net</th>
+                        <th className="px-3 py-2 text-right">K%</th>
+                        <th className="px-3 py-2 text-right">Err%</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reportStats.playerAttacking.map(player => (
+                        <tr key={player.playerId} className="border-t border-brand-gray/10 font-bold">
+                          <td className="px-3 py-2">#{player.jersey} {player.name}</td>
+                          <td className="px-3 py-2 text-right text-brand-green">{player.kills}</td>
+                          <td className="px-3 py-2 text-right text-brand-red">{player.errors}</td>
+                          <td className="px-3 py-2 text-right">{player.attempts}</td>
+                          <td className={`px-3 py-2 text-right ${player.net >= 0 ? 'text-brand-teal' : 'text-brand-red'}`}>
+                            {player.net >= 0 ? '+' : ''}{player.net}
+                          </td>
+                          <td className="px-3 py-2 text-right text-brand-green">{player.killPct}%</td>
+                          <td className="px-3 py-2 text-right text-brand-red">{player.errorPct}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
 
             {/* Key Leaders */}
             <div className="grid grid-cols-2 gap-4">

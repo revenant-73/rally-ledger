@@ -30,6 +30,7 @@ All notable changes to this project are documented here. Format loosely follows 
 - Expanded Gift Context rotation reporting to show earned points, gifted points, and net point balance by rotation.
 - Added roster player editing for name, jersey number, and position with the same team-management authorization used by player deletion.
 - Added a filtered rally log to individual match reports with set, player, outcome, classification, serving-side, and rotation filters.
+- Added richer print/save-to-PDF report layouts with paper headers, print metadata, and complete player stat tables that print even when expandable on-screen sections are collapsed.
 
 ### Fixed
 - Fixed serve reporting for one-tap ACE/ERR entries by persisting inferred serve results on new rallies and inferring serve aces/errors from older outcome-only rally rows in reports and dashboards.

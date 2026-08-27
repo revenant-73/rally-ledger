@@ -390,6 +390,24 @@ const SeasonTrendCharts: React.FC<{ rows: MatchTrendRow[] }> = ({ rows }) => (
   </section>
 );
 
+const PrintReportHeader: React.FC<{
+  title: string;
+  subtitle: string;
+  details: string[];
+}> = ({ title, subtitle, details }) => (
+  <div className="print-only print-report-header hidden">
+    <div>
+      <p className="print-report-kicker">{subtitle}</p>
+      <h1 className="print-report-title">{title}</h1>
+    </div>
+    <div className="print-report-meta">
+      {details.map(detail => (
+        <p key={detail}>{detail}</p>
+      ))}
+    </div>
+  </div>
+);
+
 const Reports: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -661,10 +679,32 @@ const Reports: React.FC = () => {
   const filtersActive = activeFilterCount > 0;
   const totalMatches = reportData?.matches.length ?? 0;
   const visibleMatches = filteredReportData?.matches.length ?? 0;
+  const printScope = filtersActive
+    ? `Filtered: ${visibleMatches} of ${totalMatches} matches`
+    : `${visibleMatches} matches`;
+  const printFilterDetails = [
+    startDate ? `From ${startDate}` : '',
+    endDate ? `To ${endDate}` : '',
+    matchTypeFilter !== 'all' ? `Type: ${matchTypeFilter}` : '',
+    opponentFilter !== 'all' ? `Opponent: ${opponentFilter}` : '',
+    resultFilter !== 'all' ? `Result: ${resultFilter}` : '',
+  ].filter(Boolean);
+  const printDetails = [
+    selectedTeam ? `${selectedTeam.name} - ${selectedTeam.season}` : 'No roster selected',
+    printScope,
+    ...printFilterDetails,
+    `Printed ${new Date().toLocaleDateString()}`,
+  ];
 
   return (
     <div className="print-report min-h-screen bg-brand-bg px-4 py-6 text-brand-text md:px-8">
       <div className="mx-auto max-w-6xl pb-24">
+        <PrintReportHeader
+          title="Season Report"
+          subtitle="Rally Ledger"
+          details={printDetails}
+        />
+
         <header className="mb-6 flex items-start justify-between gap-3">
           <button
             onClick={() => navigate('/')}
@@ -1129,6 +1169,38 @@ const Reports: React.FC = () => {
                     </table>
                   </div>
                 )}
+                <div className="print-only print-player-table hidden">
+                  <table className="w-full min-w-[520px] text-left text-xs">
+                    <thead className="text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">
+                      <tr>
+                        <th className="px-3 py-3">Player</th>
+                        <th className="px-3 py-3 text-right">Att</th>
+                        <th className="px-3 py-3 text-right">Ace</th>
+                        <th className="px-3 py-3 text-right">Err</th>
+                        <th className="px-3 py-3 text-right">InSys</th>
+                        <th className="px-3 py-3 text-right">OOS</th>
+                        <th className="px-3 py-3 text-right">KO</th>
+                        <th className="px-3 py-3 text-right">In%</th>
+                        <th className="px-3 py-3 text-right">KO%</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allServingRows.map(player => (
+                        <tr key={player.playerId} className="border-t border-brand-gray/10 font-bold">
+                          <td className="px-3 py-3">#{player.jersey} {player.name}</td>
+                          <td className="px-3 py-3 text-right">{player.attempts}</td>
+                          <td className="px-3 py-3 text-right text-brand-green">{player.aces}</td>
+                          <td className="px-3 py-3 text-right text-brand-red">{player.errors}</td>
+                          <td className="px-3 py-3 text-right">{player.inSystem}</td>
+                          <td className="px-3 py-3 text-right">{player.outOfSystem}</td>
+                          <td className="px-3 py-3 text-right text-brand-teal">{player.ko}</td>
+                          <td className="px-3 py-3 text-right text-brand-green">{pct(player.servePct)}</td>
+                          <td className="px-3 py-3 text-right text-brand-teal">{pct(player.koPct)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </Leaderboard>
 
               <Leaderboard title="Receiving Leaders" icon={<Target size={18} />} emptyText="No receiving attempts tracked.">
@@ -1193,6 +1265,34 @@ const Reports: React.FC = () => {
                     </table>
                   </div>
                 )}
+                <div className="print-only print-player-table hidden">
+                  <table className="w-full min-w-[500px] text-left text-xs">
+                    <thead className="text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">
+                      <tr>
+                        <th className="px-3 py-3">Player</th>
+                        <th className="px-3 py-3 text-right">Att</th>
+                        <th className="px-3 py-3 text-right">3s</th>
+                        <th className="px-3 py-3 text-right">2s</th>
+                        <th className="px-3 py-3 text-right">Over</th>
+                        <th className="px-3 py-3 text-right">Err</th>
+                        <th className="px-3 py-3 text-right">Avg</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allReceivingRows.map(player => (
+                        <tr key={player.playerId} className="border-t border-brand-gray/10 font-bold">
+                          <td className="px-3 py-3">#{player.jersey} {player.name}</td>
+                          <td className="px-3 py-3 text-right">{player.attempts}</td>
+                          <td className="px-3 py-3 text-right text-brand-green">{player.inSystem}</td>
+                          <td className="px-3 py-3 text-right text-brand-teal">{player.outOfSystem}</td>
+                          <td className="px-3 py-3 text-right text-brand-amber">{player.overpass}</td>
+                          <td className="px-3 py-3 text-right text-brand-red">{player.errors}</td>
+                          <td className={`px-3 py-3 text-right ${scoreTone(player.score, 2.3, 1.9)}`}>{player.score.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </Leaderboard>
             </div>
 
@@ -1266,6 +1366,36 @@ const Reports: React.FC = () => {
                   </table>
                 </div>
               )}
+              <div className="print-only print-player-table hidden">
+                <table className="w-full min-w-[560px] text-left text-xs">
+                  <thead className="text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">
+                    <tr>
+                      <th className="px-3 py-3">Player</th>
+                      <th className="px-3 py-3 text-right">Kills</th>
+                      <th className="px-3 py-3 text-right">Err</th>
+                      <th className="px-3 py-3 text-right">Att</th>
+                      <th className="px-3 py-3 text-right">Net</th>
+                      <th className="px-3 py-3 text-right">K%</th>
+                      <th className="px-3 py-3 text-right">Err%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allAttackingRows.map(player => (
+                      <tr key={player.playerId} className="border-t border-brand-gray/10 font-bold">
+                        <td className="px-3 py-3">#{player.jersey} {player.name}</td>
+                        <td className="px-3 py-3 text-right text-brand-green">{player.kills}</td>
+                        <td className="px-3 py-3 text-right text-brand-red">{player.errors}</td>
+                        <td className="px-3 py-3 text-right">{player.attempts}</td>
+                        <td className={`px-3 py-3 text-right ${player.net >= 0 ? 'text-brand-teal' : 'text-brand-red'}`}>
+                          {player.net >= 0 ? '+' : ''}{player.net}
+                        </td>
+                        <td className="px-3 py-3 text-right text-brand-green">{pct(player.killPct)}</td>
+                        <td className="px-3 py-3 text-right text-brand-red">{pct(player.errorPct)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </Leaderboard>
 
             <SeasonTrendCharts rows={stats.matchRows} />
