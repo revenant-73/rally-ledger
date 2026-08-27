@@ -1,6 +1,6 @@
 import React from 'react';
 import { AlertTriangle } from 'lucide-react';
-import type { GiftContextReport, GiftContextRow } from '../../utils/reportStats';
+import type { GiftContextReport, GiftContextRow, RotationPointRow } from '../../utils/reportStats';
 
 interface GiftContextCardProps {
   giftContext: GiftContextReport;
@@ -32,6 +32,47 @@ const ContextList: React.FC<{
     ) : (
       <p className="text-sm font-semibold text-brand-text-secondary">{emptyText}</p>
     )}
+  </div>
+);
+
+const RotationPointTable: React.FC<{
+  rows: RotationPointRow[];
+}> = ({ rows }) => (
+  <div className="rounded-2xl border border-brand-gray/10 bg-brand-bg p-4 lg:col-span-2">
+    <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">Rotation Point Balance</p>
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[420px] text-left">
+        <thead>
+          <tr className="border-b border-brand-gray/10 text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">
+            <th className="pb-2">Rotation</th>
+            <th className="pb-2 text-right">Earned</th>
+            <th className="pb-2 text-right">Gifted</th>
+            <th className="pb-2 text-right">Net</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(row => (
+            <tr key={row.rotation} className="border-b border-brand-gray/10 last:border-0">
+              <td className="py-3 text-sm font-black text-brand-text">{row.label}</td>
+              <td className="py-3 text-right">
+                <p className="text-sm font-black text-brand-green">{row.earned}</p>
+                <p className="text-[10px] font-bold uppercase text-brand-text-secondary">{row.earnedPct}%</p>
+              </td>
+              <td className="py-3 text-right">
+                <p className="text-sm font-black text-brand-red">{row.gifted}</p>
+                <p className="text-[10px] font-bold uppercase text-brand-text-secondary">{row.giftedPct}%</p>
+              </td>
+              <td className="py-3 text-right">
+                <p className={`text-sm font-black ${row.net >= 0 ? 'text-brand-green' : 'text-brand-red'}`}>
+                  {row.net >= 0 ? '+' : ''}{row.net}
+                </p>
+                <p className="text-[10px] font-bold uppercase text-brand-text-secondary">{row.total} pts</p>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   </div>
 );
 
@@ -69,8 +110,8 @@ const GiftContextCard: React.FC<GiftContextCardProps> = ({
       <ContextList title="Serving State" rows={giftContext.byServingState} emptyText="No serving-state context yet." />
       <ContextList title="Score Phase" rows={giftContext.byScorePhase} emptyText="No score-phase context yet." />
       <ContextList title="Score State" rows={giftContext.byScoreState} emptyText="No score-state context yet." />
-      {giftContext.byRotation.length > 0 && (
-        <ContextList title="Rotation" rows={giftContext.byRotation} emptyText="No rotation context yet." />
+      {giftContext.rotationPoints.length > 0 && (
+        <RotationPointTable rows={giftContext.rotationPoints} />
       )}
     </div>
   </section>

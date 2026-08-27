@@ -134,6 +134,9 @@ const stats: SeasonReportStats = {
     byRotation: [
       { label: 'Rotation 2', count: 3, pct: 75, detail: 'Current rotation when rally was entered' },
     ],
+    rotationPoints: [
+      { rotation: 2, label: 'Rotation 2', earned: 5, gifted: 3, net: 2, total: 8, earnedPct: 63, giftedPct: 38 },
+    ],
     practiceCue: 'Recreate serve error / while serving / late set situations in practice.',
   },
   setReports: [],
@@ -197,8 +200,10 @@ describe('report export', () => {
     expect(summary).toContain('Set 1: 25-20 Win (Us +8/-4, Opp +6/-7)');
     expect(summary).toContain('Team Gift Context');
     expect(summary).toContain('Serve Error: 2 (50%)');
-    expect(giftCsv).toContain('Context,Label,Count,Percent,Detail');
-    expect(giftCsv).toContain('Error Type,Serve Error,2,50,');
+    expect(summary).toContain('Rotation 2: +5/-3 (+2 net)');
+    expect(giftCsv).toContain('Context,Label,Count,Percent,Detail,Earned,Gifted,Net,Total');
+    expect(giftCsv).toContain('Error Type,Serve Error,2,50,,,,,');
+    expect(giftCsv).toContain('Rotation Balance,Rotation 2,8,,Earned and gifted point outcomes by rotation,5,3,2,8');
     expect(setCsv).toContain('Set,Score,Result,Our Earned,Our Gifted,Opponent Earned,Opponent Gifted,Serve %,Serve KO %,Pass Score');
     expect(setCsv).toContain('1,25-20,Win,8,4,6,7,88,50,2.1');
   });
@@ -214,6 +219,7 @@ describe('report export', () => {
     expect(summary).toContain('#12 Mia Stone: 2 gifted, 1 earned (-1)');
     expect(summary).toContain('Team Gift Context');
     expect(summary).toContain('Practice cue: Recreate serve error / while serving / late set situations in practice.');
+    expect(summary).toContain('Rotation 2: +5/-3 (+2 net)');
     expect(summary).toContain('8/20/2026 vs Liberty: Win');
     expect(summary).toContain('4 kills/1 errors');
   });
@@ -236,7 +242,8 @@ describe('report export', () => {
     expect(files[0].contents).toContain('Practice focus,Maintain pressure.');
     expect(files[1].contents).toContain('8/20/2026,Liberty,Win,8,+5/-2,90,45,2.3,4,1,3');
     expect(files[2].contents).toContain('07,Avery Nguyen,8,2,1,2,4,88,50,0,0,0,0,0,0,4,1,3,80,20,6,2,4');
-    expect(files[3].contents).toContain('Error Type,Serve Error,2,50,');
+    expect(files[3].contents).toContain('Error Type,Serve Error,2,50,,,,,');
+    expect(files[3].contents).toContain('Rotation Balance,Rotation 2,8,,Earned and gifted point outcomes by rotation,5,3,2,8');
     expect(files[4].contents).toContain('07,Avery Nguyen,6,2,4,8');
     expect(files[5].contents).toContain('07,Avery Nguyen,8,2,1,3,2,4,88,50');
     expect(files[7].contents).toContain('07,Avery Nguyen,4,1,5,3,80,20');

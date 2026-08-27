@@ -26,6 +26,7 @@ All notable changes to this project are documented here. Format loosely follows 
 - Added a device-local Bright Gym Mode toggle in live Match Actions for a lighter, higher-contrast live screen in bright gyms.
 - Added a device-local Scorer Focus Mode toggle that prioritizes the court and rally-entry controls while keeping lower-priority tools and score corrections in Match Actions.
 - Added a team-level Gift Context report for match and season reports that groups unforced-error gifts by error type, serving state, score phase, score state, and rotation when available, with text/CSV export coverage.
+- Expanded Gift Context rotation reporting to show earned points, gifted points, and net point balance by rotation.
 - Added roster player editing for name, jersey number, and position with the same team-management authorization used by player deletion.
 
 ### Fixed

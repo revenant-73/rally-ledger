@@ -150,6 +150,26 @@ describe('report stats', () => {
         classification: 'Gifted',
         metadata: { rotation: 5 },
       }),
+      rally({
+        rallyNumber: 4,
+        scoreBeforeUs: 21,
+        scoreBeforeOpponent: 22,
+        pointWinner: 'Us',
+        servingTeam: 'Us',
+        outcomeType: 'Kill',
+        classification: 'Earned',
+        metadata: { rotation: 4 },
+      }),
+      rally({
+        rallyNumber: 5,
+        scoreBeforeUs: 22,
+        scoreBeforeOpponent: 22,
+        pointWinner: 'Us',
+        servingTeam: 'Us',
+        outcomeType: 'Ace',
+        classification: 'Earned',
+        metadata: { rotation: 4 },
+      }),
     ], players, [sets[0]]);
 
     expect(stats.giftContext.total).toBe(3);
@@ -158,6 +178,11 @@ describe('report stats', () => {
     expect(stats.giftContext.byScorePhase[0]).toMatchObject({ label: 'Late set', count: 2, pct: 67 });
     expect(stats.giftContext.byScoreState[0]).toMatchObject({ label: 'Trailing', count: 2, pct: 67 });
     expect(stats.giftContext.byRotation[0]).toMatchObject({ label: 'Rotation 2', count: 2, pct: 67 });
+    expect(stats.giftContext.rotationPoints).toEqual([
+      expect.objectContaining({ label: 'Rotation 2', earned: 0, gifted: 2, net: -2, total: 2 }),
+      expect.objectContaining({ label: 'Rotation 4', earned: 2, gifted: 0, net: 2, total: 2 }),
+      expect.objectContaining({ label: 'Rotation 5', earned: 0, gifted: 1, net: -1, total: 1 }),
+    ]);
     expect(stats.giftContext.practiceCue).toContain('Attack Error');
   });
 

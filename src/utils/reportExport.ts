@@ -59,14 +59,33 @@ const giftContextLines = (stats: ReportStats) => [
   ...(stats.giftContext.byType.length > 0
     ? stats.giftContext.byType.map(row => `${row.label}: ${row.count} (${row.pct}%)`)
     : ['No team gifts tracked.']),
+  ...(stats.giftContext.rotationPoints.length > 0
+    ? [
+      'Rotation point balance:',
+      ...stats.giftContext.rotationPoints.map(row => (
+        `${row.label}: +${row.earned}/-${row.gifted} (${row.net >= 0 ? '+' : ''}${row.net} net)`
+      )),
+    ]
+    : []),
 ];
 
 const giftContextCsvRows = (stats: ReportStats) => [
-  ...stats.giftContext.byType.map(row => ['Error Type', row.label, row.count, row.pct, row.detail ?? '']),
-  ...stats.giftContext.byServingState.map(row => ['Serving State', row.label, row.count, row.pct, row.detail ?? '']),
-  ...stats.giftContext.byScorePhase.map(row => ['Score Phase', row.label, row.count, row.pct, row.detail ?? '']),
-  ...stats.giftContext.byScoreState.map(row => ['Score State', row.label, row.count, row.pct, row.detail ?? '']),
-  ...stats.giftContext.byRotation.map(row => ['Rotation', row.label, row.count, row.pct, row.detail ?? '']),
+  ...stats.giftContext.byType.map(row => ['Error Type', row.label, row.count, row.pct, row.detail ?? '', '', '', '', '']),
+  ...stats.giftContext.byServingState.map(row => ['Serving State', row.label, row.count, row.pct, row.detail ?? '', '', '', '', '']),
+  ...stats.giftContext.byScorePhase.map(row => ['Score Phase', row.label, row.count, row.pct, row.detail ?? '', '', '', '', '']),
+  ...stats.giftContext.byScoreState.map(row => ['Score State', row.label, row.count, row.pct, row.detail ?? '', '', '', '', '']),
+  ...stats.giftContext.byRotation.map(row => ['Rotation Gifts', row.label, row.count, row.pct, row.detail ?? '', '', row.count, '', row.count]),
+  ...stats.giftContext.rotationPoints.map(row => [
+    'Rotation Balance',
+    row.label,
+    row.total,
+    '',
+    'Earned and gifted point outcomes by rotation',
+    row.earned,
+    row.gifted,
+    row.net,
+    row.total,
+  ]),
 ];
 
 export const buildMatchTextSummary = (match: Match, stats: ReportStats) => {
@@ -226,7 +245,7 @@ export const buildMatchCsvFiles = (
     {
       filename: `${fileSafe(match.opponentName)}-gift-context.csv`,
       contents: toCsv(
-        ['Context', 'Label', 'Count', 'Percent', 'Detail'],
+        ['Context', 'Label', 'Count', 'Percent', 'Detail', 'Earned', 'Gifted', 'Net', 'Total'],
         giftContextCsvRows(stats)
       ),
     },
@@ -545,7 +564,7 @@ export const buildSeasonCsvFiles = (team: Team, stats: SeasonReportStats) => {
     {
       filename: `${baseName}-gift-context.csv`,
       contents: toCsv(
-        ['Context', 'Label', 'Count', 'Percent', 'Detail'],
+        ['Context', 'Label', 'Count', 'Percent', 'Detail', 'Earned', 'Gifted', 'Net', 'Total'],
         giftContextCsvRows(stats)
       ),
     },

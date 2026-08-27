@@ -56,6 +56,17 @@ export interface GiftContextRow {
   detail?: string;
 }
 
+export interface RotationPointRow {
+  rotation: number;
+  label: string;
+  earned: number;
+  gifted: number;
+  net: number;
+  total: number;
+  earnedPct: number;
+  giftedPct: number;
+}
+
 export interface GiftContextReport {
   total: number;
   byType: GiftContextRow[];
@@ -63,6 +74,7 @@ export interface GiftContextReport {
   byScorePhase: GiftContextRow[];
   byScoreState: GiftContextRow[];
   byRotation: GiftContextRow[];
+  rotationPoints: RotationPointRow[];
   practiceCue: string;
 }
 
@@ -205,6 +217,24 @@ const buildGiftContextReport = (rallies: RallyEvent[]): GiftContextReport => {
   const byScorePhase = new Map<string, { count: number; detail?: string }>();
   const byScoreState = new Map<string, { count: number; detail?: string }>();
   const byRotation = new Map<string, { count: number; detail?: string }>();
+  const rotationPoints = new Map<number, { earned: number; gifted: number }>();
+
+  rallies.forEach((rally) => {
+    const rotation = typeof rally.metadata?.rotation === 'number' ? rally.metadata.rotation : undefined;
+    if (!rotation) return;
+
+    const current = rotationPoints.get(rotation) ?? { earned: 0, gifted: 0 };
+    if (rally.pointWinner === 'Us' && rally.classification === 'Earned') {
+      current.earned += 1;
+    }
+    if (rally.pointWinner === 'Opponent' && rally.classification === 'Gifted') {
+      current.gifted += 1;
+    }
+
+    if (current.earned > 0 || current.gifted > 0) {
+      rotationPoints.set(rotation, current);
+    }
+  });
 
   giftRallies.forEach((rally) => {
     incrementContext(byType, rally.outcomeType);
@@ -231,6 +261,21 @@ const buildGiftContextReport = (rallies: RallyEvent[]): GiftContextReport => {
   const phaseRows = rowsFromCounts(byScorePhase, total);
   const scoreRows = rowsFromCounts(byScoreState, total);
   const rotationRows = rowsFromCounts(byRotation, total);
+  const rotationPointRows = Array.from(rotationPoints.entries())
+    .map(([rotation, row]) => {
+      const rowTotal = row.earned + row.gifted;
+      return {
+        rotation,
+        label: `Rotation ${rotation}`,
+        earned: row.earned,
+        gifted: row.gifted,
+        net: row.earned - row.gifted,
+        total: rowTotal,
+        earnedPct: pct(row.earned, rowTotal),
+        giftedPct: pct(row.gifted, rowTotal),
+      };
+    })
+    .sort((a, b) => a.rotation - b.rotation);
   const practiceParts = [
     typeRows[0]?.label,
     stateRows[0]?.label?.toLowerCase(),
@@ -245,6 +290,7 @@ const buildGiftContextReport = (rallies: RallyEvent[]): GiftContextReport => {
     byScorePhase: phaseRows,
     byScoreState: scoreRows,
     byRotation: rotationRows,
+    rotationPoints: rotationPointRows,
     practiceCue: practiceParts.length > 0
       ? `Recreate ${practiceParts.join(' / ')} situations in practice.`
       : 'No team gifts tracked yet.',
