@@ -24,7 +24,7 @@ The existing match detail screen should become the primary post-match report. It
 - Kill report: kills, attack errors, kill/error net, kill percentage, and player attacking leaders.
 - Set-by-set breakdown: final score, earned/gifted split, serve pressure, and passing score.
 - Player impact: top earners, top gifters, serve leaders, and pass leaders.
-- Rally log: a later enhancement with filters by set, player, outcome type, earned/gifted, and serve/receive.
+- Done: Rally log with filters by set, player, outcome type, earned/gifted/neutral classification, serving side, and rotation.
 
 ## Downloadable Reports
 
@@ -110,7 +110,8 @@ Completed report filters:
 11. Done: add kill reports with kills, attack errors, kill/error net, individual-match cards, match-trend columns, all-player season rows, and CSV export files.
 12. Done: add a stats audit document covering report formulas, live dashboard formulas, and coverage boundaries.
 13. Done: add cumulative player point earner/gifter leaderboards and point-leaders CSV exports.
-14. Add richer dedicated print/export report layouts if coaches need more polished packets later.
+14. Done: add filtered rally logs to individual match reports for set, player, outcome, classification, serving side, and rotation drill-down.
+15. Add richer dedicated print/export report layouts if coaches need more polished packets later.
 
 ## Validation
 

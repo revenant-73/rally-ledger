@@ -69,7 +69,7 @@ Known limitation: live dashboard set summaries infer set order from available ac
 
 Current report surfaces include:
 
-- Individual match page: match info, sets, earned/gifted balance, team gift context, serve report, receive report, kill report, top earner, and top gifter.
+- Individual match page: match info, sets, earned/gifted balance, team gift context, serve report, receive report, kill report, top earner, top gifter, and filtered rally log.
 - Individual match text/CSV exports: summary, serving, receiving, kill report, team gift context, set breakdown, and rally log.
 - Season Reports page: season snapshot, skill snapshot, team gift context, point earners/gifters, serving leaders, receiving leaders, kill report, all-player tables, and match trends.
 - Season CSV package: summary, match trends, player totals, team gift context, point leaders, serving, receiving, kill report, opponent breakdown, and practice plan.

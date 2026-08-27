@@ -11,6 +11,7 @@ import { apiPost } from '../utils/api';
 import { calculateReportStats } from '../utils/reportStats';
 import { buildMatchCsvFiles, buildMatchTextSummary, downloadTextFile, fileSafe } from '../utils/reportExport';
 import GiftContextCard from '../components/reports/GiftContextCard';
+import RallyLogCard from '../components/reports/RallyLogCard';
 
 const MatchDetail: React.FC = () => {
   const { matchId } = useParams<{ matchId: string }>();
@@ -508,6 +509,10 @@ const MatchDetail: React.FC = () => {
               </div>
             </div>
           </>
+        )}
+
+        {rallies.length > 0 && (
+          <RallyLogCard rallies={rallies} players={players} sets={sets} />
         )}
       </div>
     </div>

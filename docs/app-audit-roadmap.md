@@ -89,5 +89,5 @@ Last updated: 2026-08-09
 - Done: coaches/admins can delete individual matches through a server-side cascade that removes related sets and rallies from history and reports.
 - Done: serve reports infer one-tap ACE/ERR entries from outcome-only rally rows so older tracked scrimmages are counted correctly.
 - Remaining: consider cookie-backed sessions and durable/distributed rate limiting before public launch.
-- Remaining: add filtered rally logs and richer season trend charts.
+- Remaining: add richer season trend charts.
 

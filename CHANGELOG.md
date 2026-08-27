@@ -28,6 +28,7 @@ All notable changes to this project are documented here. Format loosely follows 
 - Added a team-level Gift Context report for match and season reports that groups unforced-error gifts by error type, serving state, score phase, score state, and rotation when available, with text/CSV export coverage.
 - Expanded Gift Context rotation reporting to show earned points, gifted points, and net point balance by rotation.
 - Added roster player editing for name, jersey number, and position with the same team-management authorization used by player deletion.
+- Added a filtered rally log to individual match reports with set, player, outcome, classification, serving-side, and rotation filters.
 
 ### Fixed
 - Fixed serve reporting for one-tap ACE/ERR entries by persisting inferred serve results on new rallies and inferring serve aces/errors from older outcome-only rally rows in reports and dashboards.
