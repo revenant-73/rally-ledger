@@ -76,7 +76,7 @@ Suggested filters:
 Core season report sections:
 
 - Season snapshot: matches played, record, sets won/lost, rallies tracked, earned/gifted balance.
-- Team trends: earned points per match, gifted points per match, serve-in percentage, serve KO percentage, and pass score by match.
+- Done: visual team trend charts for earned/gifted points, serve-in percentage, serve KO percentage, pass score, and kill/error net by match.
 - Serve season report: team serve percentage, KO percentage, aces, errors, pressure serves, and player leaderboard.
 - Receive season report: team pass score, 3-pass/2-pass/overpass/error counts, and player leaderboard.
 - Kill season report: team kills, attack errors, kill/error net, kill percentage, and player leaderboard.
@@ -111,7 +111,8 @@ Completed report filters:
 12. Done: add a stats audit document covering report formulas, live dashboard formulas, and coverage boundaries.
 13. Done: add cumulative player point earner/gifter leaderboards and point-leaders CSV exports.
 14. Done: add filtered rally logs to individual match reports for set, player, outcome, classification, serving side, and rotation drill-down.
-15. Add richer dedicated print/export report layouts if coaches need more polished packets later.
+15. Done: add richer season trend charts to the Reports page using existing match trend data.
+16. Add richer dedicated print/export report layouts if coaches need more polished packets later.
 
 ## Validation
 

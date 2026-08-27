@@ -36,6 +36,13 @@ type SeasonReportResponse = {
 };
 
 type PointEarnerSort = 'earned' | 'net';
+type MatchTrendRow = SeasonReportStats['matchRows'][number];
+type TrendSeries = {
+  label: string;
+  color: string;
+  values: number[];
+  format: (value: number) => string;
+};
 
 const formatDate = (date: string) => {
   const [year, month, day] = date.split('T')[0]?.split('-').map(Number) ?? [];
@@ -47,6 +54,29 @@ const formatDate = (date: string) => {
 const pct = (value: number) => `${value}%`;
 
 const dateKey = (date: string) => date.split('T')[0] ?? date;
+
+const parseEarnedGifted = (value: string) => {
+  const match = value.match(/\+?(-?\d+)\/-?(\d+)/);
+  return {
+    earned: match ? Number(match[1]) : 0,
+    gifted: match ? Number(match[2]) : 0,
+  };
+};
+
+const chartWidth = (matchCount: number) => matchCount <= 4 ? '100%' : `${matchCount * 76}px`;
+
+const linePoints = (values: number[], min: number, max: number, width: number, height: number, padding = 18) => {
+  const range = Math.max(max - min, 1);
+  return values
+    .map((value, index) => {
+      const x = values.length === 1
+        ? width / 2
+        : padding + (index / (values.length - 1)) * (width - padding * 2);
+      const y = padding + ((max - value) / range) * (height - padding * 2);
+      return `${x},${y}`;
+    })
+    .join(' ');
+};
 
 const playerName = (player: Player) => `${player.firstName} ${player.lastName}`.trim();
 
@@ -133,6 +163,232 @@ const Leaderboard: React.FC<{
     </section>
   );
 };
+
+const TrendLegend: React.FC<{ label: string; colorClass: string }> = ({ label, colorClass }) => (
+  <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-brand-text-secondary">
+    <span className={`h-2 w-2 rounded-full ${colorClass}`} />
+    {label}
+  </span>
+);
+
+const TrendLineChart: React.FC<{
+  rows: MatchTrendRow[];
+  series: TrendSeries[];
+  min?: number;
+  max?: number;
+}> = ({ rows, series, min, max }) => {
+  const width = 640;
+  const height = 172;
+  const allValues = series.flatMap(item => item.values);
+  const chartMin = min ?? Math.min(0, ...allValues);
+  const chartMax = max ?? Math.max(1, ...allValues);
+
+  return (
+    <div className="overflow-x-auto">
+      <div className="min-w-full" style={{ width: chartWidth(rows.length) }}>
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          className="h-44 w-full"
+          role="img"
+          aria-label={`${series.map(item => item.label).join(' and ')} by match`}
+          preserveAspectRatio="none"
+        >
+          {[0, 1, 2, 3].map(line => {
+            const y = 18 + line * ((height - 36) / 3);
+            return <line key={line} x1="18" x2={width - 18} y1={y} y2={y} stroke="currentColor" className="text-brand-gray/10" />;
+          })}
+          {series.map(item => (
+            <g key={item.label}>
+              <polyline
+                points={linePoints(item.values, chartMin, chartMax, width, height)}
+                fill="none"
+                stroke={item.color}
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+              />
+              {item.values.map((value, index) => {
+                const point = linePoints([value], chartMin, chartMax, width, height).split(',').map(Number);
+                const x = rows.length === 1 ? width / 2 : 18 + (index / (rows.length - 1)) * (width - 36);
+                const y = point[1];
+                return (
+                  <g key={`${item.label}-${rows[index]?.matchId}`}>
+                    <circle cx={x} cy={y} r="5" fill={item.color} />
+                    {rows.length <= 5 && (
+                      <text x={x} y={Math.max(12, y - 9)} textAnchor="middle" className="fill-brand-text text-[11px] font-black">
+                        {item.format(value)}
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
+            </g>
+          ))}
+        </svg>
+        <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${rows.length}, minmax(64px, 1fr))` }}>
+          {rows.map(row => (
+            <div key={row.matchId} className="min-w-0 border-t border-brand-gray/10 pt-2">
+              <p className="truncate text-[10px] font-black uppercase tracking-wide text-brand-text">vs {row.opponentName}</p>
+              <p className="text-[10px] font-bold uppercase text-brand-text-secondary">{formatDate(row.matchDate)}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const EarnedGiftedBars: React.FC<{ rows: MatchTrendRow[] }> = ({ rows }) => {
+  const values = rows.map(row => parseEarnedGifted(row.earnedGifted));
+  const maxValue = Math.max(1, ...values.flatMap(row => [row.earned, row.gifted]));
+
+  return (
+    <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${rows.length}, minmax(64px, 1fr))` }}>
+      {rows.map((row, index) => {
+        const value = values[index];
+        const earnedHeight = Math.max(8, (value.earned / maxValue) * 112);
+        const giftedHeight = Math.max(8, (value.gifted / maxValue) * 112);
+        return (
+          <div key={row.matchId} className="min-w-0">
+            <div className="flex h-32 items-end justify-center gap-1.5 rounded-2xl border border-brand-gray/10 bg-brand-bg/60 px-2 py-3">
+              <div className="w-5 rounded-t-lg bg-brand-green/90" style={{ height: `${earnedHeight}px` }} title={`Earned ${value.earned}`} />
+              <div className="w-5 rounded-t-lg bg-brand-red/90" style={{ height: `${giftedHeight}px` }} title={`Gifted ${value.gifted}`} />
+            </div>
+            <p className="mt-2 truncate text-[10px] font-black uppercase tracking-wide text-brand-text">vs {row.opponentName}</p>
+            <p className="text-[10px] font-bold uppercase text-brand-text-secondary">{value.earned}/{value.gifted}</p>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const AttackNetBars: React.FC<{ rows: MatchTrendRow[] }> = ({ rows }) => {
+  const maxAbs = Math.max(1, ...rows.map(row => Math.abs(row.attackNet)));
+
+  return (
+    <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${rows.length}, minmax(64px, 1fr))` }}>
+      {rows.map(row => {
+        const isPositive = row.attackNet > 0;
+        const isNegative = row.attackNet < 0;
+        const height = Math.max(row.attackNet === 0 ? 4 : 8, (Math.abs(row.attackNet) / maxAbs) * 54);
+        const barTone = isPositive ? 'bg-brand-green/90' : isNegative ? 'bg-brand-red/90' : 'bg-brand-gray/70';
+        const textTone = isPositive ? 'text-brand-green' : isNegative ? 'text-brand-red' : 'text-brand-text-secondary';
+        return (
+          <div key={row.matchId} className="min-w-0">
+            <div className="relative h-32 rounded-2xl border border-brand-gray/10 bg-brand-bg/60 px-2 py-3">
+              <div className="absolute left-2 right-2 top-1/2 h-px bg-brand-gray/20" />
+              <div className="absolute left-1/2 top-1/2 flex w-9 -translate-x-1/2 flex-col items-center">
+                {isPositive ? (
+                  <div className={`w-8 -translate-y-full rounded-t-lg ${barTone}`} style={{ height: `${height}px` }} />
+                ) : (
+                  <div className={`w-8 rounded-b-lg ${barTone}`} style={{ height: `${height}px` }} />
+                )}
+              </div>
+            </div>
+            <p className="mt-2 truncate text-[10px] font-black uppercase tracking-wide text-brand-text">vs {row.opponentName}</p>
+            <p className={`text-[10px] font-bold uppercase ${textTone}`}>
+              {isPositive ? '+' : ''}{row.attackNet} net
+            </p>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const SeasonTrendCharts: React.FC<{ rows: MatchTrendRow[] }> = ({ rows }) => (
+  <section className="rounded-3xl border border-brand-gray/10 bg-brand-gray/5 p-4 sm:p-5">
+    <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex items-center gap-2">
+        <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-brand-teal/10 text-brand-teal">
+          <BarChart3 size={18} />
+        </div>
+        <div>
+          <h2 className="text-sm font-black uppercase tracking-widest text-brand-text-secondary">Season Trend Charts</h2>
+          <p className="mt-1 text-xs font-bold text-brand-text-secondary">
+            {rows.length === 1 ? 'Single-match baseline for the current filters.' : `${rows.length} matches from the current filters.`}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+      <div className="rounded-2xl border border-brand-gray/10 bg-brand-bg p-3 sm:p-4">
+        <div className="mb-3 flex items-end justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">Point Swing</p>
+            <h3 className="mt-1 text-lg font-black">Earned vs Gifted</h3>
+          </div>
+          <div className="flex gap-3">
+            <TrendLegend label="Earned" colorClass="bg-brand-green" />
+            <TrendLegend label="Gifted" colorClass="bg-brand-red" />
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <div className="min-w-full" style={{ width: chartWidth(rows.length) }}>
+            <EarnedGiftedBars rows={rows} />
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-brand-gray/10 bg-brand-bg p-3 sm:p-4">
+        <div className="mb-3 flex items-end justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">Serve Pressure</p>
+            <h3 className="mt-1 text-lg font-black">In Play and KO</h3>
+          </div>
+          <div className="flex gap-3">
+            <TrendLegend label="In%" colorClass="bg-brand-green" />
+            <TrendLegend label="KO%" colorClass="bg-brand-teal" />
+          </div>
+        </div>
+        <TrendLineChart
+          rows={rows}
+          min={0}
+          max={100}
+          series={[
+            { label: 'Serve in percentage', color: '#22c55e', values: rows.map(row => row.servePct), format: pct },
+            { label: 'Serve KO percentage', color: '#14b8a6', values: rows.map(row => row.serveKoPct), format: pct },
+          ]}
+        />
+      </div>
+
+      <div className="rounded-2xl border border-brand-gray/10 bg-brand-bg p-3 sm:p-4 lg:col-span-2 xl:col-span-1">
+        <div className="mb-3 flex items-end justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">First Ball and Finish</p>
+            <h3 className="mt-1 text-lg font-black">Pass Score / Kill Net</h3>
+          </div>
+          <TrendLegend label="Pass" colorClass="bg-brand-amber" />
+        </div>
+        <TrendLineChart
+          rows={rows}
+          min={0}
+          max={3}
+          series={[
+            { label: 'Pass score', color: '#f59e0b', values: rows.map(row => row.passScore), format: value => value.toFixed(2) },
+          ]}
+        />
+        <div className="mt-4 border-t border-brand-gray/10 pt-4">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">Kill/Error Net</p>
+            <div className="flex gap-3">
+              <TrendLegend label="Positive" colorClass="bg-brand-green" />
+              <TrendLegend label="Negative" colorClass="bg-brand-red" />
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <div className="min-w-full" style={{ width: chartWidth(rows.length) }}>
+              <AttackNetBars rows={rows} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+);
 
 const Reports: React.FC = () => {
   const navigate = useNavigate();
@@ -1011,6 +1267,8 @@ const Reports: React.FC = () => {
                 </div>
               )}
             </Leaderboard>
+
+            <SeasonTrendCharts rows={stats.matchRows} />
 
             <section className="rounded-3xl border border-brand-gray/10 bg-brand-gray/5 p-5">
               <div className="mb-4 flex items-center gap-2">

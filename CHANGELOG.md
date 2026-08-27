@@ -17,6 +17,7 @@ All notable changes to this project are documented here. Format loosely follows 
 - Added an earned/net sort toggle to the cumulative point earners report.
 - Added a stats audit document covering source fields, formulas, live dashboard derivations, and report/export coverage.
 - Added visible individual-match kill performance and match-trend kill/error columns to season reports.
+- Added richer season trend charts to the Reports page for earned/gifted points, serve pressure, pass score, and kill/error net.
 - Added match format setup for best-of-three, best-of-five, two-set scrimmages, and single-set matches, including set target and deciding-set target tracking.
 - Added per-set opponent earned/gifted splits to match reports and set CSV exports so point-source totals are easier to audit.
 - Added a visible `SUB` marker on live court tiles when the current player differs from the starting player for that rotation slot.
