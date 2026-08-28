@@ -47,6 +47,20 @@ body {
     padding-bottom: 0.25rem;
   }
 
+  .live-entry-stack {
+    gap: 0.4rem;
+  }
+
+  .live-entry-stack > button {
+    min-height: 2.75rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .live-entry-secondary-action {
+    margin-top: 0;
+  }
+
   .live-match-actions {
     flex: 0 0 auto;
   }

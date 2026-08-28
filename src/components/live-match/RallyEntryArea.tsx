@@ -162,7 +162,7 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
             </h3>
             <button onClick={onResetEntry} className={`${mutedTextClass} text-xs`}>Reset</button>
           </div>
-          <div className="flex-1 grid grid-cols-1 gap-2">
+          <div className="live-entry-stack flex-1 grid grid-cols-1 gap-2">
             {servingTeam === 'Us' ? (
               <>
                 <button onClick={() => onServeQualityClick('Ace')} className="bg-brand-green/25 border-2 border-brand-green/70 py-4 rounded-xl font-black text-brand-green text-xl shadow-sm active:scale-95 transition-all">ACE</button>
@@ -178,7 +178,7 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
                 <button onClick={() => onReceiveQualityClick('Error')} className="bg-brand-red/25 border-2 border-brand-red/70 py-4 rounded-xl font-black text-brand-red text-xl shadow-sm active:scale-95 transition-all">ACE</button>
                 <button 
                   onClick={() => onCompleteRally('Gifted', 'Us', 'Serve Error', null)} 
-                  className={`mt-1 border-2 py-3.5 rounded-xl font-black text-lg active:scale-95 transition-all flex items-center justify-center gap-2 ${brightGymMode ? 'border-slate-400 bg-slate-100 text-slate-950' : 'border-brand-gray/50 bg-brand-gray/20 text-brand-text'}`}
+                  className={`live-entry-secondary-action mt-1 border-2 py-3.5 rounded-xl font-black text-lg active:scale-95 transition-all flex items-center justify-center gap-2 ${brightGymMode ? 'border-slate-400 bg-slate-100 text-slate-950' : 'border-brand-gray/50 bg-brand-gray/20 text-brand-text'}`}
                 >
                   <X size={18} />
                   OPP SERVE ERR
@@ -240,7 +240,7 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
               else onSetShowReceivePlayerSelection(true);
             }} className={`${mutedTextClass} text-xs`}>Back</button>
           </div>
-          <div className="flex-1 grid grid-cols-1 gap-3">
+          <div className="live-entry-stack flex-1 grid grid-cols-1 gap-3">
             <button
               onClick={() => onPointClick('Us')}
               className="bg-brand-teal text-brand-bg text-2xl font-black rounded-2xl active:scale-[0.96] transition-all flex flex-col items-center justify-center gap-1 py-7 shadow-xl active:shadow-inner"
