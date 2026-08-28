@@ -1,9 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Play } from 'lucide-react';
+import { useMatch } from '../hooks/useMatch';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
+  const { activeMatch } = useMatch();
 
   return (
     <div className="p-6 max-w-lg mx-auto space-y-8">
@@ -21,13 +23,15 @@ const Home: React.FC = () => {
           Start New Match
         </button>
 
-        <button 
-          onClick={() => navigate('/match/live')}
-          className="bg-brand-gray/10 hover:bg-brand-gray/20 border border-brand-teal/30 text-brand-teal font-bold py-6 px-4 rounded-xl flex items-center justify-center gap-3 text-xl transition-all active:scale-[0.98]"
-        >
-          <Play size={28} />
-          Resume Live Match
-        </button>
+        {activeMatch && (
+          <button
+            onClick={() => navigate('/match/live')}
+            className="bg-brand-gray/10 hover:bg-brand-gray/20 border border-brand-teal/30 text-brand-teal font-bold py-6 px-4 rounded-xl flex items-center justify-center gap-3 text-xl transition-all active:scale-[0.98]"
+          >
+            <Play size={28} />
+            Resume Live Match
+          </button>
+        )}
       </div>
     </div>
   );

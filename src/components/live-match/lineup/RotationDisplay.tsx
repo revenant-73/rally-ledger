@@ -55,7 +55,7 @@ const RotationDisplay: React.FC<RotationDisplayProps> = ({
   const positions = [4, 3, 2, 5, 6, 1];
 
   return (
-    <div className={`rounded-xl border p-2 ${brightGymMode ? 'border-slate-300 bg-white shadow-sm' : 'border-brand-gray/40 bg-[#0f1117]'}`}>
+    <div className={`live-court-card rounded-xl border p-2 ${brightGymMode ? 'border-slate-300 bg-white shadow-sm' : 'border-brand-gray/40 bg-[#0f1117]'}`}>
       <div className="flex items-center justify-between mb-1">
         <h4 className="text-[10px] font-black uppercase text-brand-teal tracking-widest">Rotation {currentRotation}</h4>
         <div className="flex items-center gap-2">
@@ -80,7 +80,7 @@ const RotationDisplay: React.FC<RotationDisplayProps> = ({
         </div>
       </div>
       
-      <div className="grid grid-cols-3 gap-1 aspect-[5/2] relative">
+      <div className="live-court-grid grid grid-cols-3 gap-1 aspect-[5/2] relative">
         {/* Net Indicator */}
         <div className="absolute -top-1 left-0 right-0 flex justify-center z-10">
           <div className={`${brightGymMode ? 'bg-slate-400' : 'bg-brand-gray/40'} h-[2px] w-full rounded-full flex items-center justify-center`}>

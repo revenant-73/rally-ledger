@@ -11,6 +11,8 @@ export const useDashboardMetrics = (
   return useMemo(() => {
     if (!activeSet) return null;
 
+    const getPlayerFirstName = (playerId: string) => players.find(player => player.id === playerId)?.firstName || 'Unknown';
+
     // Separate rallies by set context
     const setRallies = rallies.filter(r => r.setId === activeSet.id);
     const matchRallies = rallies; // All rallies in current activeMatch
@@ -64,7 +66,7 @@ export const useDashboardMetrics = (
       .slice(0, 3)
       .map(([pid, count]) => {
         const p = players.find(player => player.id === pid);
-        return p ? { name: p.lastName, count, jersey: p.jerseyNumber } : null;
+        return p ? { name: p.firstName, count, jersey: p.jerseyNumber } : null;
       })
       .filter(Boolean);
 
@@ -73,7 +75,7 @@ export const useDashboardMetrics = (
       .slice(0, 3)
       .map(([pid, count]) => {
         const p = players.find(player => player.id === pid);
-        return p ? { name: p.lastName, count, jersey: p.jerseyNumber } : null;
+        return p ? { name: p.firstName, count, jersey: p.jerseyNumber } : null;
       })
       .filter(Boolean);
 
@@ -95,7 +97,7 @@ export const useDashboardMetrics = (
       .map(([pid, stats]) => {
         const p = players.find(player => player.id === pid);
         return p ? {
-          name: p.lastName,
+          name: p.firstName,
           jersey: p.jerseyNumber,
           koPct: Math.round((stats.kos / stats.total) * 100),
           servePct: Math.round(((stats.total - stats.errors) / stats.total) * 100)
@@ -127,7 +129,7 @@ export const useDashboardMetrics = (
           ? Number(((stats.ace * 0 + stats.overpass * 1 + stats.oos * 2 + stats.is * 3) / stats.total).toFixed(2))
           : 0;
         return p ? {
-          name: p.lastName,
+          name: p.firstName,
           jersey: p.jerseyNumber,
           ace: stats.ace,
           overpass: stats.overpass,
@@ -309,7 +311,7 @@ export const useDashboardMetrics = (
             .sort((a, b) => b[1] - a[1])
             .slice(0, 2)
             .map(([pid, count]) => ({
-              name: players.find(p => p.id === pid)?.lastName || 'Unknown',
+              name: getPlayerFirstName(pid),
               count
             }));
 

@@ -345,7 +345,7 @@ const LiveMatch: React.FC = () => {
   };
 
   return (
-    <div className={`flex h-dvh max-h-dvh flex-col overflow-hidden relative ${brightGymMode ? 'bg-slate-100 text-slate-950' : 'bg-brand-bg text-brand-text'}`}>
+    <div className={`live-match-screen flex h-dvh max-h-dvh flex-col overflow-hidden relative ${brightGymMode ? 'bg-slate-100 text-slate-950' : 'bg-brand-bg text-brand-text'}`}>
       <LiveMatchHeader 
         onBack={() => navigate('/')}
         setNumber={activeSet.setNumber}
@@ -423,20 +423,22 @@ const LiveMatch: React.FC = () => {
         onToggleScorerFocusMode={() => setScorerFocusMode((current) => !current)}
       />
 
-      <LiveMatchScoreboard 
-        ourScore={activeSet.ourScore}
-        opponentScore={activeSet.opponentScore}
-        ourName={matchTeam?.name || 'WE ARE'}
-        opponentName={activeMatch.opponentName}
-        onManualScoreChange={handleManualScoreChange}
-        servingTeam={servingTeam}
-        onToggleServingTeam={toggleServingTeam}
-        brightGymMode={brightGymMode}
-        scorerFocusMode={scorerFocusMode}
-      />
+      <div className="live-match-scoreboard">
+        <LiveMatchScoreboard
+          ourScore={activeSet.ourScore}
+          opponentScore={activeSet.opponentScore}
+          ourName={matchTeam?.name || 'WE ARE'}
+          opponentName={activeMatch.opponentName}
+          onManualScoreChange={handleManualScoreChange}
+          servingTeam={servingTeam}
+          onToggleServingTeam={toggleServingTeam}
+          brightGymMode={brightGymMode}
+          scorerFocusMode={scorerFocusMode}
+        />
+      </div>
 
       {currentLineup ? (
-        <div className="px-3 pb-1">
+        <div className="live-match-court px-3 pb-1">
           <RotationDisplay 
             lineup={currentLineup}
             startingLineup={activeSet.metadata?.startingLineup}
@@ -460,7 +462,7 @@ const LiveMatch: React.FC = () => {
           />
         </div>
       ) : (
-        <div className="px-3 pb-2">
+        <div className="live-match-court px-3 pb-2">
           <button 
             onClick={() => setShowLineupEditor(true)}
             className={`w-full py-2 rounded-xl text-xs font-bold uppercase ${brightGymMode ? 'border border-slate-300 bg-white text-slate-700' : 'border border-brand-gray/10 bg-brand-gray/5 text-brand-text-secondary'}`}
@@ -470,40 +472,42 @@ const LiveMatch: React.FC = () => {
         </div>
       )}
 
-      <RallyEntryArea 
-        servingTeam={servingTeam}
-        serverPlayerId={serverPlayerId}
-        serveResult={serveResult}
-        receiveResult={receiveResult}
-        showReceivePlayerSelection={showReceivePlayerSelection}
-        pointWinner={pointWinner}
-        showPlayerSelection={showPlayerSelection}
-        showClassification={showClassification}
-        players={matchPlayers}
-        positiveOutcomes={positiveOutcomes}
-        errorOutcomes={errorOutcomes}
-        onServerClick={handleServerClick}
-        onServeQualityClick={handleServeQualityClick}
-        onReceiveQualityClick={handleReceiveQualityClick}
-        onReceivePlayerClick={handleReceivePlayerClick}
-        onPointClick={handlePointClick}
-        onPlayerClick={handlePlayerClick}
-        onClassificationClick={handleClassificationClick}
-        onOutcomeClick={handleOutcomeClick}
-        onResetEntry={resetEntry}
-        onCompleteRally={handleCompleteRally}
-        onSetServeResult={setServeResult}
-        onSetShowReceivePlayerSelection={setShowReceivePlayerSelection}
-        onSetReceiveResult={setReceiveResult}
-        onSetPointWinner={setPointWinner}
-        onSetShowPlayerSelection={setShowPlayerSelection}
-        onSetOutcome={setOutcome}
-        onSetServerPlayerId={setServerPlayerId}
-        currentLineup={currentLineup}
-        currentRotation={currentRotation}
-        brightGymMode={brightGymMode}
-        entryLocked={isSavingAction}
-      />
+      <div className="live-match-entry flex min-h-0 flex-1 px-3">
+        <RallyEntryArea
+          servingTeam={servingTeam}
+          serverPlayerId={serverPlayerId}
+          serveResult={serveResult}
+          receiveResult={receiveResult}
+          showReceivePlayerSelection={showReceivePlayerSelection}
+          pointWinner={pointWinner}
+          showPlayerSelection={showPlayerSelection}
+          showClassification={showClassification}
+          players={matchPlayers}
+          positiveOutcomes={positiveOutcomes}
+          errorOutcomes={errorOutcomes}
+          onServerClick={handleServerClick}
+          onServeQualityClick={handleServeQualityClick}
+          onReceiveQualityClick={handleReceiveQualityClick}
+          onReceivePlayerClick={handleReceivePlayerClick}
+          onPointClick={handlePointClick}
+          onPlayerClick={handlePlayerClick}
+          onClassificationClick={handleClassificationClick}
+          onOutcomeClick={handleOutcomeClick}
+          onResetEntry={resetEntry}
+          onCompleteRally={handleCompleteRally}
+          onSetServeResult={setServeResult}
+          onSetShowReceivePlayerSelection={setShowReceivePlayerSelection}
+          onSetReceiveResult={setReceiveResult}
+          onSetPointWinner={setPointWinner}
+          onSetShowPlayerSelection={setShowPlayerSelection}
+          onSetOutcome={setOutcome}
+          onSetServerPlayerId={setServerPlayerId}
+          currentLineup={currentLineup}
+          currentRotation={currentRotation}
+          brightGymMode={brightGymMode}
+          entryLocked={isSavingAction}
+        />
+      </div>
 
       {selectedPositionIdx && currentLineup && (
         <SubstitutionModal 
@@ -547,7 +551,7 @@ const LiveMatch: React.FC = () => {
       )}
 
       {/* Action Bar */}
-      <div className={`grid ${scorerFocusMode ? 'grid-cols-1' : 'grid-cols-2'} gap-2 ${tableMode || scorerFocusMode ? 'p-1.5' : 'p-2'}`}>
+      <div className={`live-match-actions grid ${scorerFocusMode ? 'grid-cols-1' : 'grid-cols-2'} gap-2 ${tableMode || scorerFocusMode ? 'p-1.5' : 'p-2'}`}>
         <button
           onClick={undoWithFeedback}
           className={`flex flex-col items-center gap-0.5 rounded-xl border active:border-brand-teal active:text-brand-teal ${brightGymMode ? 'border-slate-300 bg-white text-slate-950 shadow-sm' : 'border-brand-gray/40 bg-[#0f1117] text-brand-text'} ${tableMode || scorerFocusMode ? 'p-1.5' : 'p-2'}`}

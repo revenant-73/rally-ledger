@@ -23,6 +23,35 @@ body {
   min-height: 100vh;
 }
 
+@media (orientation: landscape) and (max-height: 820px) {
+  .live-match-scoreboard > div {
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+  }
+
+  .live-match-court {
+    flex: 0 0 auto;
+  }
+
+  .live-court-card {
+    max-width: min(100%, 48rem);
+    margin-inline: auto;
+  }
+
+  .live-court-grid {
+    aspect-ratio: 6 / 1.45;
+    max-height: 13.5rem;
+  }
+
+  .live-match-entry {
+    padding-bottom: 0.25rem;
+  }
+
+  .live-match-actions {
+    flex: 0 0 auto;
+  }
+}
+
 @media print {
   @page {
     margin: 0.5in;

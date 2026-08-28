@@ -65,4 +65,34 @@ describe('useMatchDetailMetrics', () => {
       errors: 0,
     });
   });
+
+  it('uses first names for top earner and gifter labels', () => {
+    const { result } = renderHook(() => useMatchDetailMetrics([
+      rally({
+        rallyNumber: 1,
+        playerId: 'p1',
+        pointWinner: 'Us',
+        classification: 'Earned',
+        outcomeType: 'Kill',
+      }),
+      rally({
+        rallyNumber: 2,
+        playerId: 'p1',
+        pointWinner: 'Opponent',
+        classification: 'Gifted',
+        outcomeType: 'Attack Error',
+      }),
+    ], players));
+
+    expect(result.current?.earner).toMatchObject({
+      jersey: '07',
+      name: 'Avery',
+      count: 1,
+    });
+    expect(result.current?.gifter).toMatchObject({
+      jersey: '07',
+      name: 'Avery',
+      count: 1,
+    });
+  });
 });

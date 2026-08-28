@@ -78,7 +78,7 @@ const NewMatch: React.FC = () => {
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="min-h-screen bg-brand-bg text-brand-text p-6 max-w-lg mx-auto"
+      className="min-h-dvh bg-brand-bg text-brand-text px-6 pt-6 pb-28 max-w-lg mx-auto"
     >
       <header className="flex items-center justify-between mb-8">
         <button onClick={() => navigate('/')} className="text-brand-text-secondary hover:text-brand-text">
@@ -262,18 +262,20 @@ const NewMatch: React.FC = () => {
           </div>
         </motion.div>
 
-        <motion.button
-          type="submit"
-          whileTap={{ scale: 0.98 }}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="w-full bg-brand-teal hover:bg-brand-teal/90 text-brand-bg font-black py-5 rounded-xl flex items-center justify-center gap-2 text-lg transition-all mt-8 uppercase tracking-widest"
-          disabled={manageableTeams.length === 0}
-        >
-          <Save size={24} />
-          Create Match
-        </motion.button>
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-brand-gray/20 bg-brand-bg/95 p-4 backdrop-blur">
+          <motion.button
+            type="submit"
+            whileTap={{ scale: 0.98 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="mx-auto flex w-full max-w-lg items-center justify-center gap-2 rounded-xl bg-brand-teal py-5 text-lg font-black uppercase tracking-widest text-brand-bg transition-all hover:bg-brand-teal/90 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={manageableTeams.length === 0}
+          >
+            <Save size={24} />
+            Create Match
+          </motion.button>
+        </div>
       </form>
     </motion.div>
   );
