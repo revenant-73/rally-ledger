@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Trophy, AlertCircle, Eye, Sun, Crosshair, RotateCcw, BarChart2, MessageSquare, Minus, Plus } from 'lucide-react';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 
@@ -44,6 +44,7 @@ const MoreMenuModal: React.FC<MoreMenuModalProps> = ({
   onToggleScorerFocusMode,
 }) => {
   const dialogRef = useFocusTrap<HTMLDivElement>(isOpen, onClose);
+  const [showFinishMatchOptions, setShowFinishMatchOptions] = useState(false);
 
   if (!isOpen) return null;
 
@@ -60,7 +61,7 @@ const MoreMenuModal: React.FC<MoreMenuModalProps> = ({
         aria-modal="true"
         aria-labelledby="more-menu-modal-title"
         tabIndex={-1}
-        className="bg-brand-gray/5 border border-brand-gray/20 rounded-3xl p-6 space-y-4 max-w-sm mx-auto w-full mb-20"
+        className="max-h-[88dvh] w-full max-w-sm space-y-4 overflow-y-auto rounded-3xl border border-brand-gray/20 bg-brand-gray/5 p-6"
       >
         <div className="flex items-center justify-between mb-2">
           <h3 id="more-menu-modal-title" className="text-xl font-bold">Match Actions</h3>
@@ -200,21 +201,45 @@ const MoreMenuModal: React.FC<MoreMenuModalProps> = ({
           <span className="text-xs uppercase opacity-60">{ourScore} - {opponentScore}</span>
         </button>
 
-        <button
-          onClick={() => {
-            const winner = ourScore > opponentScore ? 'Win' : 'Loss';
-            if (window.confirm(`End Set ${setNumber} as a ${winner} and finish the match?`)) {
-              onEndMatch(winner);
-            }
-          }}
-          className="w-full flex items-center justify-between p-4 bg-brand-green/10 text-brand-green rounded-2xl font-bold"
-        >
-          <div className="flex items-center gap-3">
-            <Trophy size={20} />
-            <span>End Match</span>
-          </div>
-          <span className="text-xs uppercase opacity-60">{ourScore} - {opponentScore}</span>
-        </button>
+        <div className="rounded-2xl border border-brand-green/20 bg-brand-green/10 p-3">
+          <button
+            onClick={() => setShowFinishMatchOptions((current) => !current)}
+            className="flex w-full items-center justify-between text-brand-green"
+            aria-expanded={showFinishMatchOptions}
+          >
+            <div className="flex items-center gap-3 font-bold">
+              <Trophy size={20} />
+              <span>Finish Match Now</span>
+            </div>
+            <span className="text-xs font-black uppercase opacity-70">{ourScore} - {opponentScore}</span>
+          </button>
+
+          {showFinishMatchOptions && (
+            <div className="mt-3 space-y-3 border-t border-brand-green/20 pt-3">
+              <div className="flex items-center justify-between rounded-xl bg-brand-bg/60 px-3 py-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">Current set {setNumber}</span>
+                <span className="text-sm font-black text-brand-text">{ourScore} - {opponentScore}</span>
+              </div>
+              <p className="text-xs font-semibold text-brand-text-secondary">
+                Closes this set and marks the match completed. Rally stats stay in reports.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => onEndMatch('Win')}
+                  className="rounded-xl bg-brand-green px-3 py-3 text-sm font-black uppercase text-brand-bg active:scale-95"
+                >
+                  Finish Win
+                </button>
+                <button
+                  onClick={() => onEndMatch('Loss')}
+                  className="rounded-xl border border-brand-red/40 bg-brand-red/10 px-3 py-3 text-sm font-black uppercase text-brand-red active:scale-95"
+                >
+                  Finish Loss
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         <button 
           onClick={() => {
