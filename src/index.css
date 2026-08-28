@@ -47,6 +47,25 @@ body {
     padding-bottom: 0.25rem;
   }
 
+  .live-recent-rallies {
+    margin-bottom: 0.25rem;
+    padding: 0.35rem 0.5rem;
+  }
+
+  .live-recent-rallies h3 {
+    font-size: 0.5rem;
+  }
+
+  .live-recent-rally-card {
+    min-width: 8rem;
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+  }
+
+  .live-recent-rally-card p {
+    margin-top: 0.15rem;
+  }
+
   .live-entry-stack {
     gap: 0.4rem;
   }

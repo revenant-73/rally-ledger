@@ -56,7 +56,7 @@ const RecentRalliesStrip: React.FC<RecentRalliesStripProps> = ({
     : 'border-brand-gray/30 bg-brand-bg';
 
   return (
-    <section className={`mx-3 mb-1 rounded-xl border ${panelClass} ${compact ? 'p-1.5' : 'p-2'}`} aria-label="Recent rally audit">
+    <section className={`live-recent-rallies mx-3 mb-1 rounded-xl border ${panelClass} ${compact ? 'p-1.5' : 'p-2'}`} aria-label="Recent rally audit">
       <div className="mb-1 flex items-center justify-between gap-2">
         <h3 className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-brand-teal">
           <History size={compact ? 12 : 14} />
@@ -82,7 +82,7 @@ const RecentRalliesStrip: React.FC<RecentRalliesStripProps> = ({
             return (
               <article
                 key={rally.id}
-                className={`min-w-[142px] rounded-lg border px-2 py-1.5 ${itemClass} ${isUndoTarget ? 'ring-1 ring-brand-teal/70' : ''}`}
+                className={`live-recent-rally-card min-w-[142px] rounded-lg border px-2 py-1.5 ${itemClass} ${isUndoTarget ? 'ring-1 ring-brand-teal/70' : ''}`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[9px] font-black text-brand-teal">#{rally.rallyNumber}</span>
