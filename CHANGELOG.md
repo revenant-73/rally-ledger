@@ -31,6 +31,8 @@ All notable changes to this project are documented here. Format loosely follows 
 - Added roster player editing for name, jersey number, and position with the same team-management authorization used by player deletion.
 - Added a filtered rally log to individual match reports with set, player, outcome, classification, serving-side, and rotation filters.
 - Added richer print/save-to-PDF report layouts with paper headers, print metadata, and complete player stat tables that print even when expandable on-screen sections are collapsed.
+- Added a live workflow audit document for match-day scoring, attribution, persistence, and tablet/iPad layout validation.
+- Added a visible live rally-entry save lock so repeated taps cannot submit another point, score correction, or undo while the previous action is still saving.
 
 ### Fixed
 - Fixed serve reporting for one-tap ACE/ERR entries by persisting inferred serve results on new rallies and inferring serve aces/errors from older outcome-only rally rows in reports and dashboards.
@@ -38,6 +40,8 @@ All notable changes to this project are documented here. Format loosely follows 
 - Fixed expanded serving reports so the `KO` count matches `KO%` by showing pressure serves as aces plus out-of-system serves, while preserving out-of-system as its own column.
 - Fixed opponent serve-receive errors so opponent aces are saved as opponent earned points automatically instead of asking for a manual earned/gifted classification.
 - Fixed match format defaults so League matches offer best-of-five set prep while Tournament matches default to best-of-three.
+- Fixed active-set transitions so live scoring resets server selection, selected outcome state, serving side, rotation, lineup, and receive selections from the newly active set instead of carrying stale state forward.
+- Fixed the live match route to use dynamic viewport height, reducing iPad/tablet browser chrome layout clipping.
 - Fixed the `react-hooks/set-state-in-effect` lint warning in `useLiveMatchLogic` by moving the activeSet-metadata sync out of a `useEffect` and into the render body, guarded by a `prevMetadata` comparison - React's documented pattern for "adjusting state when a prop changes," which avoids the extra commit-then-effect render pass.
 
 ### Security

@@ -64,6 +64,42 @@ describe('useLiveMatchLogic', () => {
     expect(result.current.servingTeam).toBe('Us');
   });
 
+  it('resets entry and serving state when a new active set starts', () => {
+    const setTwo: Set = {
+      ...mockSet,
+      id: 's2',
+      setNumber: 2,
+      ourScore: 0,
+      opponentScore: 0,
+      startingServerTeam: 'Us',
+      metadata: {
+        startingLineup: mockLineup,
+        currentRotation: 1,
+      },
+    };
+
+    const { result, rerender } = renderHook(
+      ({ activeSet }) => useLiveMatchLogic(mockMatch, activeSet, [], mockAddRally, mockUndoLastRally, mockUpdateSet),
+      { initialProps: { activeSet: mockSet } }
+    );
+
+    act(() => {
+      result.current.setPointWinner('Opponent');
+      result.current.setOutcome('Kill');
+      result.current.setServerPlayerId('p4');
+      result.current.setServingTeam('Opponent');
+      result.current.setCurrentRotation(5);
+    });
+
+    rerender({ activeSet: setTwo });
+
+    expect(result.current.pointWinner).toBeNull();
+    expect(result.current.outcome).toBeNull();
+    expect(result.current.serverPlayerId).toBeNull();
+    expect(result.current.servingTeam).toBe('Us');
+    expect(result.current.currentRotation).toBe(1);
+  });
+
   it('should complete a rally and update scores', async () => {
     const { result } = renderHook(() => useLiveMatchLogic(mockMatch, mockSet, [], mockAddRally, mockUndoLastRally, mockUpdateSet));
 

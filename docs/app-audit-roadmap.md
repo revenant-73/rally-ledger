@@ -38,7 +38,7 @@ Last updated: 2026-08-27
 ## Product And UX Upgrades
 
 - Add a visible pending/offline queue count during live matches.
-- Disable or debounce rapid repeated scoring taps while a point write is pending.
+- Done: disable rapid repeated scoring taps while a point write, manual score adjustment, or undo is pending.
 - Add clearer recovery messaging when a rally fails to save.
 - Done: add initial export/share flows for post-match and season reports (copyable text, text download, CSV bundle).
 - Done: add initial cumulative season reports for team/player trends across matches.
@@ -91,4 +91,6 @@ Last updated: 2026-08-27
 - Remaining: consider cookie-backed sessions and durable/distributed rate limiting before public launch.
 - Done: added richer season trend charts to the Reports page.
 - Done: added richer print/export report layouts with paper headers, print metadata, and complete player stat tables for coach packets.
+- Done: added a live workflow audit and fixed two match-day reliability issues: active-set transitions now reset entry/serving state, and live rally entry locks while saves are pending.
+- Done: switched the live match route to dynamic viewport height so iPad/tablet browsers are less likely to clip the scoring controls.
 

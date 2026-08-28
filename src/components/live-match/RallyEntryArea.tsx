@@ -35,6 +35,7 @@ interface RallyEntryAreaProps {
   currentLineup?: Lineup | null;
   currentRotation?: number;
   brightGymMode?: boolean;
+  entryLocked?: boolean;
 }
 
 const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
@@ -68,6 +69,7 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
   currentLineup,
   currentRotation,
   brightGymMode = false,
+  entryLocked = false,
 }) => {
   const sortedPlayers = [...players].sort((a, b) => Number(a.jerseyNumber) - Number(b.jerseyNumber));
   const panelTextClass = brightGymMode ? 'text-slate-950' : 'text-brand-text';
@@ -383,10 +385,21 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
   return (
     <div className={`flex-1 rounded-2xl p-3 flex flex-col min-h-0 overflow-hidden relative border ${
       brightGymMode ? 'border-slate-300 bg-white shadow-sm' : 'border-brand-gray/40 bg-[#0f1117]'
-    }`}>
-      <AnimatePresence mode="wait">
-        {renderContent()}
-      </AnimatePresence>
+    }`} aria-busy={entryLocked}>
+      <div className={entryLocked ? 'pointer-events-none opacity-70' : 'contents'}>
+        <AnimatePresence mode="wait">
+          {renderContent()}
+        </AnimatePresence>
+      </div>
+      {entryLocked && (
+        <div className={`absolute inset-0 z-20 flex items-center justify-center rounded-2xl border text-xs font-black uppercase tracking-widest ${
+          brightGymMode
+            ? 'border-slate-300 bg-white/80 text-slate-950'
+            : 'border-brand-teal/20 bg-brand-bg/80 text-brand-teal'
+        }`}>
+          Saving point...
+        </div>
+      )}
     </div>
   );
 };

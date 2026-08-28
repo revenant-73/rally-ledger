@@ -23,6 +23,7 @@ export const useLiveMatchLogic = (
   const [currentRotation, setCurrentRotation] = useState<number>(activeSet?.metadata?.currentRotation || 1);
   const [currentLineup, setCurrentLineup] = useState<Lineup | null>(activeSet?.metadata?.currentLineup || activeSet?.metadata?.startingLineup || null);
   const [liberoServingPosition, setLiberoServingPosition] = useState<number | undefined>(activeSet?.metadata?.liberoServingPosition);
+  const [prevActiveSetId, setPrevActiveSetId] = useState(activeSet?.id);
 
   // Sync state from activeSet.metadata when it changes (e.g. a refetch from
   // another device). Adjusted during render, not in an effect, per React's
@@ -30,7 +31,21 @@ export const useLiveMatchLogic = (
   // extra commit-then-effect render pass and the react-hooks/set-state-in-effect
   // lint rule it triggers.
   const [prevMetadata, setPrevMetadata] = useState(activeSet?.metadata);
-  if (activeSet?.metadata !== prevMetadata) {
+  if (activeSet?.id !== prevActiveSetId) {
+    setPrevActiveSetId(activeSet?.id);
+    setPrevMetadata(activeSet?.metadata);
+    setPointWinner(null);
+    setOutcome(null);
+    setSelectedPlayerId(null);
+    setServerPlayerId(null);
+    setServeResult(null);
+    setReceiveResult(null);
+    setReceivePlayerId(null);
+    setServingTeam(activeSet?.metadata?.servingTeam || activeSet?.startingServerTeam || 'Us');
+    setCurrentRotation(activeSet?.metadata?.currentRotation || 1);
+    setCurrentLineup(activeSet?.metadata?.currentLineup || activeSet?.metadata?.startingLineup || null);
+    setLiberoServingPosition(activeSet?.metadata?.liberoServingPosition);
+  } else if (activeSet?.metadata !== prevMetadata) {
     setPrevMetadata(activeSet?.metadata);
     if (activeSet?.metadata?.currentRotation) {
       setCurrentRotation(activeSet.metadata.currentRotation);

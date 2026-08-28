@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageSquare, RotateCcw } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -73,6 +73,8 @@ const LiveMatch: React.FC = () => {
   const [tableMode, setTableMode] = useState(() => localStorage.getItem('liveTableMode') === 'true');
   const [brightGymMode, setBrightGymMode] = useState(() => localStorage.getItem('liveBrightGymMode') === 'true');
   const [scorerFocusMode, setScorerFocusMode] = useState(() => localStorage.getItem('liveScorerFocusMode') === 'true');
+  const [isSavingAction, setIsSavingAction] = useState(false);
+  const isSavingActionRef = useRef(false);
   const { data: matchSets = [] } = useMatchSets(user?.id, activeMatch?.id);
   useScreenWakeLock(Boolean(activeMatch && activeSet));
 
@@ -262,6 +264,14 @@ const LiveMatch: React.FC = () => {
     outcomeOverride?: OutcomeType,
     playerOverride?: string | null
   ) => {
+    if (isSavingActionRef.current) {
+      toast('Saving previous point...');
+      return;
+    }
+
+    isSavingActionRef.current = true;
+    setIsSavingAction(true);
+
     const winner = winnerOverride || pointWinner;
     const finalOutcome = outcomeOverride || outcome;
 
@@ -281,6 +291,9 @@ const LiveMatch: React.FC = () => {
     } catch (error) {
       console.error('Error completing rally:', error);
       toast.error('Error saving point');
+    } finally {
+      isSavingActionRef.current = false;
+      setIsSavingAction(false);
     }
   };
 
@@ -290,24 +303,49 @@ const LiveMatch: React.FC = () => {
 
   const handleManualScoreChange = async (team: 'Us' | 'Opponent', delta: number) => {
     if (delta !== 1 && delta !== -1) return;
+    if (isSavingActionRef.current) {
+      toast('Saving previous action...');
+      return;
+    }
+
+    isSavingActionRef.current = true;
+    setIsSavingAction(true);
     try {
       await handleManualScoreAdjustment(team, delta);
       toast.success(`Score adjusted for ${team}`);
     } catch (error) {
       console.error('Error adjusting score:', error);
       toast.error('Error saving score adjustment');
+    } finally {
+      isSavingActionRef.current = false;
+      setIsSavingAction(false);
     }
   };
 
   const undoWithFeedback = async () => {
-    const lastRally = await undoLastRallyWithLogic();
-    if (lastRally) {
-      toast.success(`Undid: ${lastRally.outcomeType} by ${lastRally.pointWinner === 'Us' ? 'Us' : 'Them'}`);
+    if (isSavingActionRef.current) {
+      toast('Saving previous action...');
+      return;
+    }
+
+    isSavingActionRef.current = true;
+    setIsSavingAction(true);
+    try {
+      const lastRally = await undoLastRallyWithLogic();
+      if (lastRally) {
+        toast.success(`Undid: ${lastRally.outcomeType} by ${lastRally.pointWinner === 'Us' ? 'Us' : 'Them'}`);
+      }
+    } catch (error) {
+      console.error('Error undoing rally:', error);
+      toast.error('Error undoing point');
+    } finally {
+      isSavingActionRef.current = false;
+      setIsSavingAction(false);
     }
   };
 
   return (
-    <div className={`min-h-screen flex flex-col relative ${brightGymMode ? 'bg-slate-100 text-slate-950' : 'bg-brand-bg text-brand-text'}`}>
+    <div className={`flex h-dvh max-h-dvh flex-col overflow-hidden relative ${brightGymMode ? 'bg-slate-100 text-slate-950' : 'bg-brand-bg text-brand-text'}`}>
       <LiveMatchHeader 
         onBack={() => navigate('/')}
         setNumber={activeSet.setNumber}
@@ -464,6 +502,7 @@ const LiveMatch: React.FC = () => {
         currentLineup={currentLineup}
         currentRotation={currentRotation}
         brightGymMode={brightGymMode}
+        entryLocked={isSavingAction}
       />
 
       {selectedPositionIdx && currentLineup && (
