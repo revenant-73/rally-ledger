@@ -6,7 +6,16 @@ import toast from 'react-hot-toast';
 
 const History: React.FC = () => {
   const navigate = useNavigate();
-  const { matches, isSyncing, canManageTeam, deleteMatch } = useMatch();
+  const { matches, isSyncing, canManageTeam, deleteMatch, resumeMatch } = useMatch();
+
+  const openMatch = (match: typeof matches[number]) => {
+    if (match.status === 'active') {
+      resumeMatch(match);
+      navigate('/match/live');
+      return;
+    }
+    navigate(`/match/history/${match.id}`);
+  };
 
   const handleDeleteMatch = async (matchId: string, opponentName: string) => {
     const confirmed = window.confirm(`Delete match vs ${opponentName}? This will permanently delete its sets, rallies, and stats from reports.`);
@@ -54,7 +63,7 @@ const History: React.FC = () => {
             >
               <div className="mb-3 flex items-start justify-between gap-3">
                 <button
-                  onClick={() => navigate(`/match/history/${match.id}`)}
+                  onClick={() => openMatch(match)}
                   className="min-w-0 flex-1 text-left group"
                 >
                   <div className="flex items-center gap-2 mb-1">
@@ -77,12 +86,12 @@ const History: React.FC = () => {
                       <Trash2 size={17} />
                     </button>
                   )}
-                  <ChevronRight size={20} className="text-brand-gray/30" />
+                <ChevronRight size={20} className="text-brand-gray/30" />
                 </div>
               </div>
 
               <button
-                onClick={() => navigate(`/match/history/${match.id}`)}
+                onClick={() => openMatch(match)}
                 className="block w-full text-left"
               >
                 <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-brand-text-secondary font-medium">
@@ -103,6 +112,13 @@ const History: React.FC = () => {
                     </span>
                     <div className="h-1 w-1 rounded-full bg-brand-gray/20" />
                     <span className="text-xs text-brand-text-secondary">Match completed</span>
+                  </div>
+                )}
+                {match.status === 'active' && (
+                  <div className="mt-4 flex items-center gap-2">
+                    <span className="font-black text-sm uppercase text-brand-teal">Resume scoring</span>
+                    <div className="h-1 w-1 rounded-full bg-brand-gray/20" />
+                    <span className="text-xs text-brand-text-secondary">Match still active</span>
                   </div>
                 )}
               </button>

@@ -95,6 +95,14 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setActiveTeam(team);
   };
 
+  const resumeMatch = (match: Match) => {
+    setActiveMatch(match);
+    const team = teams.find(t => t.id === match.teamId) || null;
+    if (team) {
+      setActiveTeam(team);
+    }
+  };
+
   const canManageTeam = (teamId?: string) => {
     if (!teamId) return false;
     return access?.isAdmin === true || manageableTeamIdSet.has(teamId);
@@ -273,6 +281,7 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       addTeam,
       deleteTeam,
       deleteMatch,
+      resumeMatch,
       selectTeam,
       endSet,
       endMatch,

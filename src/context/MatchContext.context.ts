@@ -23,6 +23,7 @@ export interface MatchContextType {
   addTeam: (team: Team) => Promise<void>;
   deleteTeam: (teamId: string) => Promise<void>;
   deleteMatch: (matchId: string) => Promise<void>;
+  resumeMatch: (match: Match) => void;
   selectTeam: (teamId: string) => void;
   endSet: (result: 'Win' | 'Loss') => Promise<void>;
   endMatch: (result: 'Win' | 'Loss') => Promise<void>;
