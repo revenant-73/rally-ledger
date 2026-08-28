@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient } from '@tanstack/react-query'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
+import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './context/AuthContext'
@@ -36,6 +37,13 @@ const queryClient = new QueryClient({
 queryClient.setMutationDefaults(['addRally'], { mutationFn: addRallyMutationFn })
 queryClient.setMutationDefaults(['undoLastRally'], { mutationFn: undoLastRallyMutationFn })
 queryClient.setMutationDefaults(['updateSet'], { mutationFn: updateSetMutationFn })
+
+registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    window.location.reload()
+  },
+})
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
