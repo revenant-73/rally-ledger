@@ -9,7 +9,7 @@ interface RotationDisplayProps {
   currentRotation: number;
   servingTeam: 'Us' | 'Opponent';
   onManualRotate?: () => void;
-  onPlayerClick?: (playerIdx: number) => void;
+  onPlayerClick?: (playerIdx: number, physicalZone: number) => void;
   liberoServingPosition?: number;
   brightGymMode?: boolean;
 }
@@ -104,9 +104,9 @@ const RotationDisplay: React.FC<RotationDisplayProps> = ({
           return (
             <button
               key={pos}
-              onClick={() => onPlayerClick?.(playerIdx)}
+              onClick={() => onPlayerClick?.(playerIdx, pos)}
               disabled={!onPlayerClick}
-              aria-label={`Position ${pos}: ${playerLabel}${isSubstitution ? `, substituted${starterLabel}` : ''}${isServer ? ', serving' : ''}${isLiberoServing ? ', libero serving' : ''}`}
+              aria-label={`Court zone ${pos}: ${playerLabel}, rotation position ${playerIdx}${isSubstitution ? `, substituted${starterLabel}` : ''}${isServer ? ', serving' : ''}${isLiberoServing ? ', libero serving' : ''}`}
               className={`relative rounded-md flex flex-col items-center justify-center border transition-all ${
                 isServer 
                   ? 'bg-brand-teal/25 border-brand-teal shadow-inner'
@@ -118,7 +118,7 @@ const RotationDisplay: React.FC<RotationDisplayProps> = ({
               } ${onPlayerClick ? 'active:scale-95' : ''}`}
             >
               <div className={`absolute top-0.5 right-0.5 rounded-[2px] px-0.5 ${brightGymMode ? 'bg-slate-200' : 'bg-brand-gray/30'}`}>
-                <span className={`text-[6px] font-black ${brightGymMode ? 'text-slate-950' : 'text-brand-text'}`}>{pos}</span>
+                <span className={`text-[6px] font-black ${brightGymMode ? 'text-slate-950' : 'text-brand-text'}`}>Z{pos}</span>
               </div>
               
               {isLibero && (

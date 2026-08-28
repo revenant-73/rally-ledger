@@ -9,6 +9,7 @@ interface SubstitutionModalProps {
   players: Player[];
   lineup: Lineup;
   positionIdx: number; // 1-6
+  courtZone?: number; // 1-6 physical court zone
   onSubstitute: (newPlayerId: string) => void;
   onLiberoSwap: (liberoId: string | null) => void;
   onSetLiberoServing: (isServing: boolean) => void;
@@ -21,6 +22,7 @@ const SubstitutionModal: React.FC<SubstitutionModalProps> = ({
   players,
   lineup,
   positionIdx,
+  courtZone,
   onSubstitute,
   onLiberoSwap,
   onSetLiberoServing,
@@ -41,6 +43,10 @@ const SubstitutionModal: React.FC<SubstitutionModalProps> = ({
   const availablePlayers = players.filter(p => !isOnCourt(p.id) && p.id !== lineup.libero1 && p.id !== lineup.libero2);
   const isLiberoOnCourt = currentPlayer?.position === 'L' || currentPlayer?.position === 'DS';
   const canLiberoServe = !liberoServingPosition || liberoServingPosition === positionIdx;
+  const showCourtZone = typeof courtZone === 'number' && courtZone !== positionIdx;
+  const locationLabel = showCourtZone
+    ? `Court Zone ${courtZone} / Rotation Position ${positionIdx}`
+    : `Court Zone ${courtZone ?? positionIdx}`;
 
   return (
     <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -57,7 +63,9 @@ const SubstitutionModal: React.FC<SubstitutionModalProps> = ({
         <div className="p-4 border-b border-brand-gray/10 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ArrowLeftRight size={20} className="text-brand-teal" />
-            <h2 id="substitution-modal-title" className="text-lg font-black uppercase tracking-tight">Position {positionIdx} Management</h2>
+            <h2 id="substitution-modal-title" className="text-lg font-black uppercase tracking-tight">
+              Court Zone {courtZone ?? positionIdx}
+            </h2>
           </div>
           <button onClick={onClose} className="p-2 text-brand-text-secondary" aria-label="Close">
             <X size={24} />
@@ -71,7 +79,7 @@ const SubstitutionModal: React.FC<SubstitutionModalProps> = ({
             </div>
             <div>
               <p className="font-bold">{currentPlayer?.firstName} {currentPlayer?.lastName}</p>
-              <p className="text-xs font-bold text-brand-text-secondary uppercase">{currentPlayer?.position} • Position {positionIdx}</p>
+              <p className="text-xs font-bold uppercase text-brand-text-secondary">{currentPlayer?.position} • {locationLabel}</p>
             </div>
           </div>
           {isLiberoOnCourt && (

@@ -38,8 +38,8 @@ describe('RotationDisplay rotation math', () => {
     );
 
     // Position 1 is the server slot; in rotation 1 that's still player 1.
-    expect(screen.getByLabelText(/Position 1: #1 /)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Position 1: #1 .*serving/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Court zone 1: #1 /)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Court zone 1: #1 .*serving/)).toBeInTheDocument();
   });
 
   it('rotation 2: player 1 has rotated out of the server position into zone 6', () => {
@@ -53,9 +53,9 @@ describe('RotationDisplay rotation math', () => {
     );
 
     // Player 1 should now show up in physical position 6, not 1.
-    expect(screen.getByLabelText(/Position 6: #1 /)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Court zone 6: #1 /)).toBeInTheDocument();
     // Player 2 has rotated into the server slot (position 1) and should be marked serving.
-    expect(screen.getByLabelText(/Position 1: #2 .*serving/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Court zone 1: #2 .*rotation position 2.*serving/)).toBeInTheDocument();
   });
 
   it('does not mark anyone as serving when the opponent is serving', () => {
@@ -84,8 +84,8 @@ describe('RotationDisplay rotation math', () => {
     );
 
     // Physical zone 1 in rotation 2 holds player index 2.
-    screen.getByLabelText(/Position 1: #2 /).click();
-    expect(onPlayerClick).toHaveBeenCalledWith(2);
+    screen.getByLabelText(/Court zone 1: #2 /).click();
+    expect(onPlayerClick).toHaveBeenCalledWith(2, 1);
   });
 
   it('marks players who are substituted in for the original starter', () => {
@@ -104,7 +104,7 @@ describe('RotationDisplay rotation math', () => {
       />
     );
 
-    expect(screen.getByLabelText(/Position 3: #7 .*substituted for #3/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Court zone 3: #7 .*substituted for #3/)).toBeInTheDocument();
     expect(screen.getByText('Sub')).toBeInTheDocument();
     expect(screen.getByText('for #3')).toBeInTheDocument();
   });

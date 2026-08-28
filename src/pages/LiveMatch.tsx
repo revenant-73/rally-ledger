@@ -69,7 +69,7 @@ const LiveMatch: React.FC = () => {
   const [showTimeout, setShowTimeout] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showLineupEditor, setShowLineupEditor] = useState(false);
-  const [selectedPositionIdx, setSelectedPositionIdx] = useState<number | null>(null);
+  const [selectedCourtPosition, setSelectedCourtPosition] = useState<{ positionIdx: number; courtZone: number } | null>(null);
   const [tableMode, setTableMode] = useState(() => localStorage.getItem('liveTableMode') === 'true');
   const [brightGymMode, setBrightGymMode] = useState(() => localStorage.getItem('liveBrightGymMode') === 'true');
   const [scorerFocusMode, setScorerFocusMode] = useState(() => localStorage.getItem('liveScorerFocusMode') === 'true');
@@ -457,7 +457,7 @@ const LiveMatch: React.FC = () => {
               });
               toast.success(`Rotated to ${nextRotation}`);
             }}
-            onPlayerClick={(idx) => setSelectedPositionIdx(idx)}
+            onPlayerClick={(idx, courtZone) => setSelectedCourtPosition({ positionIdx: idx, courtZone })}
             brightGymMode={brightGymMode}
           />
         </div>
@@ -509,17 +509,18 @@ const LiveMatch: React.FC = () => {
         />
       </div>
 
-      {selectedPositionIdx && currentLineup && (
+      {selectedCourtPosition && currentLineup && (
         <SubstitutionModal 
           isOpen={true}
-          onClose={() => setSelectedPositionIdx(null)}
+          onClose={() => setSelectedCourtPosition(null)}
           players={matchPlayers}
           lineup={currentLineup}
-          positionIdx={selectedPositionIdx}
+          positionIdx={selectedCourtPosition.positionIdx}
+          courtZone={selectedCourtPosition.courtZone}
           onSubstitute={async (playerId) => {
             try {
-              await handleSubstitution(selectedPositionIdx, playerId);
-              setSelectedPositionIdx(null);
+              await handleSubstitution(selectedCourtPosition.positionIdx, playerId);
+              setSelectedCourtPosition(null);
               toast.success('Substitution complete');
             } catch (error) {
               console.error('Error saving substitution:', error);
@@ -528,8 +529,8 @@ const LiveMatch: React.FC = () => {
           }}
           onLiberoSwap={async (liberoId) => {
             try {
-              await handleLiberoSwap(selectedPositionIdx, liberoId);
-              setSelectedPositionIdx(null);
+              await handleLiberoSwap(selectedCourtPosition.positionIdx, liberoId);
+              setSelectedCourtPosition(null);
               toast.success(liberoId ? 'Libero swap complete' : 'Libero exited');
             } catch (error) {
               console.error('Error saving libero swap:', error);
@@ -538,8 +539,8 @@ const LiveMatch: React.FC = () => {
           }}
           onSetLiberoServing={async (isServing) => {
             try {
-              await handleSetLiberoServing(isServing, selectedPositionIdx);
-              setSelectedPositionIdx(null);
+              await handleSetLiberoServing(isServing, selectedCourtPosition.positionIdx);
+              setSelectedCourtPosition(null);
               toast.success(isServing ? 'Libero set as server' : 'Libero server reset');
             } catch (error) {
               console.error('Error updating libero server:', error);
