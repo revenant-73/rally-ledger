@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { RallyEvent, Player } from '../types';
-import { getReceiveResult, getServeResult } from '../utils/rallyResults';
+import { getReceivePlayerId, getReceiveResult, getServeResult } from '../utils/rallyResults';
 
 interface PlayerServeStat {
   aces: number;
@@ -88,15 +88,17 @@ export const useMatchDetailMetrics = (
         if (serveResult === 'In-System') playerServeStats[r.serverPlayerId].inSystem++;
         if (serveResult === 'Out-of-System') playerServeStats[r.serverPlayerId].outOfSystem++;
       }
-      if (receiveResult && r.receivePlayerId) {
-        if (!playerReceiveStats[r.receivePlayerId]) {
-          playerReceiveStats[r.receivePlayerId] = { errors: 0, overpass: 0, inSystem: 0, outOfSystem: 0, total: 0 };
+      if (receiveResult) {
+        const receivePlayerId = getReceivePlayerId(r);
+        if (!receivePlayerId) return;
+        if (!playerReceiveStats[receivePlayerId]) {
+          playerReceiveStats[receivePlayerId] = { errors: 0, overpass: 0, inSystem: 0, outOfSystem: 0, total: 0 };
         }
-        playerReceiveStats[r.receivePlayerId].total++;
-        if (receiveResult === 'Error') playerReceiveStats[r.receivePlayerId].errors++;
-        if (receiveResult === 'Overpass') playerReceiveStats[r.receivePlayerId].overpass++;
-        if (receiveResult === 'In-System') playerReceiveStats[r.receivePlayerId].inSystem++;
-        if (receiveResult === 'Out-of-System') playerReceiveStats[r.receivePlayerId].outOfSystem++;
+        playerReceiveStats[receivePlayerId].total++;
+        if (receiveResult === 'Error') playerReceiveStats[receivePlayerId].errors++;
+        if (receiveResult === 'Overpass') playerReceiveStats[receivePlayerId].overpass++;
+        if (receiveResult === 'In-System') playerReceiveStats[receivePlayerId].inSystem++;
+        if (receiveResult === 'Out-of-System') playerReceiveStats[receivePlayerId].outOfSystem++;
       }
     });
 

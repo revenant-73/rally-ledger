@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { RallyEvent } from '../types';
-import { getReceiveResult, getServeResult } from './rallyResults';
+import { getReceivePlayerId, getReceiveResult, getServeResult } from './rallyResults';
 
 const rally = (overrides: Partial<RallyEvent>): RallyEvent => ({
   id: 'r1',
@@ -36,5 +36,14 @@ describe('rally result helpers', () => {
       outcomeType: 'Ace',
       pointWinner: 'Opponent',
     }))).toBe('Error');
+  });
+
+  it('infers receiver attribution for legacy opponent ace rows', () => {
+    expect(getReceivePlayerId(rally({
+      servingTeam: 'Opponent',
+      outcomeType: 'Ace',
+      pointWinner: 'Opponent',
+      playerId: 'p6',
+    }))).toBe('p6');
   });
 });

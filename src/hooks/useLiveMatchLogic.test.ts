@@ -169,6 +169,42 @@ describe('useLiveMatchLogic', () => {
     );
   });
 
+  it('persists receiver attribution for immediate opponent ace receive errors', async () => {
+    const opponentServeSet: Set = {
+      ...mockSet,
+      startingServerTeam: 'Opponent',
+      metadata: {
+        ...mockSet.metadata,
+        servingTeam: 'Opponent',
+      },
+    };
+    const { result } = renderHook(() => useLiveMatchLogic(mockMatch, opponentServeSet, [], mockAddRally, mockUndoLastRally, mockUpdateSet));
+
+    act(() => {
+      result.current.setReceiveResult('Error');
+    });
+
+    await act(async () => {
+      await result.current.completeRally('Earned', 'Opponent', 'Ace', 'p6');
+    });
+
+    expect(mockAddRally).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pointWinner: 'Opponent',
+        servingTeam: 'Opponent',
+        outcomeType: 'Ace',
+        playerId: 'p6',
+        receiveResult: 'Error',
+        receivePlayerId: 'p6',
+        metadata: expect.objectContaining({
+          receiveResult: 'Error',
+          receivePlayerId: 'p6',
+        }),
+      }),
+      expect.any(Object)
+    );
+  });
+
   it('should undo last rally and restore serving team', async () => {
     const rallies: RallyEvent[] = [{
       id: 'r1',

@@ -17,3 +17,15 @@ export const getReceiveResult = (rally: RallyEvent): ReceiveResult | undefined =
   if (rally.outcomeType === 'Ace' && rally.pointWinner === 'Opponent') return 'Error';
   return undefined;
 };
+
+export const getReceivePlayerId = (rally: RallyEvent): string | undefined => {
+  if (rally.servingTeam !== 'Opponent') return undefined;
+  if (rally.receivePlayerId) return rally.receivePlayerId;
+
+  const receiveResult = getReceiveResult(rally);
+  if (receiveResult === 'Error' && rally.outcomeType === 'Ace' && rally.pointWinner === 'Opponent') {
+    return rally.playerId;
+  }
+
+  return undefined;
+};

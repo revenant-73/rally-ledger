@@ -1,5 +1,6 @@
 import type { Match, Player, RallyEvent, Team } from '../types';
 import type { ReportStats, SeasonReportStats } from './reportStats';
+import { getReceivePlayerId, getReceiveResult, getServeResult } from './rallyResults';
 
 const csvEscape = (value: unknown) => {
   const text = value === null || value === undefined ? '' : String(value);
@@ -282,9 +283,9 @@ export const buildMatchCsvFiles = (
           rally.outcomeType,
           rally.classification,
           playerLabel(rally.playerId),
-          rally.serveResult || '',
-          playerLabel(rally.receivePlayerId),
-          rally.receiveResult || '',
+          getServeResult(rally) || '',
+          playerLabel(getReceivePlayerId(rally)),
+          getReceiveResult(rally) || '',
           rally.notes || '',
         ])
       ),

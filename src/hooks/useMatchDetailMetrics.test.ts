@@ -52,17 +52,25 @@ describe('useMatchDetailMetrics', () => {
         pointWinner: 'Opponent',
         classification: 'Gifted',
       }),
+      rally({
+        rallyNumber: 3,
+        servingTeam: 'Opponent',
+        playerId: 'p1',
+        pointWinner: 'Opponent',
+        outcomeType: 'Ace',
+        classification: 'Earned',
+      }),
     ], players));
 
     expect(result.current?.receiveStats).toMatchObject({
-      total: 1,
+      total: 2,
       inSystem: 1,
-      errors: 0,
+      errors: 1,
     });
     expect(result.current?.playerReceiveStats.p1).toMatchObject({
-      total: 1,
+      total: 2,
       inSystem: 1,
-      errors: 0,
+      errors: 1,
     });
   });
 

@@ -217,6 +217,23 @@ describe('report stats', () => {
     expect(stats.setReports[0]).toMatchObject({ servePct: 33, serveKoPct: 33 });
   });
 
+  it('attributes legacy opponent ace receive errors to the receiver', () => {
+    const stats = calculateReportStats([
+      rally({
+        rallyNumber: 1,
+        servingTeam: 'Opponent',
+        playerId: 'p2',
+        pointWinner: 'Opponent',
+        outcomeType: 'Ace',
+        classification: 'Earned',
+      }),
+    ], players, [sets[0]]);
+
+    expect(stats.receive).toMatchObject({ attempts: 1, errors: 1, score: 0 });
+    expect(stats.playerReceiving[0]).toMatchObject({ playerId: 'p2', attempts: 1, errors: 1, score: 0 });
+    expect(stats.opponentEarned).toBe(1);
+  });
+
   it('rolls multiple matches into season report rows', () => {
     const matches: Match[] = [
       {

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Sun, Cloud, CloudLightning, CloudRain, Zap } from 'lucide-react';
 import type { RallyEvent, Player, Set as MatchSet } from '../../types';
-import { getReceiveResult, getServeResult } from '../../utils/rallyResults';
+import { getReceivePlayerId, getReceiveResult, getServeResult } from '../../utils/rallyResults';
 
 export const useDashboardMetrics = (
   rallies: RallyEvent[],
@@ -110,15 +110,16 @@ export const useDashboardMetrics = (
     const playerPassing: Record<string, { ace: number, overpass: number, oos: number, is: number, total: number }> = {};
     matchRallies.forEach(r => {
       const receiveResult = getReceiveResult(r);
-      if (r.servingTeam === 'Opponent' && r.receivePlayerId && receiveResult) {
-        if (!playerPassing[r.receivePlayerId]) {
-          playerPassing[r.receivePlayerId] = { ace: 0, overpass: 0, oos: 0, is: 0, total: 0 };
+      const receivePlayerId = getReceivePlayerId(r);
+      if (r.servingTeam === 'Opponent' && receivePlayerId && receiveResult) {
+        if (!playerPassing[receivePlayerId]) {
+          playerPassing[receivePlayerId] = { ace: 0, overpass: 0, oos: 0, is: 0, total: 0 };
         }
-        playerPassing[r.receivePlayerId].total++;
-        if (receiveResult === 'Error') playerPassing[r.receivePlayerId].ace++;
-        if (receiveResult === 'Overpass') playerPassing[r.receivePlayerId].overpass++;
-        if (receiveResult === 'Out-of-System') playerPassing[r.receivePlayerId].oos++;
-        if (receiveResult === 'In-System') playerPassing[r.receivePlayerId].is++;
+        playerPassing[receivePlayerId].total++;
+        if (receiveResult === 'Error') playerPassing[receivePlayerId].ace++;
+        if (receiveResult === 'Overpass') playerPassing[receivePlayerId].overpass++;
+        if (receiveResult === 'Out-of-System') playerPassing[receivePlayerId].oos++;
+        if (receiveResult === 'In-System') playerPassing[receivePlayerId].is++;
       }
     });
 

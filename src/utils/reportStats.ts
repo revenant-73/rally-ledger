@@ -1,5 +1,5 @@
 import type { Match, Player, RallyEvent, Set as MatchSet } from '../types';
-import { getReceiveResult, getServeResult } from './rallyResults';
+import { getReceivePlayerId, getReceiveResult, getServeResult } from './rallyResults';
 
 export interface PlayerServeReport {
   playerId: string;
@@ -310,7 +310,7 @@ const attributedPlayerId = (rally: RallyEvent) => {
 
   const receiveResult = getReceiveResult(rally);
   if (rally.servingTeam === 'Opponent' && receiveResult === 'Error') {
-    return rally.receivePlayerId;
+    return getReceivePlayerId(rally);
   }
 
   return undefined;
@@ -402,8 +402,9 @@ export const calculateReportStats = (
   });
 
   ourReceiveRallies.forEach((rally) => {
-    if (!rally.receivePlayerId) return;
-    const player = playerMap.get(rally.receivePlayerId);
+    const receivePlayerId = getReceivePlayerId(rally);
+    if (!receivePlayerId) return;
+    const player = playerMap.get(receivePlayerId);
     if (!player) return;
     const result = getReceiveResult(rally);
     const current = playerReceiving.get(player.id) ?? {

@@ -189,6 +189,8 @@ export const useLiveMatchLogic = (
       ?? (servingTeam === 'Us' && finalOutcome === 'Serve Error' ? 'Error' : undefined);
     const finalReceiveResult = receiveResult
       ?? (servingTeam === 'Opponent' && finalOutcome === 'Ace' && winner === 'Opponent' ? 'Error' : undefined);
+    const finalReceivePlayerId = receivePlayerId
+      || (servingTeam === 'Opponent' && finalReceiveResult === 'Error' ? finalPlayerId : null);
 
     const newRally: RallyEvent = {
       id: uuidv4(),
@@ -205,11 +207,14 @@ export const useLiveMatchLogic = (
       outcomeType: finalOutcome,
       classification,
       playerId: finalPlayerId || undefined,
+      serveResult: finalServeResult,
+      receiveResult: finalReceiveResult,
+      receivePlayerId: finalReceivePlayerId || undefined,
       createdAt: new Date().toISOString(),
       metadata: {
         serveResult: finalServeResult,
         receiveResult: finalReceiveResult,
-        receivePlayerId: receivePlayerId || undefined,
+        receivePlayerId: finalReceivePlayerId || undefined,
         rotation: currentRotation,
         lineup: currentLineup || undefined,
         isLiberoServing

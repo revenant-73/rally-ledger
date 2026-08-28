@@ -74,12 +74,23 @@ describe('useDashboardMetrics', () => {
         receiveResult: 'In-System',
         outcomeType: 'Kill',
       }),
+      rally({
+        rallyNumber: 4,
+        servingTeam: 'Opponent',
+        playerId: 'p1',
+        pointWinner: 'Opponent',
+        outcomeType: 'Ace',
+        classification: 'Earned',
+        scoreAfterUs: 1,
+        scoreAfterOpponent: 2,
+      }),
     ], players, activeSet));
 
     expect(result.current?.topEarners[0]).toMatchObject({ jersey: '07', name: 'Avery' });
     expect(result.current?.topGifters[0]).toMatchObject({ jersey: '07', name: 'Avery' });
     expect(result.current?.servingByPlayer[0]).toMatchObject({ jersey: '07', name: 'Avery' });
     expect(result.current?.passingByPlayer[0]).toMatchObject({ jersey: '07', name: 'Avery' });
+    expect(result.current?.passingByPlayer[0]).toMatchObject({ ace: 1, is: 1, score: 1.5 });
     expect(result.current?.serveMetrics.our.topMissers[0]).toMatchObject({ name: 'Avery' });
   });
 });

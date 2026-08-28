@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReportStats, SeasonReportStats } from './reportStats';
-import type { Match, Team } from '../types';
+import type { Match, RallyEvent, Team } from '../types';
 import { buildMatchCsvFiles, buildMatchTextSummary, buildSeasonCsvFiles, buildSeasonTextSummary } from './reportExport';
 
 const team: Team = {
@@ -160,19 +160,20 @@ const stats: SeasonReportStats = {
 };
 
 describe('report export', () => {
+  const match: Match = {
+    id: 'm1',
+    teamId: 't1',
+    opponentName: 'Liberty',
+    matchDate: '2026-08-20T00:00:00.000Z',
+    location: 'Home',
+    matchType: 'League',
+    status: 'completed',
+    result: 'Win',
+    createdAt: '2026-08-20T00:00:00.000Z',
+    updatedAt: '2026-08-20T00:00:00.000Z',
+  };
+
   it('includes opponent earned and gifted splits in match set exports', () => {
-    const match: Match = {
-      id: 'm1',
-      teamId: 't1',
-      opponentName: 'Liberty',
-      matchDate: '2026-08-20T00:00:00.000Z',
-      location: 'Home',
-      matchType: 'League',
-      status: 'completed',
-      result: 'Win',
-      createdAt: '2026-08-20T00:00:00.000Z',
-      updatedAt: '2026-08-20T00:00:00.000Z',
-    };
     const matchStats: ReportStats = {
       ...stats,
       setReports: [
@@ -206,6 +207,42 @@ describe('report export', () => {
     expect(giftCsv).toContain('Rotation Balance,Rotation 2,8,,Earned and gifted point outcomes by rotation,5,3,2,8');
     expect(setCsv).toContain('Set,Score,Result,Our Earned,Our Gifted,Opponent Earned,Opponent Gifted,Serve %,Serve KO %,Pass Score');
     expect(setCsv).toContain('1,25-20,Win,8,4,6,7,88,50,2.1');
+  });
+
+  it('includes inferred receivers in match rally log exports', () => {
+    const rally: RallyEvent = {
+      id: 'r1',
+      matchId: 'm1',
+      setId: 's1',
+      rallyNumber: 1,
+      scoreBeforeUs: 0,
+      scoreBeforeOpponent: 0,
+      scoreAfterUs: 0,
+      scoreAfterOpponent: 1,
+      pointWinner: 'Opponent',
+      servingTeam: 'Opponent',
+      outcomeType: 'Ace',
+      classification: 'Earned',
+      playerId: 'p2',
+      createdAt: '2026-08-20T00:00:00.000Z',
+    };
+
+    const files = buildMatchCsvFiles(match, stats, [rally], [
+      {
+        id: 'p2',
+        teamId: 't1',
+        firstName: 'Mia',
+        lastName: 'Stone',
+        jerseyNumber: '12',
+        position: 'L',
+        active: true,
+        createdAt: '2026-08-01T00:00:00.000Z',
+        updatedAt: '2026-08-01T00:00:00.000Z',
+      },
+    ]);
+    const rallyLogCsv = files[6].contents;
+
+    expect(rallyLogCsv).toContain('1,s1,0-0,0-1,Opponent,Opponent,,Ace,Earned,#12 Mia Stone,,#12 Mia Stone,Error,');
   });
 
   it('builds a season text summary coaches can paste elsewhere', () => {

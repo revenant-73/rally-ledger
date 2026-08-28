@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Filter, RotateCcw } from 'lucide-react';
 import type { Classification, OutcomeType, Player, RallyEvent, Set as MatchSet } from '../../types';
+import { getReceivePlayerId, getReceiveResult, getServeResult } from '../../utils/rallyResults';
 
 type SetFilter = 'all' | string;
 type PlayerFilter = 'all' | string;
@@ -29,8 +30,10 @@ const pointSourceLabel = (rally: RallyEvent) => {
 };
 
 const resultLabel = (rally: RallyEvent) => {
-  if (rally.servingTeam === 'Us' && rally.serveResult) return rally.serveResult;
-  if (rally.servingTeam === 'Opponent' && rally.receiveResult) return rally.receiveResult;
+  const serveResult = getServeResult(rally);
+  if (rally.servingTeam === 'Us' && serveResult) return serveResult;
+  const receiveResult = getReceiveResult(rally);
+  if (rally.servingTeam === 'Opponent' && receiveResult) return receiveResult;
   return 'Not tracked';
 };
 
@@ -56,7 +59,7 @@ const RallyLogCard: React.FC<RallyLogCardProps> = ({ rallies, players, sets }) =
 
     const involvedPlayerIds = new Set<string>();
     rallies.forEach((rally) => {
-      [rally.playerId, rally.serverPlayerId, rally.receivePlayerId].forEach((id) => {
+      [rally.playerId, rally.serverPlayerId, getReceivePlayerId(rally)].forEach((id) => {
         if (id) involvedPlayerIds.add(id);
       });
     });
@@ -78,7 +81,7 @@ const RallyLogCard: React.FC<RallyLogCardProps> = ({ rallies, players, sets }) =
     return rallies
       .filter((rally) => {
         if (setFilter !== 'all' && rally.setId !== setFilter) return false;
-        if (playerFilter !== 'all' && ![rally.playerId, rally.serverPlayerId, rally.receivePlayerId].includes(playerFilter)) return false;
+        if (playerFilter !== 'all' && ![rally.playerId, rally.serverPlayerId, getReceivePlayerId(rally)].includes(playerFilter)) return false;
         if (outcomeFilter !== 'all' && rally.outcomeType !== outcomeFilter) return false;
         if (classificationFilter !== 'all' && rally.classification !== classificationFilter) return false;
         if (servingFilter !== 'all' && rally.servingTeam !== servingFilter) return false;
@@ -204,7 +207,7 @@ const RallyLogCard: React.FC<RallyLogCardProps> = ({ rallies, players, sets }) =
           <tbody>
             {filteredRallies.map((rally) => {
               const set = setMap.get(rally.setId);
-              const player = playerMap.get(rally.playerId ?? rally.serverPlayerId ?? rally.receivePlayerId ?? '');
+              const player = playerMap.get(rally.playerId ?? rally.serverPlayerId ?? getReceivePlayerId(rally) ?? '');
               const source = pointSourceLabel(rally);
               const rotation = rally.metadata?.rotation;
 
