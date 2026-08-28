@@ -21,6 +21,7 @@ import NextSetScreen from '../components/live-match/NextSetScreen';
 import NoteModal from '../components/live-match/NoteModal';
 import TimeoutModal from '../components/live-match/TimeoutModal';
 import MoreMenuModal from '../components/live-match/MoreMenuModal';
+import RecentRalliesStrip from '../components/live-match/RecentRalliesStrip';
 import RotationDisplay from '../components/live-match/lineup/RotationDisplay';
 import LineupSelection from '../components/live-match/lineup/LineupSelection';
 import SubstitutionModal from '../components/live-match/lineup/SubstitutionModal';
@@ -508,6 +509,14 @@ const LiveMatch: React.FC = () => {
           entryLocked={isSavingAction}
         />
       </div>
+
+      <RecentRalliesStrip
+        rallies={rallies}
+        players={matchPlayers}
+        activeSetId={activeSet.id}
+        brightGymMode={brightGymMode}
+        compact={tableMode || scorerFocusMode}
+      />
 
       {selectedCourtPosition && currentLineup && (
         <SubstitutionModal 
