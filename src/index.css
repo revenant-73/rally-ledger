@@ -34,13 +34,13 @@ body {
   }
 
   .live-court-card {
-    max-width: min(100%, 48rem);
+    max-width: min(100%, 36rem);
     margin-inline: auto;
   }
 
   .live-court-grid {
     aspect-ratio: 6 / 1.45;
-    max-height: 13.5rem;
+    max-height: 8.5rem;
   }
 
   .live-match-entry {
