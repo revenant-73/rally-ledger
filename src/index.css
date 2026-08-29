@@ -80,6 +80,33 @@ body {
     margin-top: 0;
   }
 
+  .live-predicted-server {
+    margin-bottom: 0.4rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 0.75rem;
+  }
+
+  .live-predicted-server > div > div:first-child {
+    width: 2rem;
+    height: 2rem;
+    font-size: 1rem;
+  }
+
+  .live-predicted-server p:last-child {
+    font-size: 0.95rem;
+  }
+
+  .live-player-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.35rem;
+  }
+
+  .live-player-grid > button {
+    min-height: 2.85rem;
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
+  }
+
   .live-match-actions {
     flex: 0 0 auto;
   }

@@ -115,7 +115,7 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
           {predictedServer && (
             <button
               onClick={() => onServerClick(predictedServer.id)}
-              className="mb-3 bg-brand-teal text-brand-bg p-4 rounded-2xl flex items-center justify-between shadow-lg active:scale-[0.98] transition-all"
+              className="live-predicted-server mb-3 bg-brand-teal text-brand-bg p-4 rounded-2xl flex items-center justify-between shadow-lg active:scale-[0.98] transition-all"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-brand-bg/20 rounded-full flex items-center justify-center font-black text-xl">
@@ -130,7 +130,7 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
             </button>
           )}
 
-          <div className="flex-1 grid grid-cols-4 gap-2 overflow-y-auto pb-2 content-start">
+          <div className="live-player-grid flex-1 grid grid-cols-4 gap-2 overflow-y-auto pb-2 content-start">
             {sortedPlayers.map((player) => (
               <button
                 key={player.id}
@@ -207,7 +207,7 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
               <button onClick={() => { onSetShowReceivePlayerSelection(false); onSetReceiveResult(null); }} className={`${mutedTextClass} text-xs`}>Back</button>
             </div>
           </div>
-          <div className="flex-1 grid grid-cols-4 gap-2 overflow-y-auto pb-2 content-start">
+          <div className="live-player-grid flex-1 grid grid-cols-4 gap-2 overflow-y-auto pb-2 content-start">
             {sortedPlayers.map((player) => (
               <button
                 key={player.id}
@@ -277,7 +277,7 @@ const RallyEntryArea: React.FC<RallyEntryAreaProps> = ({
               <button onClick={() => { onSetShowPlayerSelection(false); onSetOutcome(null); }} className={`${mutedTextClass} text-xs`}>Back</button>
             </div>
           </div>
-          <div className="flex-1 grid grid-cols-4 gap-2 overflow-y-auto pb-2 content-start">
+          <div className="live-player-grid flex-1 grid grid-cols-4 gap-2 overflow-y-auto pb-2 content-start">
             {sortedPlayers.map((player) => (
               <button
                 key={player.id}
