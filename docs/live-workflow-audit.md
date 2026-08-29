@@ -221,3 +221,9 @@ Active-match lifecycle UI updated on 2026-08-29:
 - Home includes a Manage shortcut to History when active matches exist.
 - History separates active matches from completed matches.
 - Active match cleanup now uses "Abandon active match" wording in the button label, confirmation, and success toast; completed match cleanup keeps "Delete completed match" wording.
+
+Offline/update UI hardened on 2026-08-29:
+
+- The global status indicator now shows text, not only an icon: `Synced`, `Syncing`, `Offline`, or queued paused write count.
+- The status indicator uses queued paused mutations from React Query so scorers can tell when replayable writes are still waiting.
+- PWA update availability dispatches an app update event and shows an `Update Ready` action instead of immediately reloading the app during a match.

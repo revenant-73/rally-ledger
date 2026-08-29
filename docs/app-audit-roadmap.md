@@ -60,9 +60,8 @@ Last updated: 2026-08-29
 
 ## Suggested Implementation Order
 
-1. Harden offline/update behavior for game-night use: visible pending queue count, update-ready messaging, and better failed-save recovery.
-2. Continue tablet and large-phone layout validation in real scorer-table workflows.
-3. Address bundle/code-splitting after the live scoring path is consistently reliable.
+1. Continue tablet and large-phone layout validation in real scorer-table workflows.
+2. Address bundle/code-splitting after the live scoring path is consistently reliable.
 
 ## Implementation Notes
 
@@ -101,3 +100,4 @@ Last updated: 2026-08-29
 - Done: production-verified substitution display and attribution with disposable `QA Sub Verify`; #7 Kaia substituted into zone 4, appeared as `SUB 7 FOR #1`, received a credited kill, appeared in live stats as the top earner, appeared in the completed report's kill/top-earner/rally-log sections, and the QA match was deleted.
 - Done: added focused automated coverage for database-backed active-match resume from Home/History, fixed-format match completion screens, report total-to-set reconciliation, and PWA service-worker/query bootstrap wiring. Verified with `npm run lint`, `npm run test -- --run`, and `npm run build`.
 - Done: improved active-match lifecycle controls so Home lists every active match with a Manage shortcut, History groups active and completed matches separately, and active cleanup uses explicit "Abandon active match" wording while completed cleanup uses "Delete completed match" wording.
+- Done: hardened game-night offline/update feedback with a visible status chip for Synced, Syncing, Offline, and queued paused writes, plus an Update Ready action that lets the scorer choose when to reload instead of forcing an automatic refresh.

@@ -2,6 +2,7 @@ import { QueryClient } from '@tanstack/react-query';
 import { registerSW } from './pwaRegistration';
 import { addRallyMutationFn, undoLastRallyMutationFn } from './hooks/queries/useRallies';
 import { updateSetMutationFn } from './hooks/queries/useSets';
+import { APP_UPDATE_READY_EVENT } from './appUpdateEvents';
 
 export const ONE_DAY = 1000 * 60 * 60 * 24;
 
@@ -35,10 +36,14 @@ export const createAppQueryClient = () => {
 };
 
 export const registerAppServiceWorker = () => {
-  registerSW({
+  const updateServiceWorker = registerSW({
     immediate: true,
     onNeedRefresh() {
-      window.location.reload();
+      window.dispatchEvent(new CustomEvent(APP_UPDATE_READY_EVENT, {
+        detail: { updateServiceWorker },
+      }));
     },
   });
+
+  return updateServiceWorker;
 };
