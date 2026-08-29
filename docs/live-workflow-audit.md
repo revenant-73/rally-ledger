@@ -181,7 +181,8 @@ Finding:
 - Tablet layout pass on 2026-08-29:
   - Production QA at 768 x 1024 showed Home and the live scorer view were reachable with no browser errors.
   - Production QA at 1024 x 768 showed the live confirm-server player grid was vertically clipped under the recent-rally panel, making only the first row of player options comfortably visible.
-  - Fixed locally: landscape viewports up to 900 px tall now use a smaller court reference area, a denser predicted-server card, and seven-column player grids for server, receiver, and involved-player selection so tablet/large-phone landscape scorers can see the full roster above the recent-rally strip.
+  - Fixed and deployed: landscape viewports up to 900 px tall now use a smaller court reference area, a denser predicted-server card, and seven-column player grids for server, receiver, and involved-player selection so tablet/large-phone landscape scorers can see the full roster above the recent-rally strip.
+  - Production QA on deploy `6a92df67a1ef360008386b8e` confirmed the live confirm-server screen at 1024 x 768 and 1180 x 820 with all 13 roster buttons visible above the recent-rally strip and no browser errors.
 
 Important limitation:
 
@@ -192,13 +193,12 @@ Important limitation:
 
 The next authenticated browser validation pass should cover:
 
-1. Production-verify the tablet landscape roster-density fix after deploy at 1024 x 768 and 1180 x 820.
-2. Rapid-tap prevention during point save.
-3. Serve attribution: predicted server, manual server selection, ace, error, in-system, and KO.
-4. Receive attribution: receive quality, receiver selection, opponent ace.
-5. Reports after the test match.
-6. Undo from a saved rally through match detail and season report after a completed non-disposable match.
-7. Active-match cleanup workflow for old practice/test matches.
+1. Rapid-tap prevention during point save.
+2. Serve attribution: predicted server, manual server selection, ace, error, in-system, and KO.
+3. Receive attribution: receive quality, receiver selection, opponent ace.
+4. Reports after the test match.
+5. Undo from a saved rally through match detail and season report after a completed non-disposable match.
+6. Active-match cleanup workflow for old practice/test matches.
 
 ## Validation Commands
 

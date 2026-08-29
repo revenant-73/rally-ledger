@@ -7,7 +7,7 @@ Last updated: 2026-08-29
 - `npm run lint` passes.
 - `npm run test -- --run` passes.
 - `npm run build` passes.
-- Latest confirmed production deploy: `b80d342 fix: activate deployed app updates`.
+- Latest confirmed production deploy: `d586287 ui: broaden tablet landscape live layout`.
 - Vite reports a large client chunk, so code splitting is worth addressing after core reliability work.
 
 ## Highest Priority Changes
@@ -60,7 +60,7 @@ Last updated: 2026-08-29
 
 ## Suggested Implementation Order
 
-1. Production-verify the tablet landscape roster-density fix at 1024 x 768 and 1180 x 820.
+1. Re-test rapid-tap prevention during an actual point-save path in production.
 2. Address bundle/code-splitting after the live scoring path is consistently reliable.
 
 ## Implementation Notes
@@ -101,4 +101,4 @@ Last updated: 2026-08-29
 - Done: added focused automated coverage for database-backed active-match resume from Home/History, fixed-format match completion screens, report total-to-set reconciliation, and PWA service-worker/query bootstrap wiring. Verified with `npm run lint`, `npm run test -- --run`, and `npm run build`.
 - Done: improved active-match lifecycle controls so Home lists every active match with a Manage shortcut, History groups active and completed matches separately, and active cleanup uses explicit "Abandon active match" wording while completed cleanup uses "Delete completed match" wording.
 - Done: hardened game-night offline/update feedback with a visible status chip for Synced, Syncing, Offline, and queued paused writes, plus an Update Ready action that lets the scorer choose when to reload instead of forcing an automatic refresh.
-- Done: production tablet QA found the confirm-server roster grid clipped on 1024 x 768 landscape; added short-landscape court density hooks and seven-column player grids for server, receiver, and involved-player selection. Needs production verification after deploy.
+- Done: production tablet QA found the confirm-server roster grid clipped on 1024 x 768 landscape; deployed short-landscape court density hooks and seven-column player grids for server, receiver, and involved-player selection. Production deploy `6a92df67a1ef360008386b8e` confirmed the live confirm-server screen at 1024 x 768 and 1180 x 820 with all 13 roster buttons visible above the recent-rally strip.
