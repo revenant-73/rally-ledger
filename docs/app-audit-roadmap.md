@@ -60,14 +60,13 @@ Last updated: 2026-08-29
 
 ## Suggested Implementation Order
 
-1. Deploy and verify the Abandon Match fix.
-2. Run a two-set production workflow from match setup through manual match completion.
-3. Validate substitution display and attribution after a sub in the live court view.
-4. Add focused automated tests for active-match resume, match completion formats, report reconciliation, and PWA update registration.
-5. Improve active-match lifecycle controls: clearer resume cards, easier active-test cleanup, and safer "finish/abandon/delete" distinctions.
-6. Harden offline/update behavior for game-night use: visible pending queue count, update-ready messaging, and better failed-save recovery.
-7. Continue tablet and large-phone layout validation in real scorer-table workflows.
-8. Address bundle/code-splitting after the live scoring path is consistently reliable.
+1. Run a two-set production workflow from match setup through manual match completion.
+2. Validate substitution display and attribution after a sub in the live court view.
+3. Add focused automated tests for active-match resume, match completion formats, report reconciliation, and PWA update registration.
+4. Improve active-match lifecycle controls: clearer resume cards, easier active-test cleanup, and safer "finish/abandon/delete" distinctions.
+5. Harden offline/update behavior for game-night use: visible pending queue count, update-ready messaging, and better failed-save recovery.
+6. Continue tablet and large-phone layout validation in real scorer-table workflows.
+7. Address bundle/code-splitting after the live scoring path is consistently reliable.
 
 ## Implementation Notes
 
@@ -100,4 +99,5 @@ Last updated: 2026-08-29
 - Done: tightened the recent rally audit strip for tablet landscape layouts so it consumes less vertical space.
 - Done: authenticated production QA validated a controlled serve ace, serve error, receive-to-kill rally, side-out rotation, live dashboard, match report, season report, and QA match cleanup.
 - Done: authenticated production QA validated undo from saved ace through live score, recent-rally strip, and live dashboard; found that Abandon Match only navigated home and fixed it to delete the active match through the existing server-side cascade.
+- Done: deployed and production-verified the Abandon Match fix with a disposable `QA Abandon Verify` match; a pre-existing active `Test` match remains untouched.
 

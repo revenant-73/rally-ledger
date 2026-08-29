@@ -151,28 +151,28 @@ Observed results:
 - The undo path was verified through live score, recent-rally strip, and live dashboard.
 - Abandon Match returned Home but left the match active and resumable from Home/History. Fixed locally: Abandon Match now calls the authorized delete cascade before navigating Home.
 - The lingering disposable `QA Undo Audit` match was removed with the History delete action after the bug was observed.
+- After deployment, a disposable `QA Abandon Verify` match confirmed Abandon Match now removes the active match and does not leave a QA resume/history entry behind.
+- One pre-existing active match named `Test` remained in production History and was not modified.
 
 Important limitation:
 
 - The 2026-08-28 production pass did not validate the kill-entry path because the selected terminal outcome was accidentally `Ace` instead of `Kill`. The 2026-08-29 production pass completed that validation successfully.
 - Agent-browser pointer clicks were inconsistent on several live-entry controls, while keyboard focus plus Enter activated the same controls successfully. No browser console errors were reported, and the validated app state updated correctly after keyboard activation. Treat this as an automation caveat unless manual touch testing reproduces it.
-- The Abandon Match fix still needs production deployment and browser verification after deploy.
 
 ## Browser QA Still Needed
 
 The next authenticated browser validation pass should cover:
 
-1. Deploy and verify Abandon Match deletes/clears the active match instead of leaving a resumable record.
-2. iPad/tablet portrait: 768 x 1024.
-3. iPad/tablet landscape: 1024 x 768 and 1180 x 820.
-4. Two-set workflow from new match through match completion.
-5. Rapid-tap prevention during point save.
-6. Serve attribution: predicted server, manual server selection, ace, error, in-system, and KO.
-7. Receive attribution: receive quality, receiver selection, opponent ace.
-8. Substitution display and attribution after a sub.
-9. Reports after the test match.
-10. Undo from a saved rally through match detail and season report after a completed non-disposable match.
-11. Active-match cleanup workflow for old practice/test matches.
+1. iPad/tablet portrait: 768 x 1024.
+2. iPad/tablet landscape: 1024 x 768 and 1180 x 820.
+3. Two-set workflow from new match through match completion.
+4. Rapid-tap prevention during point save.
+5. Serve attribution: predicted server, manual server selection, ace, error, in-system, and KO.
+6. Receive attribution: receive quality, receiver selection, opponent ace.
+7. Substitution display and attribution after a sub.
+8. Reports after the test match.
+9. Undo from a saved rally through match detail and season report after a completed non-disposable match.
+10. Active-match cleanup workflow for old practice/test matches.
 
 ## Validation Commands
 
