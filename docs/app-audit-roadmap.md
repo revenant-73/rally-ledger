@@ -1,12 +1,13 @@
 # Century Matchbook App Audit Roadmap
 
-Last updated: 2026-08-27
+Last updated: 2026-08-29
 
 ## Current Health
 
 - `npm run lint` passes.
 - `npm run test -- --run` passes.
 - `npm run build` passes.
+- Latest confirmed production deploy: `b80d342 fix: activate deployed app updates`.
 - Vite reports a large client chunk, so code splitting is worth addressing after core reliability work.
 
 ## Highest Priority Changes
@@ -59,13 +60,14 @@ Last updated: 2026-08-27
 
 ## Suggested Implementation Order
 
-1. Deterministic rally ordering and shared rally normalization.
-2. Transaction-style rally + score persistence.
-3. Rollback-safe live-state updates on failed rally saves.
-4. Server API boundary for scoring and destructive writes.
-5. Auth/session hardening.
-6. Analytics cleanup and report upgrades.
-7. Bundle/code-splitting pass.
+1. Continue the production live scoring audit from a known active test match.
+2. Enter a controlled rally sequence and reconcile live score, player attribution, recent rally audit, undo, dashboard, match detail, and season reports.
+3. Complete the unvalidated kill-entry path from receive sequence through dashboard and reports.
+4. Add focused automated tests for active-match resume, match completion formats, report reconciliation, and PWA update registration.
+5. Improve active-match lifecycle controls: clearer resume cards, easier active-test cleanup, and safer "finish/abandon/delete" distinctions.
+6. Harden offline/update behavior for game-night use: visible pending queue count, update-ready messaging, and better failed-save recovery.
+7. Continue tablet and large-phone layout validation in real scorer-table workflows.
+8. Address bundle/code-splitting after the live scoring path is consistently reliable.
 
 ## Implementation Notes
 
@@ -93,4 +95,7 @@ Last updated: 2026-08-27
 - Done: added richer print/export report layouts with paper headers, print metadata, and complete player stat tables for coach packets.
 - Done: added a live workflow audit and fixed two match-day reliability issues: active-set transitions now reset entry/serving state, and live rally entry locks while saves are pending.
 - Done: switched the live match route to dynamic viewport height so iPad/tablet browsers are less likely to clip the scoring controls.
+- Done: active matches can be resumed from History and Home using database-backed active match records, not only the browser's local activeMatch state.
+- Done: added explicit service-worker registration so newly deployed PWA bundles activate more reliably.
+- Done: tightened the recent rally audit strip for tablet landscape layouts so it consumes less vertical space.
 

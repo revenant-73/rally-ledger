@@ -1,6 +1,6 @@
 # Live Gym Readability Plan
 
-Last updated: 2026-08-26
+Last updated: 2026-08-29
 
 ## Problem
 
@@ -50,7 +50,12 @@ Improve the live match screen for gym use by making the interface more compact, 
 - Add a device-local Table Mode toggle in Match Actions to compact the live header and bottom controls when screen space is tight.
 - Add a device-local Bright Gym Mode toggle in Match Actions for a lighter, higher-contrast live screen in bright gyms.
 - Add a device-local Scorer Focus Mode toggle in Match Actions that keeps Undo visible while moving lower-priority actions and score corrections into Match Actions.
+- Add a compact recent-rally audit strip so scorers can quickly confirm the last few points without opening reports.
+- Tighten the recent-rally audit strip for tablet landscape layouts so it supports verification without stealing too much height from the court and rally-entry controls.
 
-## Later Options
+## Remaining Roadmap
 
-- Continue tuning tablet and large-phone density after real scorer-table use.
+- Validate live scoring at tablet and large modern phone sizes, not small-phone layouts.
+- Confirm the court, rally-entry controls, recent-rally strip, Undo, and Match Actions remain visible and tappable in iPad portrait and landscape.
+- Tune density only where real scorer-table use shows friction; avoid making the score larger at the expense of the working controls.
+- Consider a stronger "game mode" visual treatment if bright-gym feedback still shows contrast problems after the current Bright Gym Mode pass.

@@ -33,6 +33,8 @@ All notable changes to this project are documented here. Format loosely follows 
 - Added richer print/save-to-PDF report layouts with paper headers, print metadata, and complete player stat tables that print even when expandable on-screen sections are collapsed.
 - Added a live workflow audit document for match-day scoring, attribution, persistence, and tablet/iPad layout validation.
 - Added a visible live rally-entry save lock so repeated taps cannot submit another point, score correction, or undo while the previous action is still saving.
+- Added a database-backed active-match resume flow so Home can show `Resume vs ...` even when the browser did not originally start that match.
+- Added explicit service-worker update registration so deployed PWA bundles activate more reliably after production releases.
 
 ### Fixed
 - Fixed serve reporting for one-tap ACE/ERR entries by persisting inferred serve results on new rallies and inferring serve aces/errors from older outcome-only rally rows in reports and dashboards.
@@ -43,6 +45,11 @@ All notable changes to this project are documented here. Format loosely follows 
 - Fixed active-set transitions so live scoring resets server selection, selected outcome state, serving side, rotation, lineup, and receive selections from the newly active set instead of carrying stale state forward.
 - Fixed the live match route to use dynamic viewport height, reducing iPad/tablet browser chrome layout clipping.
 - Fixed the `react-hooks/set-state-in-effect` lint warning in `useLiveMatchLogic` by moving the activeSet-metadata sync out of a `useEffect` and into the render body, guarded by a `prevMetadata` comparison - React's documented pattern for "adjusting state when a prop changes," which avoids the extra commit-then-effect render pass.
+- Fixed History so active match cards resume live scoring instead of opening the post-match report route.
+- Fixed stale production QA behavior where a successfully deployed update could be hidden behind an old PWA service-worker bundle.
+
+### Changed
+- Tightened the recent rally audit strip in tablet landscape layouts so it uses less vertical space while preserving quick verification of the last points.
 
 ### Security
 - Replaced email-only "login" (anyone who knew a coach's email could sign in as them) with real password authentication. Added `users.password_hash` (bcrypt, via `bcryptjs`) and a Netlify Function (`netlify/functions/auth.ts`) that verifies credentials server-side rather than the browser querying the users table directly. Existing accounts created before this change (no password set yet) are claimed with the password given on next login rather than being locked out. `Login.tsx` now has a password field with a minimum length requirement.
