@@ -35,6 +35,27 @@ describe('matchFormat', () => {
     expect(getSetTarget(settings, 5)).toBe(11);
   });
 
+  it('uses the deciding target only for deciding sets in best-of formats', () => {
+    const fixedTwo = getMatchFormatSettings({
+      metadata: {
+        matchFormat: 'fixed-2',
+        standardSetTarget: 25,
+        decidingSetTarget: 15,
+      },
+    });
+    const singleSet = getMatchFormatSettings({
+      metadata: {
+        matchFormat: 'single-set',
+        standardSetTarget: 25,
+        decidingSetTarget: 15,
+      },
+    });
+
+    expect(getSetTarget(fixedTwo, 1)).toBe(25);
+    expect(getSetTarget(fixedTwo, 2)).toBe(25);
+    expect(getSetTarget(singleSet, 1)).toBe(25);
+  });
+
   it('defaults match formats from match type', () => {
     expect(getDefaultMatchFormatForType('Tournament')).toBe('best-of-3');
     expect(getDefaultMatchFormatForType('League')).toBe('best-of-5');

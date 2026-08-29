@@ -83,7 +83,9 @@ export const getMatchFormatSettings = (match?: Partial<Pick<Match, 'metadata' | 
 };
 
 export const getSetTarget = (settings: MatchFormatSettings, setNumber: number) =>
-  setNumber === settings.maxSets ? settings.decidingSetTarget : settings.standardSetTarget;
+  settings.setsToWin && setNumber === settings.maxSets
+    ? settings.decidingSetTarget
+    : settings.standardSetTarget;
 
 export const getAvailableNextSetNumbers = (
   settings: MatchFormatSettings,

@@ -60,7 +60,7 @@ Last updated: 2026-08-29
 
 ## Suggested Implementation Order
 
-1. Run a two-set production workflow from match setup through manual match completion.
+1. Deploy and verify the fixed two-set/single-set target-score correction.
 2. Validate substitution display and attribution after a sub in the live court view.
 3. Add focused automated tests for active-match resume, match completion formats, report reconciliation, and PWA update registration.
 4. Improve active-match lifecycle controls: clearer resume cards, easier active-test cleanup, and safer "finish/abandon/delete" distinctions.
@@ -100,4 +100,5 @@ Last updated: 2026-08-29
 - Done: authenticated production QA validated a controlled serve ace, serve error, receive-to-kill rally, side-out rotation, live dashboard, match report, season report, and QA match cleanup.
 - Done: authenticated production QA validated undo from saved ace through live score, recent-rally strip, and live dashboard; found that Abandon Match only navigated home and fixed it to delete the active match through the existing server-side cascade.
 - Done: deployed and production-verified the Abandon Match fix with a disposable `QA Abandon Verify` match; a pre-existing active `Test` match remains untouched.
+- Done: authenticated production QA validated a fixed two-set match through both set completions, manual match closeout, completed match report, and QA cleanup; found and fixed fixed-format set target handling so fixed two-set and single-set matches use the standard target instead of the deciding target.
 

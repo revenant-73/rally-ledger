@@ -154,6 +154,21 @@ Observed results:
 - After deployment, a disposable `QA Abandon Verify` match confirmed Abandon Match now removes the active match and does not leave a QA resume/history entry behind.
 - One pre-existing active match named `Test` remained in production History and was not modified.
 
+Authenticated production QA on 2026-08-29 created, completed, inspected, and deleted a disposable two-set match named `QA Two Set Audit`.
+
+Controlled sequence:
+
+1. Set 1 started with the standard lineup and #6 Isa serving.
+2. Set 1 recorded a #6 Isa ace and was ended as a 1-0 win.
+3. Set 2 started cleanly with a new lineup and no score/rally carryover.
+4. Set 2 recorded a #6 Isa serve error and was ended as a 0-1 loss.
+5. With one set win and one set loss, the fixed two-set format stopped offering more sets and showed `Match Format Complete` with manual Finish Win/Loss controls.
+6. Finish Win completed the match; the match report showed both set rows, the expected +1/-1 point balance, 1 ace, 1 serve error, and two filtered rally-log rows.
+
+Finding:
+
+- Fixed two-set scrimmage displayed set 2 with the deciding-set target of 15 instead of the standard target. Fixed locally: deciding-set targets now apply only to best-of formats; fixed two-set and single-set formats use the standard set target.
+
 Important limitation:
 
 - The 2026-08-28 production pass did not validate the kill-entry path because the selected terminal outcome was accidentally `Ace` instead of `Kill`. The 2026-08-29 production pass completed that validation successfully.
@@ -163,9 +178,9 @@ Important limitation:
 
 The next authenticated browser validation pass should cover:
 
-1. iPad/tablet portrait: 768 x 1024.
-2. iPad/tablet landscape: 1024 x 768 and 1180 x 820.
-3. Two-set workflow from new match through match completion.
+1. Deploy and verify the fixed two-set/single-set target-score correction.
+2. iPad/tablet portrait: 768 x 1024.
+3. iPad/tablet landscape: 1024 x 768 and 1180 x 820.
 4. Rapid-tap prevention during point save.
 5. Serve attribution: predicted server, manual server selection, ace, error, in-system, and KO.
 6. Receive attribution: receive quality, receiver selection, opponent ace.
