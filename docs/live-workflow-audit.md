@@ -206,3 +206,11 @@ Use the project standard checks after fixes:
 - `npm run build`
 
 Use browser QA with authenticated app access before calling the full workflow production-ready.
+
+Automated regression coverage added on 2026-08-29:
+
+- Home resumes the first database-backed active match when local active-match state is empty.
+- History sends active matches to live scoring and completed matches to their post-match report.
+- Fixed two-set set 2 and completed single-set screens preserve the expected target/completion behavior.
+- Match report earned/gifted totals reconcile against the completed set report rows.
+- PWA registration remains immediate, and offline mutation replay defaults remain wired for persisted rally/set mutations.

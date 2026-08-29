@@ -60,11 +60,10 @@ Last updated: 2026-08-29
 
 ## Suggested Implementation Order
 
-1. Add focused automated tests for active-match resume, match completion formats, report reconciliation, and PWA update registration.
-2. Improve active-match lifecycle controls: clearer resume cards, easier active-test cleanup, and safer "finish/abandon/delete" distinctions.
-3. Harden offline/update behavior for game-night use: visible pending queue count, update-ready messaging, and better failed-save recovery.
-4. Continue tablet and large-phone layout validation in real scorer-table workflows.
-5. Address bundle/code-splitting after the live scoring path is consistently reliable.
+1. Improve active-match lifecycle controls: clearer resume cards, easier active-test cleanup, and safer "finish/abandon/delete" distinctions.
+2. Harden offline/update behavior for game-night use: visible pending queue count, update-ready messaging, and better failed-save recovery.
+3. Continue tablet and large-phone layout validation in real scorer-table workflows.
+4. Address bundle/code-splitting after the live scoring path is consistently reliable.
 
 ## Implementation Notes
 
@@ -101,3 +100,4 @@ Last updated: 2026-08-29
 - Done: authenticated production QA validated a fixed two-set match through both set completions, manual match closeout, completed match report, and QA cleanup; found and fixed fixed-format set target handling so fixed two-set and single-set matches use the standard target instead of the deciding target.
 - Done: deployed and production-verified the fixed-format target correction on Netlify deploy `6a92d2cb75e3cc0008faea40`; disposable `QA Target Verify` and `QA Single Target` matches confirmed two-set set 2 and single-set set 1 both use target 25, then were deleted.
 - Done: production-verified substitution display and attribution with disposable `QA Sub Verify`; #7 Kaia substituted into zone 4, appeared as `SUB 7 FOR #1`, received a credited kill, appeared in live stats as the top earner, appeared in the completed report's kill/top-earner/rally-log sections, and the QA match was deleted.
+- Done: added focused automated coverage for database-backed active-match resume from Home/History, fixed-format match completion screens, report total-to-set reconciliation, and PWA service-worker/query bootstrap wiring. Verified with `npm run lint`, `npm run test -- --run`, and `npm run build`.

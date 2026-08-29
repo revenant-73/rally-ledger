@@ -204,6 +204,38 @@ describe('report stats', () => {
     });
   });
 
+  it('keeps match totals reconciled with completed set report rows', () => {
+    const matchSets: MatchSet[] = [
+      { ...sets[0], id: 's1', matchId: 'm1', setNumber: 1, ourScore: 25, opponentScore: 20, finalResult: 'Win' },
+      { ...sets[0], id: 's2', matchId: 'm1', setNumber: 2, ourScore: 22, opponentScore: 25, finalResult: 'Loss' },
+    ];
+    const stats = calculateReportStats([
+      rally({ setId: 's1', rallyNumber: 1, pointWinner: 'Us', outcomeType: 'Kill', classification: 'Earned' }),
+      rally({ setId: 's1', rallyNumber: 2, pointWinner: 'Opponent', outcomeType: 'Serve Error', classification: 'Gifted' }),
+      rally({ setId: 's1', rallyNumber: 3, pointWinner: 'Opponent', outcomeType: 'Kill', classification: 'Earned' }),
+      rally({ setId: 's2', rallyNumber: 4, pointWinner: 'Us', outcomeType: 'Attack Error', classification: 'Gifted' }),
+      rally({ setId: 's2', rallyNumber: 5, pointWinner: 'Opponent', outcomeType: 'Attack Error', classification: 'Gifted' }),
+    ], players, matchSets);
+
+    const setTotals = stats.setReports.reduce((totals, setReport) => ({
+      ourEarned: totals.ourEarned + setReport.ourEarned,
+      ourGifted: totals.ourGifted + setReport.ourGifted,
+      opponentEarned: totals.opponentEarned + setReport.opponentEarned,
+      opponentGifted: totals.opponentGifted + setReport.opponentGifted,
+    }), { ourEarned: 0, ourGifted: 0, opponentEarned: 0, opponentGifted: 0 });
+
+    expect(setTotals).toEqual({
+      ourEarned: stats.ourEarned,
+      ourGifted: stats.ourGifted,
+      opponentEarned: stats.opponentEarned,
+      opponentGifted: stats.opponentGifted,
+    });
+    expect(stats.setReports).toEqual([
+      expect.objectContaining({ setNumber: 1, ourEarned: 1, ourGifted: 1, opponentEarned: 1, opponentGifted: 0 }),
+      expect.objectContaining({ setNumber: 2, ourEarned: 0, ourGifted: 1, opponentEarned: 0, opponentGifted: 1 }),
+    ]);
+  });
+
   it('infers serve attempts from ace and serve error outcomes when serveResult is missing', () => {
     const stats = calculateReportStats([
       rally({ rallyNumber: 1, serverPlayerId: 'p1', outcomeType: 'Ace', pointWinner: 'Us', classification: 'Earned' }),
