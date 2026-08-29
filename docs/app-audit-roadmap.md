@@ -60,9 +60,9 @@ Last updated: 2026-08-29
 
 ## Suggested Implementation Order
 
-1. Continue the production live scoring audit from a known active test match.
-2. Enter a controlled rally sequence and reconcile live score, player attribution, recent rally audit, undo, dashboard, match detail, and season reports.
-3. Complete the unvalidated kill-entry path from receive sequence through dashboard and reports.
+1. Deploy and verify the Abandon Match fix.
+2. Run a two-set production workflow from match setup through manual match completion.
+3. Validate substitution display and attribution after a sub in the live court view.
 4. Add focused automated tests for active-match resume, match completion formats, report reconciliation, and PWA update registration.
 5. Improve active-match lifecycle controls: clearer resume cards, easier active-test cleanup, and safer "finish/abandon/delete" distinctions.
 6. Harden offline/update behavior for game-night use: visible pending queue count, update-ready messaging, and better failed-save recovery.
@@ -98,4 +98,6 @@ Last updated: 2026-08-29
 - Done: active matches can be resumed from History and Home using database-backed active match records, not only the browser's local activeMatch state.
 - Done: added explicit service-worker registration so newly deployed PWA bundles activate more reliably.
 - Done: tightened the recent rally audit strip for tablet landscape layouts so it consumes less vertical space.
+- Done: authenticated production QA validated a controlled serve ace, serve error, receive-to-kill rally, side-out rotation, live dashboard, match report, season report, and QA match cleanup.
+- Done: authenticated production QA validated undo from saved ace through live score, recent-rally strip, and live dashboard; found that Abandon Match only navigated home and fixed it to delete the active match through the existing server-side cascade.
 

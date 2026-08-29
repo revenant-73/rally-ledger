@@ -43,6 +43,7 @@ const LiveMatch: React.FC = () => {
     updateMatch, 
     updateSet,
     endMatch,
+    deleteMatch,
   } = useMatch();
   
   const {
@@ -415,7 +416,12 @@ const LiveMatch: React.FC = () => {
           toast.success(`Match completed as a ${winner.toLowerCase()}.`);
           navigate('/');
         }}
-        onAbandonMatch={() => navigate('/')}
+        onAbandonMatch={async () => {
+          await deleteMatch(activeMatch.id);
+          setShowMoreMenu(false);
+          toast.success('Match abandoned.');
+          navigate('/');
+        }}
         tableMode={tableMode}
         onToggleTableMode={() => setTableMode((current) => !current)}
         brightGymMode={brightGymMode}

@@ -14,7 +14,7 @@ interface MoreMenuModalProps {
   onManualScoreChange: (team: 'Us' | 'Opponent', delta: number) => void;
   onEndSet: (winner: 'Win' | 'Loss') => Promise<void>;
   onEndMatch: (winner: 'Win' | 'Loss') => Promise<void>;
-  onAbandonMatch: () => void;
+  onAbandonMatch: () => void | Promise<void>;
   tableMode: boolean;
   onToggleTableMode: () => void;
   brightGymMode: boolean;

@@ -123,24 +123,56 @@ Observed results:
 - On 2026-08-28, production QA found the signed-in browser could keep a stale PWA bundle after a successful deploy. Fixed and deployed in `b80d342`.
 - After clearing the stale QA service worker, production at tablet size confirmed History showed `Resume scoring`, active matches opened `/match/live`, Home showed `Resume vs test 2`, and no browser errors were reported.
 
+Authenticated production QA on 2026-08-29 created, completed, reconciled, and deleted a disposable match named `QA Roadmap Audit`.
+
+Controlled rally sequence:
+
+1. Our serve ace by #6 Isa.
+2. Our serve error by #6 Isa.
+3. Opponent serve, in-system receive by #2 Luna, rally won by #3 Cassey kill.
+
+Observed results:
+
+- Live score reconciled after each rally: 1-0, 1-1, then 2-1.
+- Side-out behavior was correct after the receive-to-kill rally: service returned to Century Varsity and the court advanced from rotation 1 to rotation 2.
+- Predicted server updated correctly after the side-out: #3 Cassey moved to zone 1 and was shown as serving.
+- The live recent-rally audit strip showed all three rallies with the correct score transitions, point winner, outcome, player attribution, serve/receive context, and rotation.
+- The live dashboard matched the sequence: 2 earned, 1 gifted, 50% serve in, 50% serve KO, one in-system receive, #6 Isa credited with one ace and one serve error, and #3 Cassey credited with one kill.
+- The completed match report matched the same sequence: +2/-1 point balance, 1 ace, 1 serve error, 1 in-system receive by #2 Luna, 1 kill / 0 errors for #3 Cassey, rotation 1 balance of 2 earned and 1 gifted, and a three-row filtered rally log.
+- The season report temporarily included the QA match with the expected row: +2/-1, 50% serve in, 50% KO, 3.00 pass score, 1/0 kills/errors, and +1 kill net.
+- The disposable QA match was deleted afterward; production History returned to only the real Century JV match.
+
+Authenticated production QA on 2026-08-29 created and deleted a disposable match named `QA Undo Audit`.
+
+Observed results:
+
+- A saved #6 Isa ace correctly moved the live score from 0-0 to 1-0 and appeared as the recent-rally undo target.
+- Undo restored the score to 0-0, cleared the recent-rally strip back to `No rallies entered yet.`, and removed the ace from the live dashboard totals.
+- The undo path was verified through live score, recent-rally strip, and live dashboard.
+- Abandon Match returned Home but left the match active and resumable from Home/History. Fixed locally: Abandon Match now calls the authorized delete cascade before navigating Home.
+- The lingering disposable `QA Undo Audit` match was removed with the History delete action after the bug was observed.
+
 Important limitation:
 
-- The intended kill-entry path was not fully validated in that production pass because the selected terminal outcome was accidentally `Ace` instead of `Kill`.
+- The 2026-08-28 production pass did not validate the kill-entry path because the selected terminal outcome was accidentally `Ace` instead of `Kill`. The 2026-08-29 production pass completed that validation successfully.
+- Agent-browser pointer clicks were inconsistent on several live-entry controls, while keyboard focus plus Enter activated the same controls successfully. No browser console errors were reported, and the validated app state updated correctly after keyboard activation. Treat this as an automation caveat unless manual touch testing reproduces it.
+- The Abandon Match fix still needs production deployment and browser verification after deploy.
 
 ## Browser QA Still Needed
 
 The next authenticated browser validation pass should cover:
 
-1. iPad/tablet portrait: 768 x 1024.
-2. iPad/tablet landscape: 1024 x 768 and 1180 x 820.
-3. Two-set workflow from new match through match completion.
-4. Rapid-tap prevention during point save.
-5. Serve attribution: predicted server, manual server selection, ace, error, in-system, and KO.
-6. Receive attribution: receive quality, receiver selection, opponent ace.
-7. Substitution display and attribution after a sub.
-8. Reports after the test match.
-9. Kill attribution from receive sequence through dashboard and match-detail report.
-10. Active-match cleanup workflow for old practice/test matches.
+1. Deploy and verify Abandon Match deletes/clears the active match instead of leaving a resumable record.
+2. iPad/tablet portrait: 768 x 1024.
+3. iPad/tablet landscape: 1024 x 768 and 1180 x 820.
+4. Two-set workflow from new match through match completion.
+5. Rapid-tap prevention during point save.
+6. Serve attribution: predicted server, manual server selection, ace, error, in-system, and KO.
+7. Receive attribution: receive quality, receiver selection, opponent ace.
+8. Substitution display and attribution after a sub.
+9. Reports after the test match.
+10. Undo from a saved rally through match detail and season report after a completed non-disposable match.
+11. Active-match cleanup workflow for old practice/test matches.
 
 ## Validation Commands
 
