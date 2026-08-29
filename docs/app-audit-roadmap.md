@@ -60,13 +60,12 @@ Last updated: 2026-08-29
 
 ## Suggested Implementation Order
 
-1. Deploy and verify the fixed two-set/single-set target-score correction.
-2. Validate substitution display and attribution after a sub in the live court view.
-3. Add focused automated tests for active-match resume, match completion formats, report reconciliation, and PWA update registration.
-4. Improve active-match lifecycle controls: clearer resume cards, easier active-test cleanup, and safer "finish/abandon/delete" distinctions.
-5. Harden offline/update behavior for game-night use: visible pending queue count, update-ready messaging, and better failed-save recovery.
-6. Continue tablet and large-phone layout validation in real scorer-table workflows.
-7. Address bundle/code-splitting after the live scoring path is consistently reliable.
+1. Validate substitution display and attribution after a sub in the live court view.
+2. Add focused automated tests for active-match resume, match completion formats, report reconciliation, and PWA update registration.
+3. Improve active-match lifecycle controls: clearer resume cards, easier active-test cleanup, and safer "finish/abandon/delete" distinctions.
+4. Harden offline/update behavior for game-night use: visible pending queue count, update-ready messaging, and better failed-save recovery.
+5. Continue tablet and large-phone layout validation in real scorer-table workflows.
+6. Address bundle/code-splitting after the live scoring path is consistently reliable.
 
 ## Implementation Notes
 
@@ -101,4 +100,5 @@ Last updated: 2026-08-29
 - Done: authenticated production QA validated undo from saved ace through live score, recent-rally strip, and live dashboard; found that Abandon Match only navigated home and fixed it to delete the active match through the existing server-side cascade.
 - Done: deployed and production-verified the Abandon Match fix with a disposable `QA Abandon Verify` match; a pre-existing active `Test` match remains untouched.
 - Done: authenticated production QA validated a fixed two-set match through both set completions, manual match closeout, completed match report, and QA cleanup; found and fixed fixed-format set target handling so fixed two-set and single-set matches use the standard target instead of the deciding target.
+- Done: deployed and production-verified the fixed-format target correction on Netlify deploy `6a92d2cb75e3cc0008faea40`; disposable `QA Target Verify` and `QA Single Target` matches confirmed two-set set 2 and single-set set 1 both use target 25, then were deleted.
 

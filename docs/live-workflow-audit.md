@@ -168,6 +168,10 @@ Controlled sequence:
 Finding:
 
 - Fixed two-set scrimmage displayed set 2 with the deciding-set target of 15 instead of the standard target. Fixed locally: deciding-set targets now apply only to best-of formats; fixed two-set and single-set formats use the standard set target.
+- Deployed commit `278aba9` to Netlify deploy `6a92d2cb75e3cc0008faea40` and production-verified the fix with disposable matches:
+  - `QA Target Verify`: two-set scrimmage showed set 1 target 25 and, after ending set 1, set 2 target 25.
+  - `QA Single Target`: single-set format showed set 1 target 25.
+- Both disposable QA matches were deleted after verification. One pre-existing active match named `Test` remained in production History and was not modified.
 
 Important limitation:
 
@@ -178,16 +182,15 @@ Important limitation:
 
 The next authenticated browser validation pass should cover:
 
-1. Deploy and verify the fixed two-set/single-set target-score correction.
+1. Substitution display and attribution after a sub.
 2. iPad/tablet portrait: 768 x 1024.
 3. iPad/tablet landscape: 1024 x 768 and 1180 x 820.
 4. Rapid-tap prevention during point save.
 5. Serve attribution: predicted server, manual server selection, ace, error, in-system, and KO.
 6. Receive attribution: receive quality, receiver selection, opponent ace.
-7. Substitution display and attribution after a sub.
-8. Reports after the test match.
-9. Undo from a saved rally through match detail and season report after a completed non-disposable match.
-10. Active-match cleanup workflow for old practice/test matches.
+7. Reports after the test match.
+8. Undo from a saved rally through match detail and season report after a completed non-disposable match.
+9. Active-match cleanup workflow for old practice/test matches.
 
 ## Validation Commands
 
