@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Match } from '../types';
 import Home from './Home';
 import { useMatch } from '../hooks/useMatch';
@@ -33,6 +33,10 @@ const match = (overrides: Partial<Match>): Match => ({
 });
 
 describe('Home', () => {
+  beforeEach(() => {
+    navigate.mockClear();
+  });
+
   it('resumes a database-backed active match when local active match state is empty', async () => {
     const user = userEvent.setup();
     const resumeMatch = vi.fn();
@@ -49,5 +53,29 @@ describe('Home', () => {
 
     expect(resumeMatch).toHaveBeenCalledWith(activeMatch);
     expect(navigate).toHaveBeenCalledWith('/match/live');
+  });
+
+  it('shows every active match and routes Manage to History', async () => {
+    const user = userEvent.setup();
+    const resumeMatch = vi.fn();
+    vi.mocked(useMatch).mockReturnValue({
+      activeMatch: match({ id: 'm-current', opponentName: 'Current', location: 'Court 1' }),
+      matches: [
+        match({ id: 'm-current', opponentName: 'Current', location: 'Court 1' }),
+        match({ id: 'm-db', opponentName: 'Database', location: 'Court 2' }),
+        match({ id: 'm-done', opponentName: 'Done', status: 'completed' }),
+      ],
+      resumeMatch,
+    } as unknown as ReturnType<typeof useMatch>);
+
+    render(<Home />);
+
+    expect(screen.getByRole('region', { name: 'Active matches' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Resume vs Current/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Resume vs Database/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Resume vs Done/i })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Manage' }));
+    expect(navigate).toHaveBeenCalledWith('/history');
   });
 });

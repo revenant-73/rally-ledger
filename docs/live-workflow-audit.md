@@ -214,3 +214,10 @@ Automated regression coverage added on 2026-08-29:
 - Fixed two-set set 2 and completed single-set screens preserve the expected target/completion behavior.
 - Match report earned/gifted totals reconcile against the completed set report rows.
 - PWA registration remains immediate, and offline mutation replay defaults remain wired for persisted rally/set mutations.
+
+Active-match lifecycle UI updated on 2026-08-29:
+
+- Home shows all active matches instead of only one resumable match.
+- Home includes a Manage shortcut to History when active matches exist.
+- History separates active matches from completed matches.
+- Active match cleanup now uses "Abandon active match" wording in the button label, confirmation, and success toast; completed match cleanup keeps "Delete completed match" wording.

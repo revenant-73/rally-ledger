@@ -1,16 +1,22 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Play } from 'lucide-react';
+import { Calendar, MapPin, Plus, Play } from 'lucide-react';
 import { useMatch } from '../hooks/useMatch';
+import type { Match } from '../types';
+
+const matchDate = (match: Match) =>
+  new Date(match.matchDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
   const { activeMatch, matches, resumeMatch } = useMatch();
-  const resumableMatch = activeMatch || matches.find(match => match.status === 'active') || null;
+  const activeMatches = [
+    ...(activeMatch?.status === 'active' ? [activeMatch] : []),
+    ...matches.filter(match => match.status === 'active' && match.id !== activeMatch?.id),
+  ];
 
-  const handleResumeMatch = () => {
-    if (!resumableMatch) return;
-    resumeMatch(resumableMatch);
+  const handleResumeMatch = (match: Match) => {
+    resumeMatch(match);
     navigate('/match/live');
   };
 
@@ -30,14 +36,44 @@ const Home: React.FC = () => {
           Start New Match
         </button>
 
-        {resumableMatch && (
-          <button
-            onClick={handleResumeMatch}
-            className="bg-brand-gray/10 hover:bg-brand-gray/20 border border-brand-teal/30 text-brand-teal font-bold py-6 px-4 rounded-xl flex items-center justify-center gap-3 text-xl transition-all active:scale-[0.98]"
-          >
-            <Play size={28} />
-            Resume vs {resumableMatch.opponentName}
-          </button>
+        {activeMatches.length > 0 && (
+          <section className="space-y-3" aria-label="Active matches">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-black uppercase tracking-widest text-brand-text-secondary">Active Matches</h2>
+              <button
+                onClick={() => navigate('/history')}
+                className="text-xs font-black uppercase tracking-wide text-brand-teal"
+              >
+                Manage
+              </button>
+            </div>
+            {activeMatches.map(match => (
+              <button
+                key={match.id}
+                onClick={() => handleResumeMatch(match)}
+                className="w-full rounded-xl border border-brand-teal/30 bg-brand-gray/10 px-4 py-4 text-left text-brand-text transition-all hover:bg-brand-gray/20 active:scale-[0.98]"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-lg font-black text-brand-teal">Resume vs {match.opponentName}</p>
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-bold text-brand-text-secondary">
+                      <span className="flex items-center gap-1.5">
+                        <Calendar size={14} className="opacity-50" />
+                        {matchDate(match)}
+                      </span>
+                      {match.location && (
+                        <span className="flex items-center gap-1.5">
+                          <MapPin size={14} className="opacity-50" />
+                          {match.location}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <Play size={24} className="shrink-0 text-brand-teal" />
+                </div>
+              </button>
+            ))}
+          </section>
         )}
       </div>
     </div>
