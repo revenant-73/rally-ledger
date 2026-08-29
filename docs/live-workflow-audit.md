@@ -172,6 +172,12 @@ Finding:
   - `QA Target Verify`: two-set scrimmage showed set 1 target 25 and, after ending set 1, set 2 target 25.
   - `QA Single Target`: single-set format showed set 1 target 25.
 - Both disposable QA matches were deleted after verification. One pre-existing active match named `Test` remained in production History and was not modified.
+- Production-verified substitution display and attribution with a disposable `QA Sub Verify` match:
+  - Substituting #7 Kaia into zone 4 immediately changed the court tile to `SUB 7 FOR #1`.
+  - #7 remained available in the rally attribution list after the sub.
+  - A controlled in-system serve followed by a #7 kill saved as a 1-0 point; the recent-rally strip showed `Kill - #7 Kaia`.
+  - Live stats credited #7 Kaia as the sole earner, and the completed match report credited #7 in Kill Performance, Top Earner, and the filtered rally log.
+  - The disposable `QA Sub Verify` match was deleted after verification.
 
 Important limitation:
 
@@ -182,15 +188,14 @@ Important limitation:
 
 The next authenticated browser validation pass should cover:
 
-1. Substitution display and attribution after a sub.
-2. iPad/tablet portrait: 768 x 1024.
-3. iPad/tablet landscape: 1024 x 768 and 1180 x 820.
-4. Rapid-tap prevention during point save.
-5. Serve attribution: predicted server, manual server selection, ace, error, in-system, and KO.
-6. Receive attribution: receive quality, receiver selection, opponent ace.
-7. Reports after the test match.
-8. Undo from a saved rally through match detail and season report after a completed non-disposable match.
-9. Active-match cleanup workflow for old practice/test matches.
+1. iPad/tablet portrait: 768 x 1024.
+2. iPad/tablet landscape: 1024 x 768 and 1180 x 820.
+3. Rapid-tap prevention during point save.
+4. Serve attribution: predicted server, manual server selection, ace, error, in-system, and KO.
+5. Receive attribution: receive quality, receiver selection, opponent ace.
+6. Reports after the test match.
+7. Undo from a saved rally through match detail and season report after a completed non-disposable match.
+8. Active-match cleanup workflow for old practice/test matches.
 
 ## Validation Commands
 
