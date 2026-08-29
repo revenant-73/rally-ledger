@@ -181,7 +181,7 @@ Finding:
 - Tablet layout pass on 2026-08-29:
   - Production QA at 768 x 1024 showed Home and the live scorer view were reachable with no browser errors.
   - Production QA at 1024 x 768 showed the live confirm-server player grid was vertically clipped under the recent-rally panel, making only the first row of player options comfortably visible.
-  - Fixed locally: short landscape viewports now use a smaller court reference area, a denser predicted-server card, and seven-column player grids for server, receiver, and involved-player selection so tablet/large-phone landscape scorers can see the full roster above the recent-rally strip.
+  - Fixed locally: landscape viewports up to 900 px tall now use a smaller court reference area, a denser predicted-server card, and seven-column player grids for server, receiver, and involved-player selection so tablet/large-phone landscape scorers can see the full roster above the recent-rally strip.
 
 Important limitation:
 
