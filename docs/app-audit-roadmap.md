@@ -7,7 +7,8 @@ Last updated: 2026-08-30
 - `npm run lint` passes.
 - `npm run test -- --run` passes.
 - `npm run build` passes.
-- Latest confirmed production deploy: `383ee84 ui: replace report view scroller with dropdown`.
+- Latest confirmed production deploy: includes `6b7a9e7 ui: add practice plan report view`.
+- Latest GitHub head re-verified locally: `6b7a9e7 ui: add practice plan report view`.
 - Route-level code splitting is in place; the production build no longer reports a large client chunk warning.
 
 ## Highest Priority Changes
@@ -106,3 +107,5 @@ Last updated: 2026-08-30
 - Done: production QA on commit `a9cfe97` confirmed route chunks load for History, New Match, Reports, Live Match redirect-without-active-match, and the existing no-active-match Dashboard state without console errors. Reports and Match Detail section navigation worked on desktop and at a 390 x 844 mobile viewport.
 - Done: production QA on commit `383ee84` confirmed Reports and Match Detail use the all-device report dropdown without page-level horizontal overflow; predicted/manual serve attribution, receive attribution, opponent ace handling, live stats, match report, season report, and QA cleanup reconciled through a disposable `QA Serve Receive Delete Me` match.
 - Done: production QA on commit `383ee84` confirmed undo removes a saved rally from live score, recent rallies, live stats, completed match report, rally log, and cumulative season Reports; disposable `QA Undo Report Delete Me` was deleted after verification.
+- Done: local verification against the `6b7a9e7` worktree added focused Reports coverage for collapsed season filters, automatic filter reopening when filters remove every match, and the Practice Plan view selector. Verified with `npm run lint`, `npm run test -- --run`, and `npm run build`.
+- Done: authenticated production QA on `https://century-matchbook.netlify.app/` confirmed the latest Reports improvements after `383ee84`: collapsed season filters, the Practice Plan report view, mobile 390 x 844 layout, tablet landscape 1024 x 768 layout, tablet portrait 768 x 1024 layout, no page-level horizontal overflow, and no console warnings/errors. A read-only Loss filter check confirmed the no-match empty state keeps filters open and reports `1 active - Showing 0 of 1 matches`.

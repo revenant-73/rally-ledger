@@ -128,3 +128,10 @@ Use the project standard checks after implementation:
 - `npm run build`
 
 Manual UI validation should include desktop and mobile widths, especially for stat tables and export buttons.
+
+Latest local verification on 2026-08-30:
+
+- Added focused regression tests for the cumulative Reports page.
+- Covered the default-collapsed season filter accordion, automatic filter reopening when active filters hide every match, and switching the all-device Report View dropdown to the Practice Plan view.
+- `npm run lint`, `npm run test -- --run`, and `npm run build` pass on the current `6b7a9e7`-based worktree.
+- Authenticated production QA on `https://century-matchbook.netlify.app/` confirmed the latest Reports changes after `383ee84`: collapsed filters, Practice Plan view selection, mobile 390 x 844 layout, tablet landscape 1024 x 768 layout, tablet portrait 768 x 1024 layout, no page-level horizontal overflow, and no console warnings/errors. A read-only Loss filter check confirmed the no-match state keeps filters open and reports `1 active - Showing 0 of 1 matches`.
