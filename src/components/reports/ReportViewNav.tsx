@@ -17,39 +17,40 @@ export const ReportViewNav = <T extends string,>({
   activeView,
   options,
   onChange,
-}: ReportViewNavProps<T>) => (
-  <nav className="print-hide -mx-4 overflow-x-auto px-4" aria-label="Report sections">
-    <div className="grid min-w-max auto-cols-[9.5rem] grid-flow-col gap-2 rounded-3xl border border-brand-gray/10 bg-brand-gray/5 p-2 md:min-w-0 md:grid-flow-row md:grid-cols-[repeat(auto-fit,minmax(8.5rem,1fr))]">
-      {options.map(option => {
-        const isActive = option.id === activeView;
+}: ReportViewNavProps<T>) => {
+  const activeOption = options.find(option => option.id === activeView) ?? options[0];
 
-        return (
-          <button
-            key={option.id}
-            type="button"
-            onClick={() => onChange(option.id)}
-            className={`flex min-h-16 items-center gap-3 rounded-2xl border px-3 py-3 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-brand-teal/50 ${
-              isActive
-                ? 'border-brand-teal/50 bg-brand-teal text-brand-bg shadow-lg shadow-brand-teal/10'
-                : 'border-transparent bg-brand-bg/70 text-brand-text-secondary hover:border-brand-teal/25 hover:text-brand-text'
-            }`}
-            aria-pressed={isActive}
-          >
-            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isActive ? 'bg-brand-bg/15' : 'bg-brand-teal/10 text-brand-teal'}`}>
-              {option.icon}
+  return (
+    <nav className="print-hide rounded-3xl border border-brand-gray/10 bg-brand-gray/5 p-4" aria-label="Report sections">
+      <label className="block">
+        <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">
+          Report View
+        </span>
+        <span className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-2xl border border-brand-teal/25 bg-brand-bg px-4 py-3 focus-within:border-brand-teal/60 focus-within:ring-2 focus-within:ring-brand-teal/20">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-teal/10 text-brand-teal">
+            {activeOption?.icon}
+          </span>
+          <span className="min-w-0">
+            <select
+              value={activeView}
+              onChange={(event) => onChange(event.target.value as T)}
+              className="w-full bg-transparent text-base font-black text-brand-text outline-none"
+            >
+              {options.map(option => (
+                <option key={option.id} value={option.id} className="bg-brand-bg text-brand-text">
+                  {option.label} - {option.detail}
+                </option>
+              ))}
+            </select>
+            <span className="mt-1 block text-[10px] font-bold uppercase tracking-wide text-brand-text-secondary">
+              {activeOption?.detail}
             </span>
-            <span className="min-w-0">
-              <span className="block text-xs font-black uppercase tracking-wide">{option.label}</span>
-              <span className={`mt-0.5 block text-[10px] font-bold uppercase tracking-wide ${isActive ? 'text-brand-bg/75' : 'text-brand-text-secondary'}`}>
-                {option.detail}
-              </span>
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  </nav>
-);
+          </span>
+        </span>
+      </label>
+    </nav>
+  );
+};
 
 export const ReportViewSection: React.FC<{
   active: boolean;

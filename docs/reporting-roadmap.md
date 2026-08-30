@@ -114,7 +114,8 @@ Completed report filters:
 15. Done: add richer season trend charts to the Reports page using existing match trend data.
 16. Done: add richer print/export report layouts with paper headers, print metadata, and complete player stat tables that print even when expandable on-screen sections are collapsed.
 17. Done: organize match and season report screens into task-based sections so coaches can jump to overview, skills, players, trends/gifts, and rally detail without scrolling through every stat block.
-18. Consider a dedicated PDF rendering pipeline only if browser print/save-to-PDF is not enough for coach packets.
+18. Done: replace the horizontal report section scroller with an all-device dropdown so mobile and tablet users can change report views without sideways scrolling.
+19. Consider a dedicated PDF rendering pipeline only if browser print/save-to-PDF is not enough for coach packets.
 
 ## Validation
 

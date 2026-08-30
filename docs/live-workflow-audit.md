@@ -184,6 +184,21 @@ Finding:
   - Fixed and deployed: landscape viewports up to 900 px tall now use a smaller court reference area, a denser predicted-server card, and seven-column player grids for server, receiver, and involved-player selection so tablet/large-phone landscape scorers can see the full roster above the recent-rally strip.
   - Production QA on deploy `6a92df67a1ef360008386b8e` confirmed the live confirm-server screen at 1024 x 768 and 1180 x 820 with all 13 roster buttons visible above the recent-rally strip and no browser errors.
 
+Authenticated production QA on 2026-08-30 created, completed, reconciled, and deleted a disposable single-set match named `QA Rapid Tap Delete Me`.
+
+Observed results:
+
+- Production History initially showed no active matches, only the real completed `Century JV` match.
+- A single-set scrimmage QA match was created for `Century Varsity` with location `Production QA`.
+- The set started with the standard six-player lineup and predicted #6 Isa as server.
+- Three rapid ACE clicks against the same serve-result control saved only one rally and one point.
+- Live score reconciled to 1-0, and the recent-rally strip showed a single undo target: `0-0 to 1-0`, `US POINT`, `Ace - #6 Isa`, `Serve Ace / Rot 1`.
+- Live dashboard reconciled to one earned point, #6 Isa as the only earner, 100% serve-in, and 100% KO.
+- The completed match report reconciled to `+1/-0`, top source `ACE`, top leak `NONE`, and a 1-0 win.
+- The season report temporarily included the QA match in Trends with `+1/-0`, 100% serve, 100% KO, 0.00 pass score, and 0/0 kills/errors.
+- After user-confirmed deletion, History returned to only the real completed `Century JV` match, and the season report returned to one match with no `QA Rapid Tap Delete Me` row.
+- A transient `Not authorized for this match` console error appeared while the deleted match-detail page was being torn down after deletion. The delete succeeded and subsequent History/Reports state was correct.
+
 Important limitation:
 
 - The 2026-08-28 production pass did not validate the kill-entry path because the selected terminal outcome was accidentally `Ace` instead of `Kill`. The 2026-08-29 production pass completed that validation successfully.
@@ -193,12 +208,9 @@ Important limitation:
 
 The next authenticated browser validation pass should cover:
 
-1. Rapid-tap prevention during point save.
-2. Serve attribution: predicted server, manual server selection, ace, error, in-system, and KO.
-3. Receive attribution: receive quality, receiver selection, opponent ace.
-4. Reports after the test match.
-5. Undo from a saved rally through match detail and season report after a completed non-disposable match.
-6. Active-match cleanup workflow for old practice/test matches.
+1. Serve attribution: predicted server, manual server selection, ace, error, in-system, and KO.
+2. Receive attribution: receive quality, receiver selection, opponent ace.
+3. Undo from a saved rally through match detail and season report after a completed non-disposable match.
 
 ## Validation Commands
 
