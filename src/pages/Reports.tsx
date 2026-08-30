@@ -424,6 +424,7 @@ const Reports: React.FC = () => {
   const [matchTypeFilter, setMatchTypeFilter] = useState('all');
   const [opponentFilter, setOpponentFilter] = useState('all');
   const [resultFilter, setResultFilter] = useState('all');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [showAllServing, setShowAllServing] = useState(false);
   const [showAllReceiving, setShowAllReceiving] = useState(false);
   const [showAllAttacking, setShowAllAttacking] = useState(false);
@@ -669,6 +670,7 @@ const Reports: React.FC = () => {
     setMatchTypeFilter('all');
     setOpponentFilter('all');
     setResultFilter('all');
+    setFiltersOpen(false);
   };
 
   const hasTeams = teams.length > 0;
@@ -682,6 +684,7 @@ const Reports: React.FC = () => {
   const filtersActive = activeFilterCount > 0;
   const totalMatches = reportData?.matches.length ?? 0;
   const visibleMatches = filteredReportData?.matches.length ?? 0;
+  const showFilterControls = filtersOpen || (hasMatches && !hasFilteredMatches);
   const printScope = filtersActive
     ? `Filtered: ${visibleMatches} of ${totalMatches} matches`
     : `${visibleMatches} matches`;
@@ -767,31 +770,51 @@ const Reports: React.FC = () => {
 
         {hasMatches && (
           <section className="print-hide mb-5 rounded-3xl border border-brand-gray/10 bg-brand-gray/5 p-4">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setFiltersOpen(isOpen => !isOpen)}
+                className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl text-left focus:outline-none focus:ring-2 focus:ring-brand-teal/50"
+                aria-expanded={showFilterControls}
+                aria-controls="season-report-filters"
+              >
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-teal/10 text-brand-teal">
                   <ListFilter size={20} />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h2 className="text-sm font-black uppercase tracking-widest text-brand-text-secondary">Report Filters</h2>
-                  <p className="mt-1 text-xs font-bold text-brand-text-secondary">
+                  <p className="mt-1 truncate text-xs font-bold text-brand-text-secondary">
+                    {filtersActive ? `${activeFilterCount} active · ` : 'Filters off · '}
                     Showing {visibleMatches} of {totalMatches} matches
                   </p>
                 </div>
-              </div>
-              {filtersActive && (
+              </button>
+
+              <div className="flex shrink-0 items-center gap-2">
+                {filtersActive && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="flex items-center gap-2 rounded-2xl border border-brand-gray/10 bg-brand-bg px-3 py-2 text-xs font-black uppercase tracking-tight text-brand-text-secondary transition-colors hover:border-brand-teal/40 hover:text-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/50"
+                  >
+                    <RotateCcw size={15} />
+                    Clear
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={clearFilters}
-                  className="flex items-center gap-2 rounded-2xl border border-brand-gray/10 bg-brand-bg px-3 py-2 text-xs font-black uppercase tracking-tight text-brand-text-secondary transition-colors hover:border-brand-teal/40 hover:text-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/50"
+                  onClick={() => setFiltersOpen(isOpen => !isOpen)}
+                  className="flex h-10 w-10 items-center justify-center rounded-2xl border border-brand-gray/10 bg-brand-bg text-brand-text-secondary transition-colors hover:border-brand-teal/40 hover:text-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/50"
+                  aria-label={showFilterControls ? 'Hide report filters' : 'Show report filters'}
+                  aria-expanded={showFilterControls}
+                  aria-controls="season-report-filters"
                 >
-                  <RotateCcw size={15} />
-                  Clear
+                  <ChevronDown size={18} className={`transition-transform ${showFilterControls ? 'rotate-180' : ''}`} />
                 </button>
-              )}
+              </div>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-5">
+            <div id="season-report-filters" className={`${showFilterControls ? 'mt-4 grid' : 'hidden'} gap-3 md:grid-cols-5`}>
               <label className="block">
                 <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">From</span>
                 <input
