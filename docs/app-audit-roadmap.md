@@ -7,7 +7,7 @@ Last updated: 2026-08-30
 - `npm run lint` passes.
 - `npm run test -- --run` passes.
 - `npm run build` passes.
-- Latest confirmed production deploy: `d586287 ui: broaden tablet landscape live layout`.
+- Latest confirmed production deploy: `383ee84 ui: replace report view scroller with dropdown`.
 - Route-level code splitting is in place; the production build no longer reports a large client chunk warning.
 
 ## Highest Priority Changes
@@ -104,3 +104,5 @@ Last updated: 2026-08-30
 - Done: production tablet QA found the confirm-server roster grid clipped on 1024 x 768 landscape; deployed short-landscape court density hooks and seven-column player grids for server, receiver, and involved-player selection. Production deploy `6a92df67a1ef360008386b8e` confirmed the live confirm-server screen at 1024 x 768 and 1180 x 820 with all 13 roster buttons visible above the recent-rally strip.
 - Done: added route-level lazy loading for page components so reporting, live match, dashboard, history, roster, settings, and match setup screens load as route chunks. The main production app chunk dropped to about 300 kB and the Vite large-chunk warning cleared.
 - Done: production QA on commit `a9cfe97` confirmed route chunks load for History, New Match, Reports, Live Match redirect-without-active-match, and the existing no-active-match Dashboard state without console errors. Reports and Match Detail section navigation worked on desktop and at a 390 x 844 mobile viewport.
+- Done: production QA on commit `383ee84` confirmed Reports and Match Detail use the all-device report dropdown without page-level horizontal overflow; predicted/manual serve attribution, receive attribution, opponent ace handling, live stats, match report, season report, and QA cleanup reconciled through a disposable `QA Serve Receive Delete Me` match.
+- Done: production QA on commit `383ee84` confirmed undo removes a saved rally from live score, recent rallies, live stats, completed match report, rally log, and cumulative season Reports; disposable `QA Undo Report Delete Me` was deleted after verification.

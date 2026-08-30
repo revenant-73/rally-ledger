@@ -1,6 +1,6 @@
 # Live Workflow Audit
 
-Last updated: 2026-08-29
+Last updated: 2026-08-30
 
 ## Scope
 
@@ -199,6 +199,36 @@ Observed results:
 - After user-confirmed deletion, History returned to only the real completed `Century JV` match, and the season report returned to one match with no `QA Rapid Tap Delete Me` row.
 - A transient `Not authorized for this match` console error appeared while the deleted match-detail page was being torn down after deletion. The delete succeeded and subsequent History/Reports state was correct.
 
+Authenticated production QA on 2026-08-30 created, completed, reconciled, and deleted a disposable single-set match named `QA Serve Receive Delete Me`.
+
+Observed results:
+
+- Production Reports used the all-device `Report View` dropdown at 390 x 844 and 1024 x 768 with no page-level horizontal overflow.
+- The Reports dropdown switched from Overview to Skills correctly and showed the expected season sections: Overview, Skills, Players, Trends, and Gifts.
+- The completed match report used the same dropdown pattern with Summary, Sets, Skills, Players, Gifts, and Rallies.
+- A predicted-server ace by #6 Isa saved as `Ace - #6 Isa`, moved the score from 0-0 to 1-0, and appeared in the recent-rally strip as `Serve Ace / Rot 1`.
+- Manual server selection of #1 Tiffany saved a serve error as `Serve Error - #1 Tiffany`, moved the score from 1-0 to 1-1, and gave service to the opponent.
+- Opponent serve receive flow accepted an in-system receive by #2 Luna, then a won rally credited as `Kill - #3 Cassey`; the score moved to 2-1 and rotation advanced to 2 with #3 Cassey predicted to serve.
+- A KO serve by #3 Cassey followed by a #4 Chloe attack error saved as `Attack Error - #4 Chloe` with serve context `Serve Out-of-System / Rot 2`, moving the score to 2-2.
+- Opponent ace receive flow required receiver attribution and saved as `Ace - #5 Lily` with `Receive Error / Rot 2`, moving the score to 2-3.
+- Live Stats reconciled the sequence to 2 earned, 2 gifted, 1 opponent-earned point, 67% serve-in, 67% KO, one in-system receive, one receive error, #6/#3 as earners, and #1/#4 as gifters.
+- Completed match report reconciled to a loss with top source `ACE`, top leak `SERVE ERROR`, our balance `+2/-2`, and their balance `+1/-0`.
+- The match rally log showed all five rallies with expected scores, sources, classifications, players, serve sides, serve/receive context, and rotations.
+- Season Reports temporarily included the disposable match with `Showing 2 of 2 matches`; after user-confirmed deletion, Reports returned to `Showing 1 of 1 matches` and the QA match no longer appeared in History or Reports.
+
+Authenticated production QA on 2026-08-30 created, completed, reconciled, and deleted a disposable single-set match named `QA Undo Report Delete Me`.
+
+Observed results:
+
+- A #6 Isa ace saved correctly, moved the score from 0-0 to 1-0, and appeared as the recent-rally undo target.
+- Undo restored the score to 0-0, removed `Ace - #6 Isa` from the recent-rally strip, restored `No rallies entered yet.`, kept Century Varsity serving, and stayed in rotation 1.
+- Live Stats after undo showed no data yet, zero earners/gifters, zero serve/receive totals, and a 0-0 score.
+- A different final rally was saved after the undo: #6 Isa serve error from 0-0 to 0-1.
+- The completed match report reconciled to a loss with top source `NONE`, top leak `SERVE ERROR`, and our balance `+0/-1`.
+- The completed match rally log showed exactly `Showing 1 of 1 rallies.` with only the 0-0 to 0-1 #6 Isa serve error; the undone ace did not appear.
+- Season Reports temporarily included the disposable match with `Showing 2 of 2 matches`, 93 total rallies, and balance +3, matching the one post-undo gifted point added to the real data.
+- After user-confirmed deletion, History returned to only the real completed `Century JV` match, Reports returned to `Showing 1 of 1 matches`, 92 rallies, and no `QA Undo Report Delete Me` row.
+
 Important limitation:
 
 - The 2026-08-28 production pass did not validate the kill-entry path because the selected terminal outcome was accidentally `Ace` instead of `Kill`. The 2026-08-29 production pass completed that validation successfully.
@@ -206,11 +236,7 @@ Important limitation:
 
 ## Browser QA Still Needed
 
-The next authenticated browser validation pass should cover:
-
-1. Serve attribution: predicted server, manual server selection, ace, error, in-system, and KO.
-2. Receive attribution: receive quality, receiver selection, opponent ace.
-3. Undo from a saved rally through match detail and season report after a completed non-disposable match.
+No known live/report browser QA gaps remain from this audit pass.
 
 ## Validation Commands
 
