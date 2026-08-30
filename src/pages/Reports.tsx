@@ -37,13 +37,20 @@ type SeasonReportResponse = {
 };
 
 type PointEarnerSort = 'earned' | 'net';
-type SeasonReportView = 'overview' | 'skills' | 'players' | 'trends' | 'gifts';
+type SeasonReportView = 'overview' | 'skills' | 'players' | 'trends' | 'gifts' | 'plan';
 type MatchTrendRow = SeasonReportStats['matchRows'][number];
 type TrendSeries = {
   label: string;
   color: string;
   values: number[];
   format: (value: number) => string;
+};
+type PracticePriority = {
+  label: string;
+  title: string;
+  detail: string;
+  metric: string;
+  tone: string;
 };
 
 const formatDate = (date: string) => {
@@ -629,6 +636,87 @@ const Reports: React.FC = () => {
       .slice(0, 6);
   }, [stats]);
 
+  const practicePriorities = useMemo<PracticePriority[]>(() => {
+    if (!stats) return [];
+
+    const priorities: PracticePriority[] = [];
+    const serveErrors = stats.serve.errors;
+    const receiveErrors = stats.receive.errors;
+    const attackErrors = stats.attack.errors;
+
+    if (stats.ourGifted > stats.ourEarned) {
+      priorities.push({
+        label: 'Priority 1',
+        title: 'Clean up free points',
+        detail: `Gifted points are outpacing earned points. Start with ${stats.biggestLeak.toLowerCase()} reps before adding more risk.`,
+        metric: `${stats.ourEarned}-${stats.ourGifted}`,
+        tone: 'text-brand-red',
+      });
+    } else {
+      priorities.push({
+        label: 'Priority 1',
+        title: 'Protect the edge',
+        detail: `Keep using ${stats.biggestWeapon.toLowerCase()} as the main pressure source while tightening ${stats.biggestLeak.toLowerCase()}.`,
+        metric: `+${stats.ourEarned}/-${stats.ourGifted}`,
+        tone: 'text-brand-teal',
+      });
+    }
+
+    if (stats.serve.servePct < 82 || serveErrors >= Math.max(3, stats.serve.attempts * 0.18)) {
+      priorities.push({
+        label: 'Serve Block',
+        title: 'Serve under pressure',
+        detail: 'Run target serving with score pressure and immediate miss consequences.',
+        metric: `${pct(stats.serve.servePct)} in`,
+        tone: scoreTone(stats.serve.servePct, 90, 82),
+      });
+    } else if (stats.receive.score < 1.9 || receiveErrors > 0) {
+      priorities.push({
+        label: 'First Contact',
+        title: 'Stabilize receive',
+        detail: 'Build receive lanes, call seams early, and finish with first-ball side-out swings.',
+        metric: stats.receive.score.toFixed(2),
+        tone: scoreTone(stats.receive.score, 2.3, 1.9),
+      });
+    } else {
+      priorities.push({
+        label: 'Pressure Block',
+        title: 'Convert playable balls',
+        detail: 'Train transition from controlled first contact into aggressive first-swing choices.',
+        metric: pct(stats.serve.koPct),
+        tone: scoreTone(stats.serve.koPct, 35, 22),
+      });
+    }
+
+    if (stats.attack.net < 0 || attackErrors > Math.max(2, stats.attack.kills)) {
+      priorities.push({
+        label: 'Attack Block',
+        title: 'Smarter swings',
+        detail: 'Separate kill-ball swings from reset swings and score points for playable misses.',
+        metric: `${stats.attack.kills}/${stats.attack.errors}`,
+        tone: stats.attack.net >= 0 ? 'text-brand-green' : 'text-brand-red',
+      });
+    } else {
+      priorities.push({
+        label: 'Context',
+        title: 'Recreate the leak',
+        detail: stats.giftContext.practiceCue,
+        metric: `${stats.giftContext.total} gifts`,
+        tone: stats.giftContext.total > 0 ? 'text-brand-amber' : 'text-brand-green',
+      });
+    }
+
+    return priorities;
+  }, [stats]);
+
+  const playerWatchRows = useMemo(() => {
+    if (!stats) return [];
+    return [...stats.playerPoints]
+      .filter(player => player.total > 0)
+      .sort((a, b) => a.net - b.net || b.gifted - a.gifted || b.total - a.total || a.jersey.localeCompare(b.jersey))
+      .slice(0, 4);
+  }, [stats]);
+
   const handleTeamChange = (teamId: string) => {
     setSelectedTeamId(teamId);
     selectTeam(teamId);
@@ -685,6 +773,7 @@ const Reports: React.FC = () => {
   const totalMatches = reportData?.matches.length ?? 0;
   const visibleMatches = filteredReportData?.matches.length ?? 0;
   const showFilterControls = filtersOpen || (hasMatches && !hasFilteredMatches);
+  const latestMatchRow = stats?.matchRows[stats.matchRows.length - 1];
   const printScope = filtersActive
     ? `Filtered: ${visibleMatches} of ${totalMatches} matches`
     : `${visibleMatches} matches`;
@@ -707,6 +796,7 @@ const Reports: React.FC = () => {
     { id: 'players', label: 'Players', detail: 'leaders', icon: <Users size={18} /> },
     { id: 'trends', label: 'Trends', detail: 'by match', icon: <BarChart3 size={18} /> },
     { id: 'gifts', label: 'Gifts', detail: 'leaks', icon: <AlertTriangle size={18} /> },
+    { id: 'plan', label: 'Plan', detail: 'practice', icon: <Target size={18} /> },
   ];
 
   return (
@@ -1052,6 +1142,103 @@ const Reports: React.FC = () => {
 
             <ReportViewSection active={activeReportView === 'gifts'}>
               <GiftContextCard giftContext={stats.giftContext} />
+            </ReportViewSection>
+
+            <ReportViewSection active={activeReportView === 'plan'} className="space-y-6">
+              <section className="rounded-3xl border border-brand-teal/15 bg-brand-teal/5 p-5">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-brand-teal">Practice Plan</p>
+                    <h2 className="mt-1 text-xl font-black">Next Training Block</h2>
+                  </div>
+                  <Target size={24} className="text-brand-teal" />
+                </div>
+
+                <p className="text-sm font-semibold leading-6 text-brand-text-secondary">
+                  {stats.focus}
+                </p>
+              </section>
+
+              <section className="grid gap-3 md:grid-cols-3">
+                {practicePriorities.map(priority => (
+                  <div key={`${priority.label}-${priority.title}`} className="rounded-2xl border border-brand-gray/10 bg-brand-gray/5 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-brand-text-secondary">{priority.label}</p>
+                      <p className={`text-lg font-black ${priority.tone}`}>{priority.metric}</p>
+                    </div>
+                    <h3 className="mt-3 text-base font-black">{priority.title}</h3>
+                    <p className="mt-2 text-sm font-semibold leading-6 text-brand-text-secondary">{priority.detail}</p>
+                  </div>
+                ))}
+              </section>
+
+              <div className="grid gap-6 lg:grid-cols-2">
+                <Leaderboard title="Player Watch List" icon={<Users size={18} />} emptyText="No player-specific point data yet.">
+                  {playerWatchRows.map(player => (
+                    <div
+                      key={player.playerId}
+                      className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-3 rounded-2xl border border-brand-gray/10 bg-brand-bg px-4 py-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black">#{player.jersey} {player.name}</p>
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-brand-text-secondary">
+                          {player.total} attributed points
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-black text-brand-red">{player.gifted}</p>
+                        <p className="text-[10px] font-bold uppercase text-brand-text-secondary">Gift</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-black text-brand-green">{player.earned}</p>
+                        <p className="text-[10px] font-bold uppercase text-brand-text-secondary">Earn</p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-sm font-black ${player.net >= 0 ? 'text-brand-teal' : 'text-brand-red'}`}>
+                          {player.net >= 0 ? '+' : ''}{player.net}
+                        </p>
+                        <p className="text-[10px] font-bold uppercase text-brand-text-secondary">Net</p>
+                      </div>
+                    </div>
+                  ))}
+                </Leaderboard>
+
+                <section className="rounded-3xl border border-brand-gray/10 bg-brand-gray/5 p-5">
+                  <div className="mb-4 flex items-center gap-2">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-brand-amber/10 text-brand-amber">
+                      <Calendar size={18} />
+                    </div>
+                    <h2 className="text-sm font-black uppercase tracking-widest text-brand-text-secondary">Recent Match Check</h2>
+                  </div>
+
+                  {latestMatchRow ? (
+                    <div className="space-y-3">
+                      <div className="rounded-2xl border border-brand-gray/10 bg-brand-bg p-4">
+                        <p className="truncate text-sm font-black">vs {latestMatchRow.opponentName}</p>
+                        <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-brand-text-secondary">
+                          {formatDate(latestMatchRow.matchDate)} · {latestMatchRow.result ?? 'Open'}
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <SnapshotCard label="Earn/Gift" value={latestMatchRow.earnedGifted} detail="latest match" tone="text-brand-teal" />
+                        <SnapshotCard label="Serve" value={pct(latestMatchRow.servePct)} detail={`${pct(latestMatchRow.serveKoPct)} KO`} tone={scoreTone(latestMatchRow.servePct, 90, 82)} />
+                        <SnapshotCard label="Pass" value={latestMatchRow.passScore.toFixed(2)} detail="receive score" tone={scoreTone(latestMatchRow.passScore, 2.3, 1.9)} />
+                        <SnapshotCard
+                          label="Kill Net"
+                          value={`${latestMatchRow.attackNet >= 0 ? '+' : ''}${latestMatchRow.attackNet}`}
+                          detail={`${latestMatchRow.kills}/${latestMatchRow.attackErrors} K/Err`}
+                          tone={latestMatchRow.attackNet >= 0 ? 'text-brand-green' : 'text-brand-red'}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="rounded-2xl border border-dashed border-brand-gray/20 bg-brand-bg px-4 py-6 text-center text-sm font-semibold text-brand-text-secondary">
+                      No match trend data yet.
+                    </p>
+                  )}
+                </section>
+              </div>
             </ReportViewSection>
 
             <ReportViewSection active={activeReportView === 'players'} className="space-y-6">

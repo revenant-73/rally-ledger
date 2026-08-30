@@ -84,7 +84,7 @@ Core season report sections:
 - Expandable all-player kill report table for roster-complete attacking review.
 - Earned/gifted report: top scoring sources, top leaks, and cumulative player point earners/gifters.
 - Player development view: per-player recent form compared with season average.
-- Practice planning view: auto-generated focus areas from the season trends.
+- Done: practice planning view with auto-generated priorities, player watch list, and recent-match check from season trends.
 
 Completed report filters:
 
@@ -116,7 +116,8 @@ Completed report filters:
 17. Done: organize match and season report screens into task-based sections so coaches can jump to overview, skills, players, trends/gifts, and rally detail without scrolling through every stat block.
 18. Done: replace the horizontal report section scroller with an all-device dropdown so mobile and tablet users can change report views without sideways scrolling.
 19. Done: collapse season report filters into an accordion so the report content stays higher on mobile and tablet screens unless filters are being edited.
-20. Consider a dedicated PDF rendering pipeline only if browser print/save-to-PDF is not enough for coach packets.
+20. Done: add a practice plan report view that turns season stats into prioritized training blocks, player watch rows, and latest-match context.
+21. Consider a dedicated PDF rendering pipeline only if browser print/save-to-PDF is not enough for coach packets.
 
 ## Validation
 
