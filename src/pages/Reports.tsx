@@ -27,6 +27,7 @@ import { normalizeRallies } from '../utils/rallies';
 import { calculateSeasonReportStats, type SeasonReportStats } from '../utils/reportStats';
 import { buildSeasonCsvFiles, buildSeasonTextSummary, downloadTextFile, fileSafe } from '../utils/reportExport';
 import GiftContextCard from '../components/reports/GiftContextCard';
+import { ReportViewNav, ReportViewSection, type ReportViewOption } from '../components/reports/ReportViewNav';
 
 type SeasonReportResponse = {
   matches: Match[];
@@ -36,6 +37,7 @@ type SeasonReportResponse = {
 };
 
 type PointEarnerSort = 'earned' | 'net';
+type SeasonReportView = 'overview' | 'skills' | 'players' | 'trends' | 'gifts';
 type MatchTrendRow = SeasonReportStats['matchRows'][number];
 type TrendSeries = {
   label: string;
@@ -426,6 +428,7 @@ const Reports: React.FC = () => {
   const [showAllReceiving, setShowAllReceiving] = useState(false);
   const [showAllAttacking, setShowAllAttacking] = useState(false);
   const [pointEarnerSort, setPointEarnerSort] = useState<PointEarnerSort>('earned');
+  const [activeReportView, setActiveReportView] = useState<SeasonReportView>('overview');
 
   const effectiveTeamId = useMemo(() => {
     if (teams.length === 0) return '';
@@ -695,6 +698,13 @@ const Reports: React.FC = () => {
     ...printFilterDetails,
     `Printed ${new Date().toLocaleDateString()}`,
   ];
+  const reportViews: ReportViewOption<SeasonReportView>[] = [
+    { id: 'overview', label: 'Overview', detail: 'summary', icon: <ShieldCheck size={18} /> },
+    { id: 'skills', label: 'Skills', detail: 'team rates', icon: <Zap size={18} /> },
+    { id: 'players', label: 'Players', detail: 'leaders', icon: <Users size={18} /> },
+    { id: 'trends', label: 'Trends', detail: 'by match', icon: <BarChart3 size={18} /> },
+    { id: 'gifts', label: 'Gifts', detail: 'leaks', icon: <AlertTriangle size={18} /> },
+  ];
 
   return (
     <div className="print-report min-h-screen bg-brand-bg px-4 py-6 text-brand-text md:px-8">
@@ -940,76 +950,89 @@ const Reports: React.FC = () => {
               </button>
             </section>
 
-            <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-              <SnapshotCard label="Matches" value={String(stats.matchesPlayed)} detail={`${stats.wins}-${stats.losses} record`} />
-              <SnapshotCard label="Sets" value={`${stats.setsWon}-${stats.setsLost}`} detail="won-lost" />
-              <SnapshotCard label="Rallies" value={String(stats.ralliesTracked)} detail="tracked points" />
-              <SnapshotCard
-                label="Earned"
-                value={`+${stats.ourEarned}`}
-                detail="our pressure"
-                tone="text-brand-green"
-              />
-              <SnapshotCard
-                label="Balance"
-                value={`${earnedGiftedBalance >= 0 ? '+' : ''}${earnedGiftedBalance}`}
-                detail={`+${stats.ourEarned} / -${stats.ourGifted}`}
-                tone={earnedGiftedBalance >= 0 ? 'text-brand-teal' : 'text-brand-red'}
-              />
-            </section>
+            <ReportViewNav
+              activeView={activeReportView}
+              options={reportViews}
+              onChange={setActiveReportView}
+            />
 
-            <section className="rounded-3xl border border-brand-teal/15 bg-brand-teal/5 p-5">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-brand-teal">Team Trend</p>
-                  <h2 className="mt-1 text-xl font-black">Skill Snapshot</h2>
-                </div>
-                <ShieldCheck size={24} className="text-brand-teal" />
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-                <SkillCard
-                  label="Serve In"
-                  value={pct(stats.serve.servePct)}
-                  detail={`${stats.serve.attempts - stats.serve.errors}/${stats.serve.attempts} in play`}
-                  tone={scoreTone(stats.serve.servePct, 90, 82)}
-                />
-                <SkillCard
-                  label="Serve KO"
-                  value={pct(stats.serve.koPct)}
-                  detail={`${stats.serve.aces + stats.serve.outOfSystem} pressure serves`}
-                  tone={scoreTone(stats.serve.koPct, 35, 22)}
-                />
-                <SkillCard
-                  label="Pass Score"
-                  value={stats.receive.score.toFixed(2)}
-                  detail={`${stats.receive.attempts} receive attempts`}
-                  tone={scoreTone(stats.receive.score, 2.3, 1.9)}
-                />
-                <SkillCard
-                  label="Kill Net"
-                  value={`${stats.attack.net >= 0 ? '+' : ''}${stats.attack.net}`}
-                  detail={`${stats.attack.kills} kills / ${stats.attack.errors} errors`}
-                  tone={stats.attack.net >= 0 ? 'text-brand-green' : 'text-brand-red'}
-                />
-                <SkillCard
-                  label="Weapon"
-                  value={stats.biggestWeapon}
-                  detail="top earned source"
+            <ReportViewSection active={activeReportView === 'overview'} className="space-y-6">
+              <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+                <SnapshotCard label="Matches" value={String(stats.matchesPlayed)} detail={`${stats.wins}-${stats.losses} record`} />
+                <SnapshotCard label="Sets" value={`${stats.setsWon}-${stats.setsLost}`} detail="won-lost" />
+                <SnapshotCard label="Rallies" value={String(stats.ralliesTracked)} detail="tracked points" />
+                <SnapshotCard
+                  label="Earned"
+                  value={`+${stats.ourEarned}`}
+                  detail="our pressure"
                   tone="text-brand-green"
                 />
-                <SkillCard
-                  label="Leak"
-                  value={stats.biggestLeak}
-                  detail="top gifted source"
-                  tone="text-brand-red"
+                <SnapshotCard
+                  label="Balance"
+                  value={`${earnedGiftedBalance >= 0 ? '+' : ''}${earnedGiftedBalance}`}
+                  detail={`+${stats.ourEarned} / -${stats.ourGifted}`}
+                  tone={earnedGiftedBalance >= 0 ? 'text-brand-teal' : 'text-brand-red'}
                 />
-              </div>
-            </section>
+              </section>
+            </ReportViewSection>
 
-            <GiftContextCard giftContext={stats.giftContext} />
+            <ReportViewSection active={activeReportView === 'overview' || activeReportView === 'skills'} className="space-y-6">
+              <section className="rounded-3xl border border-brand-teal/15 bg-brand-teal/5 p-5">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-brand-teal">Team Trend</p>
+                    <h2 className="mt-1 text-xl font-black">Skill Snapshot</h2>
+                  </div>
+                  <ShieldCheck size={24} className="text-brand-teal" />
+                </div>
 
-            <section className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                  <SkillCard
+                    label="Serve In"
+                    value={pct(stats.serve.servePct)}
+                    detail={`${stats.serve.attempts - stats.serve.errors}/${stats.serve.attempts} in play`}
+                    tone={scoreTone(stats.serve.servePct, 90, 82)}
+                  />
+                  <SkillCard
+                    label="Serve KO"
+                    value={pct(stats.serve.koPct)}
+                    detail={`${stats.serve.aces + stats.serve.outOfSystem} pressure serves`}
+                    tone={scoreTone(stats.serve.koPct, 35, 22)}
+                  />
+                  <SkillCard
+                    label="Pass Score"
+                    value={stats.receive.score.toFixed(2)}
+                    detail={`${stats.receive.attempts} receive attempts`}
+                    tone={scoreTone(stats.receive.score, 2.3, 1.9)}
+                  />
+                  <SkillCard
+                    label="Kill Net"
+                    value={`${stats.attack.net >= 0 ? '+' : ''}${stats.attack.net}`}
+                    detail={`${stats.attack.kills} kills / ${stats.attack.errors} errors`}
+                    tone={stats.attack.net >= 0 ? 'text-brand-green' : 'text-brand-red'}
+                  />
+                  <SkillCard
+                    label="Weapon"
+                    value={stats.biggestWeapon}
+                    detail="top earned source"
+                    tone="text-brand-green"
+                  />
+                  <SkillCard
+                    label="Leak"
+                    value={stats.biggestLeak}
+                    detail="top gifted source"
+                    tone="text-brand-red"
+                  />
+                </div>
+              </section>
+            </ReportViewSection>
+
+            <ReportViewSection active={activeReportView === 'gifts'}>
+              <GiftContextCard giftContext={stats.giftContext} />
+            </ReportViewSection>
+
+            <ReportViewSection active={activeReportView === 'players'} className="space-y-6">
+              <section className="space-y-4">
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2">
                   <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-brand-teal/10 text-brand-teal">
@@ -1100,9 +1123,10 @@ const Reports: React.FC = () => {
                   ))}
                 </Leaderboard>
               </div>
-            </section>
+              </section>
+            </ReportViewSection>
 
-            <div className="grid gap-6 lg:grid-cols-2">
+            <ReportViewSection active={activeReportView === 'players' || activeReportView === 'skills'} className="grid gap-6 lg:grid-cols-2">
               <Leaderboard title="Serving Leaders" icon={<Zap size={18} />} emptyText="No serving attempts tracked.">
                 {stats.playerServing.slice(0, 6).map(player => (
                   <div
@@ -1294,9 +1318,10 @@ const Reports: React.FC = () => {
                   </table>
                 </div>
               </Leaderboard>
-            </div>
+            </ReportViewSection>
 
-            <Leaderboard title="Kill Report" icon={<Trophy size={18} />} emptyText="No kills or attack errors tracked.">
+            <ReportViewSection active={activeReportView === 'players' || activeReportView === 'skills'}>
+              <Leaderboard title="Kill Report" icon={<Trophy size={18} />} emptyText="No kills or attack errors tracked.">
               {stats.playerAttacking.slice(0, 6).map(player => (
                 <div
                   key={player.playerId}
@@ -1396,11 +1421,13 @@ const Reports: React.FC = () => {
                   </tbody>
                 </table>
               </div>
-            </Leaderboard>
+              </Leaderboard>
+            </ReportViewSection>
 
-            <SeasonTrendCharts rows={stats.matchRows} />
+            <ReportViewSection active={activeReportView === 'trends'} className="space-y-6">
+              <SeasonTrendCharts rows={stats.matchRows} />
 
-            <section className="rounded-3xl border border-brand-gray/10 bg-brand-gray/5 p-5">
+              <section className="rounded-3xl border border-brand-gray/10 bg-brand-gray/5 p-5">
               <div className="mb-4 flex items-center gap-2">
                 <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-brand-amber/10 text-brand-amber">
                   <Calendar size={18} />
@@ -1489,7 +1516,8 @@ const Reports: React.FC = () => {
                   </tbody>
                 </table>
               </div>
-            </section>
+              </section>
+            </ReportViewSection>
           </div>
         )}
       </div>

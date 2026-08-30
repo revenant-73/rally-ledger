@@ -1,6 +1,6 @@
 # Century Matchbook App Audit Roadmap
 
-Last updated: 2026-08-29
+Last updated: 2026-08-30
 
 ## Current Health
 
@@ -8,7 +8,7 @@ Last updated: 2026-08-29
 - `npm run test -- --run` passes.
 - `npm run build` passes.
 - Latest confirmed production deploy: `d586287 ui: broaden tablet landscape live layout`.
-- Vite reports a large client chunk, so code splitting is worth addressing after core reliability work.
+- Route-level code splitting is in place; the production build no longer reports a large client chunk warning.
 
 ## Highest Priority Changes
 
@@ -61,7 +61,7 @@ Last updated: 2026-08-29
 ## Suggested Implementation Order
 
 1. Re-test rapid-tap prevention during an actual point-save path in production.
-2. Address bundle/code-splitting after the live scoring path is consistently reliable.
+2. Done: address route-level bundle/code-splitting after the live scoring path stabilized.
 
 ## Implementation Notes
 
@@ -102,3 +102,4 @@ Last updated: 2026-08-29
 - Done: improved active-match lifecycle controls so Home lists every active match with a Manage shortcut, History groups active and completed matches separately, and active cleanup uses explicit "Abandon active match" wording while completed cleanup uses "Delete completed match" wording.
 - Done: hardened game-night offline/update feedback with a visible status chip for Synced, Syncing, Offline, and queued paused writes, plus an Update Ready action that lets the scorer choose when to reload instead of forcing an automatic refresh.
 - Done: production tablet QA found the confirm-server roster grid clipped on 1024 x 768 landscape; deployed short-landscape court density hooks and seven-column player grids for server, receiver, and involved-player selection. Production deploy `6a92df67a1ef360008386b8e` confirmed the live confirm-server screen at 1024 x 768 and 1180 x 820 with all 13 roster buttons visible above the recent-rally strip.
+- Done: added route-level lazy loading for page components so reporting, live match, dashboard, history, roster, settings, and match setup screens load as route chunks. The main production app chunk dropped to about 300 kB and the Vite large-chunk warning cleared.

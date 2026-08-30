@@ -1,6 +1,6 @@
 # Reporting Roadmap
 
-Last updated: 2026-08-27
+Last updated: 2026-08-30
 
 ## Goals
 
@@ -113,7 +113,8 @@ Completed report filters:
 14. Done: add filtered rally logs to individual match reports for set, player, outcome, classification, serving side, and rotation drill-down.
 15. Done: add richer season trend charts to the Reports page using existing match trend data.
 16. Done: add richer print/export report layouts with paper headers, print metadata, and complete player stat tables that print even when expandable on-screen sections are collapsed.
-17. Consider a dedicated PDF rendering pipeline only if browser print/save-to-PDF is not enough for coach packets.
+17. Done: organize match and season report screens into task-based sections so coaches can jump to overview, skills, players, trends/gifts, and rally detail without scrolling through every stat block.
+18. Consider a dedicated PDF rendering pipeline only if browser print/save-to-PDF is not enough for coach packets.
 
 ## Validation
 

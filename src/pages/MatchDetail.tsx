@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Zap, Calendar, MapPin, Trophy, Copy, Download, FileSpreadsheet, Printer, Trash2 } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Calendar, Copy, Download, FileSpreadsheet, ListFilter, MapPin, Printer, ShieldCheck, Trash2, Trophy, Users, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { Match, Set, RallyEvent, Player } from '../types';
 import { useMatch } from '../hooks/useMatch';
@@ -12,6 +12,9 @@ import { calculateReportStats } from '../utils/reportStats';
 import { buildMatchCsvFiles, buildMatchTextSummary, downloadTextFile, fileSafe } from '../utils/reportExport';
 import GiftContextCard from '../components/reports/GiftContextCard';
 import RallyLogCard from '../components/reports/RallyLogCard';
+import { ReportViewNav, ReportViewSection, type ReportViewOption } from '../components/reports/ReportViewNav';
+
+type MatchReportView = 'summary' | 'sets' | 'skills' | 'players' | 'gifts' | 'rallies';
 
 const PrintReportHeader: React.FC<{
   title: string;
@@ -42,6 +45,7 @@ const MatchDetail: React.FC = () => {
   const [rallies, setRallies] = useState<RallyEvent[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeReportView, setActiveReportView] = useState<MatchReportView>('summary');
 
   const metrics = useMatchDetailMetrics(rallies, players);
   const reportStats = useMemo(() => calculateReportStats(rallies, players, sets), [rallies, players, sets]);
@@ -152,9 +156,17 @@ const MatchDetail: React.FC = () => {
   const canDeleteMatch = canManageTeam(match.teamId);
   const printedDate = new Date().toLocaleDateString();
   const matchDate = new Date(match.matchDate).toLocaleDateString();
+  const reportViews: ReportViewOption<MatchReportView>[] = [
+    { id: 'summary', label: 'Summary', detail: 'takeaway', icon: <ShieldCheck size={18} /> },
+    { id: 'sets', label: 'Sets', detail: 'scores', icon: <Calendar size={18} /> },
+    { id: 'skills', label: 'Skills', detail: 'serve pass hit', icon: <Zap size={18} /> },
+    { id: 'players', label: 'Players', detail: 'tables', icon: <Users size={18} /> },
+    { id: 'gifts', label: 'Gifts', detail: 'patterns', icon: <AlertTriangle size={18} /> },
+    { id: 'rallies', label: 'Rallies', detail: 'log', icon: <ListFilter size={18} /> },
+  ];
 
   return (
-    <div className="print-report min-h-screen bg-brand-bg text-brand-text p-6 max-w-lg mx-auto pb-24">
+    <div className="print-report min-h-screen bg-brand-bg text-brand-text p-6 max-w-5xl mx-auto pb-24">
       <PrintReportHeader
         title={`vs ${match.opponentName}`}
         subtitle="Match Report"
@@ -221,6 +233,13 @@ const MatchDetail: React.FC = () => {
           </div>
         )}
 
+        <ReportViewNav
+          activeView={activeReportView}
+          options={reportViews}
+          onChange={setActiveReportView}
+        />
+
+        <ReportViewSection active={activeReportView === 'summary'} className="space-y-6">
         {/* Post-Match Summary / Key Insights */}
         {metrics && (
           <div className="bg-brand-teal/5 border-2 border-brand-teal/20 rounded-3xl p-6 shadow-sm">
@@ -288,7 +307,9 @@ const MatchDetail: React.FC = () => {
             </div>
           )}
         </div>
+        </ReportViewSection>
 
+        <ReportViewSection active={activeReportView === 'sets'}>
         {/* Sets Summary */}
         <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-6">
           <h3 className="text-sm font-bold text-brand-text-secondary uppercase mb-4 tracking-widest">Sets Breakdown</h3>
@@ -338,13 +359,26 @@ const MatchDetail: React.FC = () => {
             ))}
           </div>
         </div>
+        </ReportViewSection>
 
+        <ReportViewSection active={activeReportView === 'gifts'}>
         {reportStats.giftContext.total > 0 && (
           <GiftContextCard giftContext={reportStats.giftContext} title="Match Gift Context" />
         )}
+        {reportStats.giftContext.total === 0 && (
+          <div className="rounded-3xl border border-brand-gray/10 bg-brand-gray/5 p-6 text-center">
+            <AlertTriangle size={24} className="mx-auto mb-3 text-brand-text-secondary" />
+            <p className="text-sm font-black uppercase tracking-widest text-brand-text-secondary">No Team Gifts Tracked</p>
+            <p className="mt-2 text-sm font-semibold text-brand-text-secondary">
+              Gift context appears here when rallies include team-gifted points.
+            </p>
+          </div>
+        )}
+        </ReportViewSection>
 
         {metrics && (
           <>
+            <ReportViewSection active={activeReportView === 'summary'} className="space-y-6">
             {/* Execution vs Point Leaks Balance */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-6 flex flex-col items-center">
@@ -366,7 +400,9 @@ const MatchDetail: React.FC = () => {
                 <p className="text-[10px] mt-2 text-brand-text-secondary uppercase">Execution / Leaks</p>
               </div>
             </div>
+            </ReportViewSection>
 
+            <ReportViewSection active={activeReportView === 'skills'} className="space-y-4">
             {/* Serve & Receive Performance */}
             <div className="space-y-4">
               <div className="bg-brand-gray/5 border border-brand-gray/10 rounded-3xl p-6">
@@ -513,8 +549,10 @@ const MatchDetail: React.FC = () => {
                 </p>
               )}
             </div>
+            </ReportViewSection>
 
-            <section className="print-only print-player-table hidden rounded-3xl border border-brand-gray/10 bg-brand-gray/5 p-6">
+            <ReportViewSection active={activeReportView === 'players'} className="space-y-6">
+            <section className="print-player-table rounded-3xl border border-brand-gray/10 bg-brand-gray/5 p-6">
               <h3 className="mb-4 text-sm font-bold uppercase tracking-widest text-brand-text-secondary">Complete Player Skill Tables</h3>
 
               {reportStats.playerServing.length > 0 && (
@@ -641,12 +679,15 @@ const MatchDetail: React.FC = () => {
                 )}
               </div>
             </div>
+            </ReportViewSection>
           </>
         )}
 
+        <ReportViewSection active={activeReportView === 'rallies'}>
         {rallies.length > 0 && (
           <RallyLogCard rallies={rallies} players={players} sets={sets} />
         )}
+        </ReportViewSection>
       </div>
     </div>
   );
