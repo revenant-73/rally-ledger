@@ -50,7 +50,7 @@ const NewMatch: React.FC = () => {
       }
 
       await startMatch(newMatch);
-      navigate('/match/live');
+      navigate('/app/match/live');
     } catch (error) {
       console.error('Failed to create match:', error);
       toast.error('Could not create match. Please try again.');
@@ -81,7 +81,7 @@ const NewMatch: React.FC = () => {
       className="min-h-dvh bg-brand-bg text-brand-text px-6 pt-6 pb-28 max-w-lg mx-auto"
     >
       <header className="flex items-center justify-between mb-8">
-        <button onClick={() => navigate('/')} className="text-brand-text-secondary hover:text-brand-text">
+        <button onClick={() => navigate('/app')} className="text-brand-text-secondary hover:text-brand-text">
           <ArrowLeft size={24} />
         </button>
         <h1 className="text-2xl font-black uppercase italic tracking-tighter">New Match</h1>
@@ -110,7 +110,7 @@ const NewMatch: React.FC = () => {
             ))}
           </select>
           {teams.length === 0 && (
-            <p className="text-xs text-brand-teal mt-1 cursor-pointer font-bold" onClick={() => navigate('/roster')}>
+            <p className="text-xs text-brand-teal mt-1 cursor-pointer font-bold" onClick={() => navigate('/app/roster')}>
               + Create your first roster
             </p>
           )}

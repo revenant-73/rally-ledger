@@ -30,7 +30,7 @@ const Dashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-brand-bg text-brand-text p-4 md:p-8 max-w-5xl mx-auto pb-24">
       <header className="flex items-center justify-between mb-8">
-        <button onClick={() => navigate('/match/live')} className="p-2 hover:bg-brand-gray/10 rounded-full transition-colors">
+        <button onClick={() => navigate('/app/match/live')} className="p-2 hover:bg-brand-gray/10 rounded-full transition-colors">
           <ArrowLeft size={24} />
         </button>
         <div className="text-center">

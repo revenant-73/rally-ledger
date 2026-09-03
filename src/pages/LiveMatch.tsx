@@ -349,11 +349,11 @@ const LiveMatch: React.FC = () => {
   return (
     <div className={`live-match-screen flex h-dvh max-h-dvh flex-col overflow-hidden relative ${brightGymMode ? 'bg-slate-100 text-slate-950' : 'bg-brand-bg text-brand-text'}`}>
       <LiveMatchHeader 
-        onBack={() => navigate('/')}
+        onBack={() => navigate('/app')}
         setNumber={activeSet.setNumber}
         opponentName={activeMatch.opponentName}
         onShowTimeout={() => setShowTimeout(true)}
-        onShowStats={() => navigate('/match/dashboard')}
+        onShowStats={() => navigate('/app/match/dashboard')}
         onShowMore={() => setShowMoreMenu(true)}
         compact={tableMode}
         brightGymMode={brightGymMode}
@@ -389,7 +389,7 @@ const LiveMatch: React.FC = () => {
         ourScore={activeSet.ourScore}
         opponentScore={activeSet.opponentScore}
         onShowTimeout={() => setShowTimeout(true)}
-        onShowStats={() => navigate('/match/dashboard')}
+        onShowStats={() => navigate('/app/match/dashboard')}
         onShowNote={() => setShowNoteModal(true)}
         onManualScoreChange={handleManualScoreChange}
         onEndSet={async (winner) => {

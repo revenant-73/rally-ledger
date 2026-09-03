@@ -14,6 +14,7 @@ const NewMatch = lazy(() => import('./pages/NewMatch'));
 const LiveMatch = lazy(() => import('./pages/LiveMatch'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Login = lazy(() => import('./pages/Login'));
+const RebuildPrototype = lazy(() => import('./pages/RebuildPrototype'));
 
 const LoadingScreen = () => (
   <div className="min-h-screen bg-brand-bg flex items-center justify-center">
@@ -48,8 +49,10 @@ function App() {
       <Suspense fallback={<LoadingScreen />}>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/" element={<RebuildPrototype />} />
+          <Route path="/prototype" element={<Navigate to="/" replace />} />
 
-          <Route path="/" element={
+          <Route path="/app" element={
             <ProtectedRoute>
               <Layout />
             </ProtectedRoute>
@@ -63,17 +66,17 @@ function App() {
           </Route>
 
           {/* These screens will likely be full-screen without the bottom nav */}
-          <Route path="match/new" element={
+          <Route path="/app/match/new" element={
             <ProtectedRoute>
               <NewMatch />
             </ProtectedRoute>
           } />
-          <Route path="match/live" element={
+          <Route path="/app/match/live" element={
             <ProtectedRoute>
               <LiveMatch />
             </ProtectedRoute>
           } />
-          <Route path="match/dashboard" element={
+          <Route path="/app/match/dashboard" element={
             <ProtectedRoute>
               <Dashboard />
             </ProtectedRoute>

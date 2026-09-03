@@ -52,7 +52,7 @@ describe('Home', () => {
     await user.click(screen.getByRole('button', { name: /Resume vs Central/i }));
 
     expect(resumeMatch).toHaveBeenCalledWith(activeMatch);
-    expect(navigate).toHaveBeenCalledWith('/match/live');
+    expect(navigate).toHaveBeenCalledWith('/app/match/live');
   });
 
   it('shows every active match and routes Manage to History', async () => {
@@ -76,6 +76,6 @@ describe('Home', () => {
     expect(screen.queryByRole('button', { name: /Resume vs Done/i })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Manage' }));
-    expect(navigate).toHaveBeenCalledWith('/history');
+    expect(navigate).toHaveBeenCalledWith('/app/history');
   });
 });

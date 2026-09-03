@@ -14,10 +14,10 @@ const History: React.FC = () => {
   const openMatch = (match: Match) => {
     if (match.status === 'active') {
       resumeMatch(match);
-      navigate('/match/live');
+      navigate('/app/match/live');
       return;
     }
-    navigate(`/match/history/${match.id}`);
+    navigate(`/app/match/history/${match.id}`);
   };
 
   const handleDeleteMatch = async (match: Match) => {
@@ -37,7 +37,7 @@ const History: React.FC = () => {
   return (
     <div className="p-6 max-w-lg mx-auto pb-24">
       <header className="flex items-center gap-4 mb-8">
-        <button onClick={() => navigate('/')} className="text-brand-text-secondary hover:text-brand-text">
+        <button onClick={() => navigate('/app')} className="text-brand-text-secondary hover:text-brand-text">
           <ArrowLeft size={24} />
         </button>
         <h1 className="text-3xl font-bold">History</h1>
@@ -52,7 +52,7 @@ const History: React.FC = () => {
           <Trophy size={48} className="mx-auto text-brand-gray/20 mb-4" />
           <p className="text-brand-text-secondary font-medium">No matches recorded yet.</p>
           <button 
-            onClick={() => navigate('/match/new')}
+            onClick={() => navigate('/app/match/new')}
             className="mt-4 text-brand-teal font-bold text-sm"
           >
             Start your first match

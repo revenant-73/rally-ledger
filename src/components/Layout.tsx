@@ -57,11 +57,11 @@ const Layout: React.FC = () => {
   };
 
   const navItems = [
-    { icon: <Home size={24} />, label: 'Home', path: '/' },
-    { icon: <Users size={24} />, label: 'Roster', path: '/roster' },
-    { icon: <History size={24} />, label: 'History', path: '/history' },
-    { icon: <BarChart3 size={24} />, label: 'Reports', path: '/reports' },
-    { icon: <Settings size={24} />, label: 'Settings', path: '/settings' },
+    { icon: <Home size={24} />, label: 'Home', path: '/app' },
+    { icon: <Users size={24} />, label: 'Roster', path: '/app/roster' },
+    { icon: <History size={24} />, label: 'History', path: '/app/history' },
+    { icon: <BarChart3 size={24} />, label: 'Reports', path: '/app/reports' },
+    { icon: <Settings size={24} />, label: 'Settings', path: '/app/settings' },
   ];
 
   return (

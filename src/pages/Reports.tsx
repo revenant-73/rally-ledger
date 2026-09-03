@@ -989,7 +989,7 @@ const Reports: React.FC = () => {
             message="Create a roster before season reports can show team and player trends."
             action={
               <button
-                onClick={() => navigate('/roster')}
+                onClick={() => navigate('/app/roster')}
                 className="rounded-2xl bg-brand-teal px-5 py-3 text-sm font-black text-brand-bg transition-transform active:scale-95"
               >
                 Add roster
@@ -1003,7 +1003,7 @@ const Reports: React.FC = () => {
             message="Season reports will populate after this roster has at least one match."
             action={
               <button
-                onClick={() => navigate('/match/new')}
+                onClick={() => navigate('/app/match/new')}
                 className="rounded-2xl bg-brand-teal px-5 py-3 text-sm font-black text-brand-bg transition-transform active:scale-95"
               >
                 Start match

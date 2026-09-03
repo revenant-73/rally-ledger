@@ -87,7 +87,7 @@ const MatchDetail: React.FC = () => {
     try {
       await deleteMatch(match.id);
       toast.success('Match deleted');
-      navigate('/history');
+      navigate('/app/history');
     } catch (error) {
       console.error('Failed to delete match:', error);
       toast.error('Unable to delete match');
@@ -148,7 +148,7 @@ const MatchDetail: React.FC = () => {
     return (
       <div className="min-h-screen bg-brand-bg text-brand-text p-6 flex flex-col items-center justify-center text-center">
         <h2 className="text-2xl font-bold mb-4">Match not found</h2>
-        <button onClick={() => navigate('/history')} className="text-brand-teal font-bold">Back to History</button>
+        <button onClick={() => navigate('/app/history')} className="text-brand-teal font-bold">Back to History</button>
       </div>
     );
   }
@@ -179,7 +179,7 @@ const MatchDetail: React.FC = () => {
       />
 
       <header className="flex items-center justify-between mb-8">
-        <button onClick={() => navigate('/history')} className="print-hide text-brand-text-secondary hover:text-brand-text">
+        <button onClick={() => navigate('/app/history')} className="print-hide text-brand-text-secondary hover:text-brand-text">
           <ArrowLeft size={24} />
         </button>
         <div className="text-center">

@@ -17,7 +17,7 @@ const Home: React.FC = () => {
 
   const handleResumeMatch = (match: Match) => {
     resumeMatch(match);
-    navigate('/match/live');
+    navigate('/app/match/live');
   };
 
   return (
@@ -29,7 +29,7 @@ const Home: React.FC = () => {
 
       <div className="grid gap-4">
         <button 
-          onClick={() => navigate('/match/new')}
+          onClick={() => navigate('/app/match/new')}
           className="bg-brand-teal hover:bg-brand-teal/90 text-brand-bg font-bold py-6 px-4 rounded-xl flex items-center justify-center gap-3 text-xl transition-all active:scale-[0.98]"
         >
           <Plus size={28} />
@@ -41,7 +41,7 @@ const Home: React.FC = () => {
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-black uppercase tracking-widest text-brand-text-secondary">Active Matches</h2>
               <button
-                onClick={() => navigate('/history')}
+                onClick={() => navigate('/app/history')}
                 className="text-xs font-black uppercase tracking-wide text-brand-teal"
               >
                 Manage

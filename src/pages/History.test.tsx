@@ -67,10 +67,10 @@ describe('History', () => {
 
     await user.click(screen.getByRole('heading', { name: /vs Central/i }));
     expect(resumeMatch).toHaveBeenCalledWith(activeMatch);
-    expect(navigate).toHaveBeenCalledWith('/match/live');
+    expect(navigate).toHaveBeenCalledWith('/app/match/live');
 
     await user.click(screen.getByRole('heading', { name: /vs Liberty/i }));
-    expect(navigate).toHaveBeenCalledWith('/match/history/m-completed');
+    expect(navigate).toHaveBeenCalledWith('/app/match/history/m-completed');
   });
 
   it('separates active matches and uses abandon language for active cleanup', async () => {
