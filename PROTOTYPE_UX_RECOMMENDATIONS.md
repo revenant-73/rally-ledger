@@ -27,6 +27,9 @@ The rebuild should keep protecting the core concept: record the terminal rally e
 7. Treat reporting as two related views.
    Each completed match needs its own breakdown by set, earned/gifted balance, scoring source, and player attribution. The season report should combine every match for the selected roster and keep the same questions visible: where we earn, who earns, where we gift, and who gifts.
 
+8. Provide explicit test-data cleanup.
+   Production testing will create disposable rosters and match runs. The prototype needs separate controls to clear only match data or delete the current roster plus lineup and test rallies, with confirmations before either destructive action.
+
 ## Started Implementation
 
 - Make the app open directly to the live scoring screen with saved/default setup.
@@ -37,6 +40,7 @@ The rebuild should keep protecting the core concept: record the terminal rally e
 - Limit Recent Rallies to the last three by default and tighten support-panel spacing for tablet landscape.
 - Add a 45-rally scripted set fixture that verifies a 25-20 result, earned/gifted totals, player attribution, undo, and correction recalculation.
 - Add prototype match and season report aggregation so the new concept can show a match-by-match breakdown and a combined season report.
+- Add setup-sheet cleanup actions for clearing current match data while keeping the roster, or deleting the current prototype roster and its test match data.
 
 ## Validation Added
 

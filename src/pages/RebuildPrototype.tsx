@@ -492,6 +492,45 @@ const RebuildPrototype = () => {
     localStorage.removeItem(storageKey);
   };
 
+  const clearMatchData = () => {
+    const confirmed = window.confirm('Clear match data for this prototype? This removes the current test rallies but keeps the roster and lineup.');
+    if (!confirmed) {
+      return;
+    }
+    setRallies([]);
+    setRestorable(null);
+    setPending(null);
+    setCorrectionOpen(false);
+    setSummaryOpen(false);
+    setReportOpen(false);
+    setFeedback('Match data cleared');
+  };
+
+  const deleteRosterData = () => {
+    const confirmed = window.confirm('Delete this prototype roster and all current match data? This removes players, lineup, and test rallies from this device.');
+    if (!confirmed) {
+      return;
+    }
+    const emptySetup = {
+      ...defaultSetup,
+      initialServerId: undefined,
+      lineup: {},
+      rotationServers: {},
+    };
+    setSetup(emptySetup);
+    setDraftSetup(emptySetup);
+    setRoster([]);
+    setCurrentLineup({});
+    setRallies([]);
+    setRestorable(null);
+    setPending(null);
+    setCorrectionOpen(false);
+    setSummaryOpen(false);
+    setReportOpen(false);
+    setFeedback('Roster and match data deleted');
+    setSetupOpen(true);
+  };
+
   return (
     <main className="min-h-screen bg-slate-950 text-white">
       <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-3 py-3 sm:px-5 lg:max-h-screen lg:overflow-hidden">
@@ -668,6 +707,8 @@ const RebuildPrototype = () => {
           onClose={() => setSetupOpen(false)}
           onStart={startSet}
           onReset={resetPrototype}
+          onClearMatchData={clearMatchData}
+          onDeleteRosterData={deleteRosterData}
         />
       ) : null}
 
@@ -841,6 +882,8 @@ interface SetupSheetProps {
   onClose: () => void;
   onStart: () => void;
   onReset: () => void;
+  onClearMatchData: () => void;
+  onDeleteRosterData: () => void;
 }
 
 const SetupSheet = ({
@@ -857,6 +900,8 @@ const SetupSheet = ({
   onClose,
   onStart,
   onReset,
+  onClearMatchData,
+  onDeleteRosterData,
 }: SetupSheetProps) => {
   const [newNumber, setNewNumber] = useState('');
   const [newName, setNewName] = useState('');
@@ -985,6 +1030,21 @@ const SetupSheet = ({
             Reset Prototype
           </button>
         </div>
+
+        <section className="mt-3 rounded border border-red-200 bg-red-50 p-3">
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-center">
+            <div>
+              <h3 className="text-sm font-black uppercase text-red-900">Test Data Cleanup</h3>
+              <p className="text-xs font-bold text-red-800">Use this to remove demo entries before real matches.</p>
+            </div>
+            <button type="button" onClick={onClearMatchData} className="min-h-12 rounded bg-white px-3 font-black text-red-950">
+              Clear Match Data
+            </button>
+            <button type="button" onClick={onDeleteRosterData} className="min-h-12 rounded bg-red-700 px-3 font-black text-white">
+              Delete Roster
+            </button>
+          </div>
+        </section>
 
         {editor === 'roster' ? (
           <section className="mt-3 rounded border border-slate-300 bg-white p-3">
