@@ -223,7 +223,7 @@ const RebuildPrototype = () => {
   const [pending, setPending] = useState<PendingSelection | null>(null);
   const [feedback, setFeedback] = useState('Ready');
   const [locked, setLocked] = useState(false);
-  const [setupOpen, setSetupOpen] = useState(initialPrototype.rallies.length === 0);
+  const [setupOpen, setSetupOpen] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [correctionOpen, setCorrectionOpen] = useState(false);
   const [lineupSelection, setLineupSelection] = useState<LineupSelection | null>(null);
@@ -247,6 +247,7 @@ const RebuildPrototype = () => {
   const currentServer = roster.find((player) => player.id === state.serverId);
   const lastRally = [...rallies].reverse().find((rally) => rally.active);
   const activeRallies = rallies.filter((rally) => rally.active);
+  const recentRallies = [...activeRallies].reverse().slice(0, 3);
 
   const recordRally = (input: PendingRallyInput) => {
     if (locked) {
@@ -441,9 +442,10 @@ const RebuildPrototype = () => {
             <button
               type="button"
               onClick={() => setSummaryOpen((value) => !value)}
+              aria-expanded={summaryOpen}
               className="min-h-14 rounded border border-white/15 bg-white/10 px-3 text-left font-black"
             >
-              Summary
+              {summaryOpen ? 'Hide Summary' : 'Summary'}
               <span className="block text-xs font-bold text-slate-300">{activeRallies.length} rallies</span>
             </button>
           </div>
@@ -468,8 +470,8 @@ const RebuildPrototype = () => {
               />
             </div>
 
-            <div className="grid min-h-0 gap-3 md:grid-cols-2">
-              <section className="rounded border border-white/15 bg-white/5 p-3">
+            <div className="grid min-h-0 gap-3 md:grid-cols-2 lg:gap-2">
+              <section className="rounded border border-white/15 bg-white/5 p-3 lg:p-2">
                 <div className="flex items-center justify-between gap-2">
                   <div>
                     <h2 className="text-sm font-black uppercase text-slate-300">Current Lineup</h2>
@@ -481,7 +483,7 @@ const RebuildPrototype = () => {
                       onClick={() => setSetupOpen(true)}
                       className="min-h-10 rounded bg-white px-3 text-sm font-black text-slate-950"
                     >
-                      Change
+                      Edit Lineup
                     </button>
                     <SideToggle courtSide={courtSide} onChange={setCourtSide} compact />
                   </div>
@@ -495,18 +497,21 @@ const RebuildPrototype = () => {
                 />
               </section>
 
-              <section className="min-h-0 rounded border border-white/15 bg-white/5 p-3">
+              <section className="min-h-0 rounded border border-white/15 bg-white/5 p-3 lg:p-2">
                 <div className="mb-2 flex items-center justify-between">
-                  <h2 className="text-sm font-black uppercase text-slate-300">Recent Rallies</h2>
+                  <div>
+                    <h2 className="text-sm font-black uppercase text-slate-300">Recent Rallies</h2>
+                    <p className="text-xs font-bold text-slate-500">Last {Math.min(activeRallies.length, 3)} of {activeRallies.length}</p>
+                  </div>
                   {restorable ? (
                     <button type="button" onClick={restore} className="rounded bg-teal-300 px-3 py-2 text-sm font-black text-slate-950">
                       Restore
                     </button>
                   ) : null}
                 </div>
-                <div className="max-h-48 space-y-2 overflow-auto pr-1 lg:max-h-none">
-                  {[...activeRallies].reverse().slice(0, 8).map((rally) => (
-                    <div key={rally.id} className="rounded border border-white/10 bg-slate-900 px-3 py-2">
+                <div className="max-h-48 space-y-2 overflow-auto pr-1 lg:max-h-44">
+                  {recentRallies.map((rally) => (
+                    <div key={rally.id} className="rounded border border-white/10 bg-slate-900 px-3 py-2 lg:py-1.5">
                       <p className="text-sm font-black">{getRallyDescription(rally, roster)}</p>
                       <p className="text-xs font-bold text-slate-400">
                         Rally {rally.sequence} - started {rally.startMode}, R{rally.startRotation}
@@ -519,15 +524,16 @@ const RebuildPrototype = () => {
             </div>
           </div>
 
-          <aside className="grid gap-3 lg:min-h-0 lg:grid-rows-[auto_1fr]">
+          <aside className="grid content-start gap-3">
             <div className="rounded border border-white/15 bg-slate-900 p-3">
               <p className="text-xs font-black uppercase text-slate-400">Recorded</p>
               <p className="mt-1 text-lg font-black">{feedback}</p>
             </div>
-            <SummaryPanel summaryOpen={summaryOpen} summary={summary} players={roster} />
           </aside>
         </section>
       </div>
+
+      {summaryOpen ? <SummaryPanel summary={summary} players={roster} onClose={() => setSummaryOpen(false)} /> : null}
 
       {setupOpen ? (
         <SetupSheet
@@ -663,13 +669,13 @@ const CourtLineupGrid = ({
   const positions = getCourtPositions(courtSide);
 
   return (
-    <div className={`mt-3 rounded border p-2 ${light ? 'border-slate-300 bg-slate-100' : 'border-white/15 bg-slate-950'}`}>
-      <div className={`mb-2 flex items-center ${courtSide === 'left' ? 'justify-end' : 'justify-start'}`}>
+    <div className={`mt-3 rounded border p-2 lg:mt-2 lg:p-1.5 ${light ? 'border-slate-300 bg-slate-100' : 'border-white/15 bg-slate-950'}`}>
+      <div className={`mb-2 flex items-center lg:mb-1.5 ${courtSide === 'left' ? 'justify-end' : 'justify-start'}`}>
         <span className={`rounded px-2 py-1 text-[0.65rem] font-black uppercase ${light ? 'bg-slate-300 text-slate-900' : 'bg-white/10 text-slate-300'}`}>
           Net
         </span>
       </div>
-      <div className={`grid grid-cols-2 gap-2 border-teal-300 ${courtSide === 'left' ? 'border-r-4 pr-2' : 'border-l-4 pl-2'}`}>
+      <div className={`grid grid-cols-2 gap-2 border-teal-300 lg:gap-1.5 ${courtSide === 'left' ? 'border-r-4 pr-2 lg:pr-1.5' : 'border-l-4 pl-2 lg:pl-1.5'}`}>
         {positions.map((courtPosition) => {
           const lineupRotation = getLineupRotationForCourtPosition(currentRotation, courtPosition);
           const active = courtPosition === 1;
@@ -682,7 +688,7 @@ const CourtLineupGrid = ({
               type="button"
               aria-label={`${actionLabel} position ${courtPosition} ${getPlayerLabel(roster, playerId)}`}
               onClick={() => onPick(lineupRotation)}
-              className={`relative min-h-12 rounded border px-2 py-1.5 text-left ${
+              className={`relative min-h-12 rounded border px-2 py-1.5 text-left lg:min-h-11 lg:py-1 ${
                 active
                   ? 'border-teal-600 bg-teal-300 text-slate-950'
                   : light
@@ -736,6 +742,7 @@ const SetupSheet = ({
 }: SetupSheetProps) => {
   const [newNumber, setNewNumber] = useState('');
   const [newName, setNewName] = useState('');
+  const [editor, setEditor] = useState<'roster' | 'lineup' | null>(null);
   const lineup = setup.lineup ?? getDefaultLineup(roster);
 
   const addPlayer = () => {
@@ -755,19 +762,114 @@ const SetupSheet = ({
 
   return (
     <div className="fixed inset-0 z-20 flex items-end bg-black/70 p-3 sm:items-center sm:justify-center">
-      <section className="max-h-[92vh] w-full overflow-auto rounded bg-slate-100 p-4 text-slate-950 shadow-xl sm:max-w-5xl">
+      <section className="max-h-[92vh] w-full overflow-auto rounded bg-slate-100 p-4 text-slate-950 shadow-xl sm:max-w-4xl">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-2xl font-black">Match and Set Setup</h2>
-            <p className="text-sm font-bold text-slate-600">Roster, lineup, and set start are saved on this device.</p>
+            <h2 className="text-2xl font-black">Start Set</h2>
+            <p className="text-sm font-bold text-slate-600">{activeRoster.length} active players. Lineup and roster are saved on this device.</p>
           </div>
           <button type="button" onClick={onClose} className="min-h-12 rounded bg-slate-950 px-4 font-black text-white">
-            Close
+            Done
           </button>
         </div>
 
-        <div className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
-          <section className="rounded border border-slate-300 bg-white p-3">
+        <section className="mt-4 rounded border border-slate-300 bg-white p-3">
+          <div className="grid gap-3 sm:grid-cols-[1.4fr_0.6fr]">
+            <label className="grid gap-1">
+              <span className="text-xs font-black uppercase text-slate-600">Opponent</span>
+              <input className={inputClass} value={setup.opponent} onChange={(event) => onChange({ ...setup, opponent: event.target.value })} />
+            </label>
+            <label className="grid gap-1">
+              <span className="text-xs font-black uppercase text-slate-600">Set</span>
+              <input
+                className={inputClass}
+                type="number"
+                min={1}
+                value={setup.setNumber}
+                onChange={(event) => onChange({ ...setup, setNumber: Number(event.target.value) || 1 })}
+              />
+            </label>
+          </div>
+
+          <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1.2fr_1fr]">
+            <div>
+              <p className="mb-2 text-xs font-black uppercase text-slate-600">Starts</p>
+              <div className="grid grid-cols-2 rounded bg-slate-900 p-1">
+                {(['serving', 'receiving'] satisfies RallyMode[]).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => onChange({ ...setup, initialMode: mode })}
+                    className={`min-h-12 rounded text-sm font-black uppercase ${
+                      setup.initialMode === mode ? 'bg-teal-500 text-slate-950' : 'text-white'
+                    }`}
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs font-black uppercase text-slate-600">Starting Rotation</p>
+              <div className="grid grid-cols-6 gap-2">
+                {rotations.map((rotation) => (
+                  <button
+                    key={rotation}
+                    type="button"
+                    aria-label={`Starting rotation R${rotation}`}
+                    onClick={() => onChange({ ...setup, initialRotation: rotation, initialServerId: setup.lineup?.[rotation] ?? setup.initialServerId })}
+                    className={`min-h-12 rounded border text-base font-black ${
+                      setup.initialRotation === rotation ? 'border-teal-700 bg-teal-500 text-slate-950' : 'border-slate-300 bg-white'
+                    }`}
+                  >
+                    R{rotation}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs font-black uppercase text-slate-600">Court Side</p>
+              <SideToggle courtSide={courtSide} onChange={onCourtSideChange} />
+            </div>
+          </div>
+
+          <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+            <div className="rounded border border-slate-300 bg-slate-50 p-3">
+              <p className="text-xs font-black uppercase text-slate-600">
+                {stateMode === 'serving' ? `Server for current R${currentRotation}` : 'Starting server if Century serves'}
+              </p>
+              <p className="mt-1 text-xl font-black">{getPlayerLabel(roster, lineup[setup.initialRotation])}</p>
+            </div>
+            <button type="button" onClick={onStart} className="min-h-14 rounded bg-teal-500 px-5 font-black text-slate-950">
+              Start Set
+            </button>
+          </div>
+        </section>
+
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          <button
+            type="button"
+            onClick={() => setEditor((value) => (value === 'roster' ? null : 'roster'))}
+            className={`min-h-12 rounded px-3 font-black ${editor === 'roster' ? 'bg-teal-500 text-slate-950' : 'bg-white text-slate-950'}`}
+          >
+            Edit Roster
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditor((value) => (value === 'lineup' ? null : 'lineup'))}
+            className={`min-h-12 rounded px-3 font-black ${editor === 'lineup' ? 'bg-teal-500 text-slate-950' : 'bg-white text-slate-950'}`}
+          >
+            Edit Lineup
+          </button>
+          <button type="button" onClick={onReset} className="min-h-12 rounded bg-slate-950 px-3 font-black text-white">
+            Reset Prototype
+          </button>
+        </div>
+
+        {editor === 'roster' ? (
+          <section className="mt-3 rounded border border-slate-300 bg-white p-3">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm font-black uppercase text-slate-600">Roster</h3>
@@ -833,8 +935,10 @@ const SetupSheet = ({
               ))}
             </div>
           </section>
+        ) : null}
 
-          <section className="rounded border border-slate-300 bg-white p-3">
+        {editor === 'lineup' ? (
+          <section className="mt-3 rounded border border-slate-300 bg-white p-3">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-sm font-black uppercase text-slate-600">Starting Lineup</h3>
@@ -867,70 +971,7 @@ const SetupSheet = ({
               Fill First Six Active
             </button>
           </section>
-        </div>
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-4">
-          <label className="grid gap-1 sm:col-span-2">
-            <span className="text-xs font-black uppercase text-slate-600">Opponent</span>
-            <input className={inputClass} value={setup.opponent} onChange={(event) => onChange({ ...setup, opponent: event.target.value })} />
-          </label>
-          <label className="grid gap-1">
-            <span className="text-xs font-black uppercase text-slate-600">Set</span>
-            <input
-              className={inputClass}
-              type="number"
-              min={1}
-              value={setup.setNumber}
-              onChange={(event) => onChange({ ...setup, setNumber: Number(event.target.value) || 1 })}
-            />
-          </label>
-          <label className="grid gap-1">
-            <span className="text-xs font-black uppercase text-slate-600">Starts</span>
-            <select
-              className={inputClass}
-              value={setup.initialMode}
-              onChange={(event) => onChange({ ...setup, initialMode: event.target.value as RallyMode })}
-            >
-              <option value="serving">Serving</option>
-              <option value="receiving">Receiving</option>
-            </select>
-          </label>
-        </div>
-
-        <div className="mt-4">
-          <p className="mb-2 text-xs font-black uppercase text-slate-600">Starting Rotation</p>
-          <div className="grid grid-cols-6 gap-2">
-            {rotations.map((rotation) => (
-              <button
-                key={rotation}
-                type="button"
-                aria-label={`Starting rotation R${rotation}`}
-                onClick={() => onChange({ ...setup, initialRotation: rotation, initialServerId: setup.lineup?.[rotation] ?? setup.initialServerId })}
-                className={`min-h-14 rounded border text-lg font-black ${
-                  setup.initialRotation === rotation ? 'border-teal-700 bg-teal-500 text-slate-950' : 'border-slate-300 bg-white'
-                }`}
-              >
-                R{rotation}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-4 rounded border border-slate-300 bg-white p-3">
-          <p className="text-xs font-black uppercase text-slate-600">
-            {stateMode === 'serving' ? `Server for current R${currentRotation}` : 'Starting server if Century serves'}
-          </p>
-          <p className="mt-1 text-xl font-black">{getPlayerLabel(roster, lineup[setup.initialRotation])}</p>
-        </div>
-
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" onClick={onStart} className="min-h-14 rounded bg-teal-500 px-5 font-black text-slate-950">
-            Start Fresh Set
-          </button>
-          <button type="button" onClick={onReset} className="min-h-14 rounded bg-slate-950 px-5 font-black text-white">
-            Reset Prototype
-          </button>
-        </div>
+        ) : null}
       </section>
     </div>
   );
@@ -1066,41 +1107,52 @@ const CorrectionSheet = ({ rally, players, onEvent, onClose }: CorrectionSheetPr
 );
 
 interface SummaryPanelProps {
-  summaryOpen: boolean;
   summary: ReturnType<typeof summarizeSet>;
   players: PrototypePlayer[];
+  onClose: () => void;
 }
 
-const SummaryPanel = ({ summaryOpen, summary, players }: SummaryPanelProps) => (
-  <section className={`${summaryOpen ? 'block' : 'hidden lg:block'} min-h-0 overflow-auto rounded border border-white/15 bg-white/5 p-3`}>
-    <h2 className="text-sm font-black uppercase text-slate-300">Set / Match Live Read</h2>
-    <div className="mt-3 grid grid-cols-3 gap-2">
-      <Metric label="Earned" value={summary.team.earnedPoints} />
-      <Metric label="Gifts In" value={summary.team.giftsReceived} />
-      <Metric label="Gifts Out" value={summary.team.giftsConceded} />
-    </div>
-    <div className="mt-2 grid grid-cols-3 gap-2">
-      <Metric label="BP" value={summary.team.breakpoint.label} compact />
-      <Metric label="Sideout" value={summary.team.sideout.label} compact />
-      <Metric label="Serve IN" value={summary.team.serveIn.label} compact />
-    </div>
+const SummaryPanel = ({ summary, players, onClose }: SummaryPanelProps) => (
+  <div className="fixed inset-0 z-30 flex items-end bg-black/70 p-3 sm:items-center sm:justify-center">
+    <section className="max-h-[86vh] w-full overflow-auto rounded bg-slate-100 p-3 text-slate-950 shadow-xl sm:max-w-3xl sm:p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-black">Set / Match Live Read</h2>
+          <p className="text-sm font-bold text-slate-600">Current scoring balance from the rally log.</p>
+        </div>
+        <button type="button" onClick={onClose} className="min-h-14 rounded bg-slate-950 px-4 font-black text-white">
+          Back
+        </button>
+      </div>
 
-    <div className="mt-4 grid grid-cols-2 gap-2.5">
-      <div className="grid content-start gap-2.5">
-        <BreakdownBlock title="Where Earning" emptyText="No earned points yet" items={summary.team.earnedByType} tone="good" />
-        <PlayerBlock title="Who Earning" emptyText="No player-earned points yet" players={players} summary={summary} mode="earnedPoints" />
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <Metric label="Earned" value={summary.team.earnedPoints} />
+        <Metric label="Gifts In" value={summary.team.giftsReceived} />
+        <Metric label="Gifts Out" value={summary.team.giftsConceded} />
       </div>
-      <div className="grid content-start gap-2.5">
-        <BreakdownBlock title="Where Gifting" emptyText="No Century gifts conceded" items={summary.team.giftsConcededByType} tone="warn" />
-        <PlayerBlock title="Who Gifting" emptyText="No player gifts charged" players={players} summary={summary} mode="giftsConceded" />
+      <div className="mt-2 grid grid-cols-3 gap-2">
+        <Metric label="BP" value={summary.team.breakpoint.label} compact />
+        <Metric label="Sideout" value={summary.team.sideout.label} compact />
+        <Metric label="Serve IN" value={summary.team.serveIn.label} compact />
       </div>
-    </div>
-  </section>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="grid content-start gap-3">
+          <BreakdownBlock title="Where Earning" emptyText="No earned points yet" items={summary.team.earnedByType} tone="good" />
+          <PlayerBlock title="Who Earning" emptyText="No player-earned points yet" players={players} summary={summary} mode="earnedPoints" />
+        </div>
+        <div className="grid content-start gap-3">
+          <BreakdownBlock title="Where Gifting" emptyText="No Century gifts conceded" items={summary.team.giftsConcededByType} tone="warn" />
+          <PlayerBlock title="Who Gifting" emptyText="No player gifts charged" players={players} summary={summary} mode="giftsConceded" />
+        </div>
+      </div>
+    </section>
+  </div>
 );
 
 const Metric = ({ label, value, compact = false }: { label: string; value: string | number; compact?: boolean }) => (
-  <div className="rounded bg-slate-900 p-2">
-    <p className="text-xs font-black uppercase text-slate-400">{label}</p>
+  <div className="rounded bg-slate-900 p-2 text-white">
+    <p className="text-xs font-black uppercase text-slate-300">{label}</p>
     <p className={`${compact ? 'text-xl' : 'text-2xl'} font-black`}>{value}</p>
   </div>
 );
@@ -1117,12 +1169,12 @@ const BreakdownBlock = ({
   tone: 'good' | 'warn' | 'neutral';
 }) => (
   <div>
-    <h3 className="text-xs font-black uppercase text-slate-400">{title}</h3>
+    <h3 className="text-xs font-black uppercase text-slate-600">{title}</h3>
     <div className="mt-1.5 space-y-1.5">
       {items.length > 0 ? (
         items.map((item) => <InsightRow key={item.key} label={item.label} value={item.total} tone={tone} />)
       ) : (
-        <p className="rounded bg-slate-900 p-2 text-sm font-bold text-slate-500">{emptyText}</p>
+        <p className="rounded bg-white p-2 text-sm font-bold text-slate-500">{emptyText}</p>
       )}
     </div>
   </div>
@@ -1145,8 +1197,8 @@ const PlayerBlock = ({
 
   return (
     <div>
-      <h3 className="text-xs font-black uppercase text-slate-400">{title}</h3>
-    <div className="mt-1.5 space-y-1.5">
+      <h3 className="text-xs font-black uppercase text-slate-600">{title}</h3>
+      <div className="mt-1.5 space-y-1.5">
         {topPlayers.length > 0 ? (
           topPlayers.map((item) => {
             return (
@@ -1159,7 +1211,7 @@ const PlayerBlock = ({
             );
           })
         ) : (
-          <p className="rounded bg-slate-900 p-2 text-sm font-bold text-slate-500">{emptyText}</p>
+          <p className="rounded bg-white p-2 text-sm font-bold text-slate-500">{emptyText}</p>
         )}
       </div>
     </div>
@@ -1183,7 +1235,7 @@ const InsightRow = ({
         : 'bg-slate-200 text-slate-950';
 
   return (
-    <div className="grid grid-cols-[1fr_auto] gap-2 rounded bg-slate-900 px-2 py-1.5 text-sm">
+    <div className="grid grid-cols-[1fr_auto] gap-2 rounded bg-white px-2 py-1.5 text-sm">
       <div className="min-w-0">
         <p className="truncate font-black">{label}</p>
       </div>
