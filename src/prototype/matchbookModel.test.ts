@@ -4,9 +4,12 @@ import {
   deriveSetState,
   formatRatio,
   getWinnerForEvent,
+  summarizeMatchReport,
+  summarizeSeasonReport,
   summarizeSet,
   type ErrorSubtype,
   type PendingRallyInput,
+  type PrototypeMatchInput,
   type PrototypePlayer,
   type RallyRecord,
   type SetSetup,
@@ -300,6 +303,87 @@ describe('matchbook prototype rally model', () => {
     expect(summarizeSet(correctedRallies, scriptedPlayers).team).toMatchObject({
       giftsReceived: 5,
       opponentEarnedPoints: 9,
+    });
+  });
+
+  it('builds a match report with set-by-set breakdowns from rally logs', () => {
+    const match: PrototypeMatchInput = {
+      id: 'match-1',
+      opponent: 'Liberty',
+      date: '2026-09-03',
+      result: 'Win',
+      sets: [
+        { id: 'set-1', setNumber: 1, setup: scriptedSetup, rallies: buildScriptedSet() },
+        {
+          id: 'set-2',
+          setNumber: 2,
+          setup: { ...scriptedSetup, setNumber: 2 },
+          rallies: [
+            buildRally(scriptedSetup, [], { winner: 'century', event: 'century_ace' }, () => 'm1-s2-r1'),
+            buildRally(scriptedSetup, [], { winner: 'opponent', event: 'serve_error' }, () => 'm1-s2-r2'),
+          ],
+        },
+      ],
+    };
+
+    const report = summarizeMatchReport(match, scriptedPlayers);
+
+    expect(report).toMatchObject({
+      opponent: 'Liberty',
+      result: 'Win',
+      centurySetsWon: 1,
+      opponentSetsWon: 0,
+      ralliesTracked: 47,
+    });
+    expect(report.setReports).toHaveLength(2);
+    expect(report.setReports[0]).toMatchObject({ setNumber: 1, centuryScore: 25, opponentScore: 20, ralliesTracked: 45 });
+    expect(report.setReports[1]).toMatchObject({ setNumber: 2, centuryScore: 1, opponentScore: 1, ralliesTracked: 2 });
+    expect(report.summary.team).toMatchObject({ earnedPoints: 22, giftsConceded: 11 });
+  });
+
+  it('combines match reports into a season report', () => {
+    const matches: PrototypeMatchInput[] = [
+      {
+        id: 'match-1',
+        opponent: 'Liberty',
+        date: '2026-09-03',
+        result: 'Win',
+        sets: [{ id: 'set-1', setNumber: 1, setup: scriptedSetup, rallies: buildScriptedSet() }],
+      },
+      {
+        id: 'match-2',
+        opponent: 'Central',
+        date: '2026-09-05',
+        result: 'Loss',
+        sets: [
+          {
+            id: 'set-1',
+            setNumber: 1,
+            setup: scriptedSetup,
+            rallies: [
+              buildRally(scriptedSetup, [], { winner: 'opponent', event: 'opponent_kill' }, () => 'm2-s1-r1'),
+              buildRally(scriptedSetup, [], { winner: 'century', event: 'opponent_error', errorSubtype: 'Attack' }, () => 'm2-s1-r2'),
+            ],
+          },
+        ],
+      },
+    ];
+
+    const season = summarizeSeasonReport(matches, scriptedPlayers);
+
+    expect(season).toMatchObject({
+      matchesPlayed: 2,
+      wins: 1,
+      losses: 1,
+      openMatches: 0,
+      ralliesTracked: 47,
+    });
+    expect(season.matchReports.map((match) => match.opponent)).toEqual(['Liberty', 'Central']);
+    expect(season.summary.team).toMatchObject({
+      earnedPoints: 21,
+      giftsReceived: 5,
+      opponentEarnedPoints: 11,
+      giftsConceded: 10,
     });
   });
 });

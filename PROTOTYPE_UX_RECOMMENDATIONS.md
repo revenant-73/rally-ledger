@@ -24,6 +24,9 @@ The rebuild should keep protecting the core concept: record the terminal rally e
 6. Avoid reopening full setup unnecessarily.
    Once a usable roster and lineup exist locally, the prototype should default to the scoring screen. Setup should stay one tap away, but it should not block live entry by default.
 
+7. Treat reporting as two related views.
+   Each completed match needs its own breakdown by set, earned/gifted balance, scoring source, and player attribution. The season report should combine every match for the selected roster and keep the same questions visible: where we earn, who earns, where we gift, and who gifts.
+
 ## Started Implementation
 
 - Make the app open directly to the live scoring screen with saved/default setup.
@@ -33,8 +36,10 @@ The rebuild should keep protecting the core concept: record the terminal rally e
 - Move Summary out of the persistent live layout and into a temporary overlay.
 - Limit Recent Rallies to the last three by default and tighten support-panel spacing for tablet landscape.
 - Add a 45-rally scripted set fixture that verifies a 25-20 result, earned/gifted totals, player attribution, undo, and correction recalculation.
+- Add prototype match and season report aggregation so the new concept can show a match-by-match breakdown and a combined season report.
 
 ## Validation Added
 
 - Model test coverage now includes a realistic full-set rally log with one-tap events, player selections, team/unclear attribution, and opponent error subtypes.
 - Browser dogfooding now includes a visible full-set tap sequence through the prototype, ending at 25-20 with the live summary opened.
+- Reporting coverage now verifies set-level match reports and cumulative season totals from the same rally summary model.

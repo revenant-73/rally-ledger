@@ -6,11 +6,15 @@ import {
   eventLabels,
   eventNeedsPlayer,
   getWinnerForEvent,
+  summarizeSeasonReport,
   summarizeSet,
   TEAM_ATTRIBUTION_ID,
   type ErrorSubtype,
   type LineupSlots,
   type PendingRallyInput,
+  type PrototypeMatchInput,
+  type PrototypeMatchReport,
+  type PrototypeSeasonReport,
   type PrototypePlayer,
   type RallyRecord,
   type RallyMode,
@@ -67,6 +71,90 @@ const defaultSetup: SetSetup = {
   lineup: defaultLineup,
   rotationServers: defaultRotationServers,
 };
+
+const buildPrototypeRallies = (setup: SetSetup, inputs: PendingRallyInput[], prefix: string) =>
+  inputs.reduce<RallyRecord[]>(
+    (rallies, input, index) => [
+      ...rallies,
+      buildRally(
+        setup,
+        rallies,
+        input,
+        () => `${prefix}-${index + 1}`,
+        () => `2026-09-${String(index + 1).padStart(2, '0')}T19:00:00.000Z`,
+      ),
+    ],
+    [],
+  );
+
+const priorSeasonMatches: PrototypeMatchInput[] = [
+  {
+    id: 'prior-liberty',
+    opponent: 'Glencoe',
+    date: '2026-09-01',
+    result: 'Win',
+    sets: [
+      {
+        id: 'prior-liberty-1',
+        setNumber: 1,
+        setup: { ...defaultSetup, opponent: 'Glencoe', setNumber: 1 },
+        rallies: buildPrototypeRallies(
+          { ...defaultSetup, opponent: 'Glencoe', setNumber: 1 },
+          [
+            { winner: 'century', event: 'century_ace' },
+            { winner: 'century', event: 'century_kill', creditedPlayerId: 'p2' },
+            { winner: 'opponent', event: 'serve_error' },
+            { winner: 'century', event: 'century_block', creditedPlayerId: 'p6' },
+            { winner: 'opponent', event: 'opponent_kill' },
+            { winner: 'century', event: 'opponent_error', errorSubtype: 'Attack' },
+          ],
+          'glencoe-s1',
+        ),
+      },
+      {
+        id: 'prior-liberty-2',
+        setNumber: 2,
+        setup: { ...defaultSetup, opponent: 'Glencoe', setNumber: 2, initialMode: 'receiving', initialServerId: undefined },
+        rallies: buildPrototypeRallies(
+          { ...defaultSetup, opponent: 'Glencoe', setNumber: 2, initialMode: 'receiving', initialServerId: undefined },
+          [
+            { winner: 'opponent', event: 'opponent_block' },
+            { winner: 'century', event: 'century_kill', creditedPlayerId: 'p3' },
+            { winner: 'opponent', event: 'attack_error', chargedPlayerId: 'p4' },
+            { winner: 'century', event: 'century_ace' },
+            { winner: 'century', event: 'century_kill', creditedPlayerId: 'p5' },
+          ],
+          'glencoe-s2',
+        ),
+      },
+    ],
+  },
+  {
+    id: 'prior-central',
+    opponent: 'Central',
+    date: '2026-09-03',
+    result: 'Loss',
+    sets: [
+      {
+        id: 'prior-central-1',
+        setNumber: 1,
+        setup: { ...defaultSetup, opponent: 'Central', setNumber: 1, initialRotation: 4, initialServerId: 'p4' },
+        rallies: buildPrototypeRallies(
+          { ...defaultSetup, opponent: 'Central', setNumber: 1, initialRotation: 4, initialServerId: 'p4' },
+          [
+            { winner: 'century', event: 'century_kill', creditedPlayerId: 'p4' },
+            { winner: 'opponent', event: 'opponent_kill' },
+            { winner: 'opponent', event: 'receive_error', chargedPlayerId: 'p1' },
+            { winner: 'century', event: 'century_block', teamAttribution: true },
+            { winner: 'opponent', event: 'attack_error', chargedPlayerId: 'p2' },
+            { winner: 'opponent', event: 'opponent_block' },
+          ],
+          'central-s1',
+        ),
+      },
+    ],
+  },
+];
 
 const centuryEvents: TerminalEvent[] = ['century_ace', 'century_kill', 'century_block', 'opponent_error'];
 const opponentEvents: TerminalEvent[] = [
@@ -225,6 +313,7 @@ const RebuildPrototype = () => {
   const [locked, setLocked] = useState(false);
   const [setupOpen, setSetupOpen] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [correctionOpen, setCorrectionOpen] = useState(false);
   const [lineupSelection, setLineupSelection] = useState<LineupSelection | null>(null);
 
@@ -244,6 +333,18 @@ const RebuildPrototype = () => {
   const state = useMemo(() => deriveSetState(setup, rallies), [setup, rallies]);
   const activeRoster = useMemo(() => roster.filter((player) => player.active), [roster]);
   const summary = useMemo(() => summarizeSet(rallies, roster), [rallies, roster]);
+  const currentMatch = useMemo<PrototypeMatchInput>(
+    () => ({
+      id: 'live-match',
+      opponent: setup.opponent,
+      date: new Date().toISOString().slice(0, 10),
+      result: 'Open',
+      sets: [{ id: 'live-set', setNumber: setup.setNumber, setup, rallies }],
+    }),
+    [rallies, setup],
+  );
+  const seasonReport = useMemo(() => summarizeSeasonReport([...priorSeasonMatches, currentMatch], roster), [currentMatch, roster]);
+  const currentMatchReport = seasonReport.matchReports.find((match) => match.id === currentMatch.id) ?? seasonReport.matchReports[seasonReport.matchReports.length - 1];
   const currentServer = roster.find((player) => player.id === state.serverId);
   const lastRally = [...rallies].reverse().find((rally) => rally.active);
   const activeRallies = rallies.filter((rally) => rally.active);
@@ -410,7 +511,7 @@ const RebuildPrototype = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:w-[34rem]">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 lg:w-[42rem]">
             <button
               type="button"
               onClick={() => setSetupOpen(true)}
@@ -447,6 +548,14 @@ const RebuildPrototype = () => {
             >
               {summaryOpen ? 'Hide Summary' : 'Summary'}
               <span className="block text-xs font-bold text-slate-300">{activeRallies.length} rallies</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setReportOpen(true)}
+              className="min-h-14 rounded border border-white/15 bg-white/10 px-3 text-left font-black"
+            >
+              Reports
+              <span className="block text-xs font-bold text-slate-300">Match + season</span>
             </button>
           </div>
         </header>
@@ -534,6 +643,15 @@ const RebuildPrototype = () => {
       </div>
 
       {summaryOpen ? <SummaryPanel summary={summary} players={roster} onClose={() => setSummaryOpen(false)} /> : null}
+
+      {reportOpen && currentMatchReport ? (
+        <ReportSheet
+          seasonReport={seasonReport}
+          currentMatchReport={currentMatchReport}
+          players={roster}
+          onClose={() => setReportOpen(false)}
+        />
+      ) : null}
 
       {setupOpen ? (
         <SetupSheet
@@ -1111,6 +1229,140 @@ interface SummaryPanelProps {
   players: PrototypePlayer[];
   onClose: () => void;
 }
+
+interface ReportSheetProps {
+  seasonReport: PrototypeSeasonReport;
+  currentMatchReport: PrototypeMatchReport;
+  players: PrototypePlayer[];
+  onClose: () => void;
+}
+
+const formatReportDate = (date: string) =>
+  new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+const formatMatchScore = (match: PrototypeMatchReport) => `${match.centurySetsWon}-${match.opponentSetsWon}`;
+
+const ReportSheet = ({ seasonReport, currentMatchReport, players, onClose }: ReportSheetProps) => {
+  const [view, setView] = useState<'match' | 'season'>('match');
+  const activeReport = view === 'match' ? currentMatchReport : undefined;
+  const summary = activeReport?.summary ?? seasonReport.summary;
+
+  return (
+    <div className="fixed inset-0 z-30 flex items-end bg-black/70 p-3 sm:items-center sm:justify-center">
+      <section className="max-h-[88vh] w-full overflow-auto rounded bg-slate-100 p-3 text-slate-950 shadow-xl sm:max-w-5xl sm:p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-black">Reports</h2>
+            <p className="text-sm font-bold text-slate-600">Match-by-match breakdown and combined season view.</p>
+          </div>
+          <button type="button" onClick={onClose} className="min-h-14 rounded bg-slate-950 px-4 font-black text-white">
+            Back
+          </button>
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 rounded bg-slate-900 p-1">
+          {(['match', 'season'] satisfies Array<typeof view>).map((item) => (
+            <button
+              key={item}
+              type="button"
+              onClick={() => setView(item)}
+              className={`min-h-12 rounded text-sm font-black uppercase ${view === item ? 'bg-teal-400 text-slate-950' : 'text-white'}`}
+            >
+              {item === 'match' ? 'Current Match' : 'Season'}
+            </button>
+          ))}
+        </div>
+
+        {view === 'match' ? (
+          <div className="mt-3 grid gap-3 lg:grid-cols-[0.9fr_1.1fr]">
+            <section className="rounded border border-slate-300 bg-white p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase text-slate-500">Current Match</p>
+                  <h3 className="text-2xl font-black">Century vs {currentMatchReport.opponent}</h3>
+                  <p className="text-sm font-bold text-slate-600">
+                    {formatReportDate(currentMatchReport.date)} · {currentMatchReport.result} · Match {formatMatchScore(currentMatchReport)}
+                  </p>
+                </div>
+                <span className="rounded bg-slate-900 px-3 py-2 text-sm font-black text-white">{currentMatchReport.ralliesTracked} rallies</span>
+              </div>
+
+              <div className="mt-3 grid gap-2">
+                {currentMatchReport.setReports.map((set) => (
+                  <div key={set.id} className="rounded border border-slate-200 bg-slate-50 p-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-black">Set {set.setNumber}</p>
+                      <p className="text-xl font-black">
+                        {set.centuryScore}-{set.opponentScore}
+                      </p>
+                    </div>
+                    <p className="text-xs font-bold text-slate-500">
+                      Earned {set.summary.team.earnedPoints} · Gifts in {set.summary.team.giftsReceived} · Gifts out {set.summary.team.giftsConceded}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <ReportInsightGrid summary={summary} players={players} />
+          </div>
+        ) : (
+          <div className="mt-3 grid gap-3 lg:grid-cols-[0.95fr_1.05fr]">
+            <section className="rounded border border-slate-300 bg-white p-3">
+              <div className="grid grid-cols-4 gap-2">
+                <Metric label="Matches" value={seasonReport.matchesPlayed} />
+                <Metric label="Record" value={`${seasonReport.wins}-${seasonReport.losses}`} />
+                <Metric label="Open" value={seasonReport.openMatches} />
+                <Metric label="Rallies" value={seasonReport.ralliesTracked} />
+              </div>
+
+              <div className="mt-3 grid gap-2">
+                {seasonReport.matchReports.map((match) => (
+                  <div key={match.id} className="rounded border border-slate-200 bg-slate-50 p-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate font-black">Century vs {match.opponent}</p>
+                        <p className="text-xs font-bold text-slate-500">
+                          {formatReportDate(match.date)} · {match.result} · Match {formatMatchScore(match)}
+                        </p>
+                      </div>
+                      <p className="text-sm font-black text-slate-600">{match.ralliesTracked} rallies</p>
+                    </div>
+                    <p className="mt-1 text-xs font-bold text-slate-500">
+                      Earned {match.summary.team.earnedPoints} · Gifts in {match.summary.team.giftsReceived} · Gifts out {match.summary.team.giftsConceded}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <ReportInsightGrid summary={summary} players={players} />
+          </div>
+        )}
+      </section>
+    </div>
+  );
+};
+
+const ReportInsightGrid = ({ summary, players }: { summary: ReturnType<typeof summarizeSet>; players: PrototypePlayer[] }) => (
+  <section className="rounded border border-slate-300 bg-white p-3">
+    <div className="grid grid-cols-3 gap-2">
+      <Metric label="Earned" value={summary.team.earnedPoints} />
+      <Metric label="Gifts In" value={summary.team.giftsReceived} />
+      <Metric label="Gifts Out" value={summary.team.giftsConceded} />
+    </div>
+    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+      <div className="grid content-start gap-3">
+        <BreakdownBlock title="Where Earning" emptyText="No earned points yet" items={summary.team.earnedByType} tone="good" />
+        <PlayerBlock title="Who Earning" emptyText="No player-earned points yet" players={players} summary={summary} mode="earnedPoints" />
+      </div>
+      <div className="grid content-start gap-3">
+        <BreakdownBlock title="Where Gifting" emptyText="No Century gifts conceded" items={summary.team.giftsConcededByType} tone="warn" />
+        <PlayerBlock title="Who Gifting" emptyText="No player gifts charged" players={players} summary={summary} mode="giftsConceded" />
+      </div>
+    </div>
+  </section>
+);
 
 const SummaryPanel = ({ summary, players, onClose }: SummaryPanelProps) => (
   <div className="fixed inset-0 z-30 flex items-end bg-black/70 p-3 sm:items-center sm:justify-center">

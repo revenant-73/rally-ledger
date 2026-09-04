@@ -126,6 +126,52 @@ export interface BreakdownItem {
   total: number;
 }
 
+export interface PrototypeSetInput {
+  id: string;
+  setNumber: number;
+  setup: SetSetup;
+  rallies: RallyRecord[];
+}
+
+export interface PrototypeMatchInput {
+  id: string;
+  opponent: string;
+  date: string;
+  result?: 'Win' | 'Loss' | 'Open';
+  sets: PrototypeSetInput[];
+}
+
+export interface PrototypeSetReport {
+  id: string;
+  setNumber: number;
+  centuryScore: number;
+  opponentScore: number;
+  ralliesTracked: number;
+  summary: SetSummary;
+}
+
+export interface PrototypeMatchReport {
+  id: string;
+  opponent: string;
+  date: string;
+  result: 'Win' | 'Loss' | 'Open';
+  centurySetsWon: number;
+  opponentSetsWon: number;
+  ralliesTracked: number;
+  summary: SetSummary;
+  setReports: PrototypeSetReport[];
+}
+
+export interface PrototypeSeasonReport {
+  matchesPlayed: number;
+  wins: number;
+  losses: number;
+  openMatches: number;
+  ralliesTracked: number;
+  summary: SetSummary;
+  matchReports: PrototypeMatchReport[];
+}
+
 export const TEAM_ATTRIBUTION_ID = 'team';
 
 const rotations: Rotation[] = [1, 2, 3, 4, 5, 6];
@@ -385,6 +431,50 @@ export const summarizeSet = (rallies: RallyRecord[], players: PrototypePlayer[])
   });
 
   return { team, rotations: rotationSummaries, players: playerSummaries };
+};
+
+export const summarizeMatchReport = (match: PrototypeMatchInput, players: PrototypePlayer[]): PrototypeMatchReport => {
+  const setReports = match.sets.map((set) => {
+    const finalState = deriveSetState(set.setup, set.rallies);
+    const activeRallies = set.rallies.filter((rally) => rally.active);
+
+    return {
+      id: set.id,
+      setNumber: set.setNumber,
+      centuryScore: finalState.centuryScore,
+      opponentScore: finalState.opponentScore,
+      ralliesTracked: activeRallies.length,
+      summary: summarizeSet(set.rallies, players),
+    };
+  });
+  const activeRallies = match.sets.flatMap((set) => set.rallies.filter((rally) => rally.active));
+
+  return {
+    id: match.id,
+    opponent: match.opponent,
+    date: match.date,
+    result: match.result ?? 'Open',
+    centurySetsWon: setReports.filter((set) => set.centuryScore > set.opponentScore).length,
+    opponentSetsWon: setReports.filter((set) => set.opponentScore > set.centuryScore).length,
+    ralliesTracked: activeRallies.length,
+    summary: summarizeSet(activeRallies, players),
+    setReports,
+  };
+};
+
+export const summarizeSeasonReport = (matches: PrototypeMatchInput[], players: PrototypePlayer[]): PrototypeSeasonReport => {
+  const matchReports = matches.map((match) => summarizeMatchReport(match, players));
+  const activeRallies = matches.flatMap((match) => match.sets.flatMap((set) => set.rallies.filter((rally) => rally.active)));
+
+  return {
+    matchesPlayed: matches.length,
+    wins: matchReports.filter((match) => match.result === 'Win').length,
+    losses: matchReports.filter((match) => match.result === 'Loss').length,
+    openMatches: matchReports.filter((match) => match.result === 'Open').length,
+    ralliesTracked: activeRallies.length,
+    summary: summarizeSet(activeRallies, players),
+    matchReports,
+  };
 };
 
 export const eventLabels: Record<TerminalEvent, string> = {
