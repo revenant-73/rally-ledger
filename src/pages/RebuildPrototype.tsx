@@ -305,6 +305,14 @@ const getShortPlayerName = (player: PrototypePlayer) => {
 };
 
 const getRallyDescription = (rally: RallyRecord, players: PrototypePlayer[]) => {
+  if (rally.event === 'score_adjustment') {
+    const centuryAdjustment = rally.scoreAdjustment?.century ?? 0;
+    const opponentAdjustment = rally.scoreAdjustment?.opponent ?? 0;
+    const side = centuryAdjustment !== 0 ? 'Century' : 'Opponent';
+    const value = centuryAdjustment !== 0 ? centuryAdjustment : opponentAdjustment;
+    return `${side} score ${value > 0 ? '+' : ''}${value}`;
+  }
+
   const playerId = rally.creditedPlayerId ?? rally.chargedPlayerId;
   const playerText = rally.teamAttribution ? 'TEAM / UNCLEAR' : getPlayerLabel(players, playerId);
   const extra = rally.errorSubtype ? ` - ${rally.errorSubtype}` : playerId || rally.teamAttribution ? ` - ${playerText}` : '';
@@ -439,8 +447,28 @@ const RebuildPrototype = () => {
   const currentMatchReport = seasonReport.matchReports.find((match) => match.id === currentMatch.id) ?? seasonReport.matchReports[seasonReport.matchReports.length - 1];
   const currentServer = roster.find((player) => player.id === state.serverId);
   const lastRally = [...rallies].reverse().find((rally) => rally.active);
-  const activeRallies = rallies.filter((rally) => rally.active);
-  const recentRallies = [...activeRallies].reverse().slice(0, 3);
+  const activeEntries = rallies.filter((rally) => rally.active);
+  const activeRallies = activeEntries.filter((rally) => rally.event !== 'score_adjustment');
+  const recentRallies = [...activeEntries].reverse().slice(0, 3);
+
+  const reviewSetCompletion = (nextState: ReturnType<typeof deriveSetState>, reason: SetCompletionReview['reason']) => {
+    const winner = getSetWinner(nextState.centuryScore, nextState.opponentScore, setTarget);
+    if (!winner) {
+      return;
+    }
+
+    const winningResult: 'Win' | 'Loss' = winner === 'century' ? 'Win' : 'Loss';
+    const nextCompletedResults: Array<'Win' | 'Loss'> = [...completedSetResults, winningResult];
+    setSetCompletion({
+      setNumber: setup.setNumber,
+      centuryScore: nextState.centuryScore,
+      opponentScore: nextState.opponentScore,
+      targetScore: setTarget,
+      winner,
+      matchComplete: isMatchCompleteAfterSet(matchSettings, nextCompletedResults),
+      reason,
+    });
+  };
 
   const recordRally = (input: PendingRallyInput) => {
     if (locked) {
@@ -449,27 +477,35 @@ const RebuildPrototype = () => {
     const rally = buildRally(setup, rallies, input);
     const nextRallies = [...rallies, rally];
     const nextState = deriveSetState(setup, nextRallies);
-    const winner = getSetWinner(nextState.centuryScore, nextState.opponentScore, setTarget);
-    const winningResult: 'Win' | 'Loss' | undefined = winner ? (winner === 'century' ? 'Win' : 'Loss') : undefined;
-    const nextCompletedResults: Array<'Win' | 'Loss'> = winningResult ? [...completedSetResults, winningResult] : completedSetResults;
 
     setRallies((current) => [...current, rally]);
     setRestorable(null);
     setPending(null);
     setFeedback(getRallyDescription(rally, roster));
     setLocked(true);
+    reviewSetCompletion(nextState, 'automatic');
+  };
 
-    if (winner) {
-      setSetCompletion({
-        setNumber: setup.setNumber,
-        centuryScore: nextState.centuryScore,
-        opponentScore: nextState.opponentScore,
-        targetScore: setTarget,
-        winner,
-        matchComplete: isMatchCompleteAfterSet(matchSettings, nextCompletedResults),
-        reason: 'automatic',
-      });
+  const adjustScore = (team: TeamSide, delta: 1 | -1) => {
+    if (locked || (team === 'century' ? state.centuryScore : state.opponentScore) + delta < 0) {
+      return;
     }
+
+    const input: PendingRallyInput = {
+      winner: team,
+      event: 'score_adjustment',
+      scoreAdjustment: { [team]: delta },
+    };
+    const rally = buildRally(setup, rallies, input);
+    const nextRallies = [...rallies, rally];
+    const nextState = deriveSetState(setup, nextRallies);
+
+    setRallies((current) => [...current, rally]);
+    setRestorable(null);
+    setPending(null);
+    setFeedback(getRallyDescription(rally, roster));
+    setLocked(true);
+    reviewSetCompletion(nextState, 'automatic');
   };
 
   const updateLastRally = (input: PendingRallyInput, rallyId: string) => {
@@ -724,21 +760,28 @@ const RebuildPrototype = () => {
       <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-3 py-3 sm:px-5 lg:max-h-screen lg:overflow-hidden">
         <header className="grid gap-3 border-b border-white/15 pb-3 lg:grid-cols-[1fr_auto] lg:items-center">
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-            <div className="rounded bg-teal-400 px-4 py-3 text-slate-950">
-              <p className="text-xs font-black uppercase">Century</p>
-              <p className="text-5xl font-black leading-none sm:text-6xl">{state.centuryScore}</p>
-            </div>
+            <ScoreCard
+              label="Century"
+              score={state.centuryScore}
+              tone="century"
+              onIncrement={() => adjustScore('century', 1)}
+              onDecrement={() => adjustScore('century', -1)}
+            />
             <div className="text-center">
               <p className="text-xs font-black uppercase text-slate-300">Set {setup.setNumber}</p>
               <p className="mt-1 text-2xl font-black text-white">R{state.rotation}</p>
             </div>
-            <div className="rounded bg-white px-4 py-3 text-right text-slate-950">
-              <p className="text-xs font-black uppercase">{setup.opponent}</p>
-              <p className="text-5xl font-black leading-none sm:text-6xl">{state.opponentScore}</p>
-            </div>
+            <ScoreCard
+              label={setup.opponent}
+              score={state.opponentScore}
+              tone="opponent"
+              align="right"
+              onIncrement={() => adjustScore('opponent', 1)}
+              onDecrement={() => adjustScore('opponent', -1)}
+            />
           </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-6 lg:w-[50rem]">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 lg:w-[42rem]">
             <button
               type="button"
               onClick={() => setSetupOpen(true)}
@@ -752,15 +795,6 @@ const RebuildPrototype = () => {
                     : 'Serving: pick server'
                   : 'Receiving: Century'}
               </span>
-            </button>
-            <button
-              type="button"
-              onClick={endSet}
-              disabled={activeRallies.length === 0}
-              className="min-h-14 rounded border border-white/15 bg-white/10 px-3 text-left font-black disabled:opacity-50"
-            >
-              End Set
-              <span className="block text-xs font-bold text-slate-300">Keep with match</span>
             </button>
             <button
               type="button"
@@ -849,8 +883,8 @@ const RebuildPrototype = () => {
               <section className="min-h-0 rounded border border-white/15 bg-white/5 p-3 lg:p-2">
                 <div className="mb-2 flex items-center justify-between">
                   <div>
-                    <h2 className="text-sm font-black uppercase text-slate-300">Recent Rallies</h2>
-                    <p className="text-xs font-bold text-slate-500">Last {Math.min(activeRallies.length, 3)} of {activeRallies.length}</p>
+                    <h2 className="text-sm font-black uppercase text-slate-300">Recent Entries</h2>
+                    <p className="text-xs font-bold text-slate-500">Last {Math.min(activeEntries.length, 3)} of {activeEntries.length}</p>
                   </div>
                   {restorable ? (
                     <button type="button" onClick={restore} className="rounded bg-teal-300 px-3 py-2 text-sm font-black text-slate-950">
@@ -863,11 +897,11 @@ const RebuildPrototype = () => {
                     <div key={rally.id} className="rounded border border-white/10 bg-slate-900 px-3 py-2 lg:py-1.5">
                       <p className="text-sm font-black">{getRallyDescription(rally, roster)}</p>
                       <p className="text-xs font-bold text-slate-400">
-                        Rally {rally.sequence} - started {rally.startMode}, R{rally.startRotation}
+                        {rally.event === 'score_adjustment' ? 'Score adjustment' : `Rally ${rally.sequence} - started ${rally.startMode}, R${rally.startRotation}`}
                       </p>
                     </div>
                   ))}
-                  {activeRallies.length === 0 ? <p className="py-6 text-center text-sm font-bold text-slate-400">No rallies yet.</p> : null}
+                  {activeEntries.length === 0 ? <p className="py-6 text-center text-sm font-bold text-slate-400">No entries yet.</p> : null}
                 </div>
               </section>
             </div>
@@ -911,6 +945,8 @@ const RebuildPrototype = () => {
           onPickLineupSlot={(rotation) => setLineupSelection({ rotation, context: 'setup' })}
           onClose={() => setSetupOpen(false)}
           onStart={startSet}
+          onEndSet={endSet}
+          canEndSet={activeRallies.length > 0}
         />
       ) : null}
 
@@ -929,6 +965,7 @@ const RebuildPrototype = () => {
         <PickerSheet
           pending={pending}
           players={activeRoster}
+          lineup={currentLineup}
           onPlayer={handlePlayer}
           onErrorSubtype={handleErrorSubtype}
           onCancel={() => setPending(null)}
@@ -971,6 +1008,43 @@ interface EventPanelProps {
   disabled: boolean;
   onEvent: (event: TerminalEvent) => void;
 }
+
+interface ScoreCardProps {
+  label: string;
+  score: number;
+  tone: 'century' | 'opponent';
+  align?: 'left' | 'right';
+  onIncrement: () => void;
+  onDecrement: () => void;
+}
+
+const ScoreCard = ({ label, score, tone, align = 'left', onIncrement, onDecrement }: ScoreCardProps) => (
+  <div className={`grid grid-cols-[1fr_auto] items-center gap-2 rounded px-4 py-3 text-slate-950 ${tone === 'century' ? 'bg-teal-400' : 'bg-white'}`}>
+    <div className={align === 'right' ? 'text-right' : 'text-left'}>
+      <p className="truncate text-xs font-black uppercase">{label}</p>
+      <p className="text-5xl font-black leading-none sm:text-6xl">{score}</p>
+    </div>
+    <div className="grid gap-1">
+      <button
+        type="button"
+        onClick={onIncrement}
+        aria-label={`Add ${label} score`}
+        className="h-9 w-9 rounded bg-slate-950 text-lg font-black leading-none text-white active:scale-95"
+      >
+        +
+      </button>
+      <button
+        type="button"
+        onClick={onDecrement}
+        disabled={score === 0}
+        aria-label={`Subtract ${label} score`}
+        className="h-9 w-9 rounded bg-slate-950 text-lg font-black leading-none text-white active:scale-95 disabled:opacity-35"
+      >
+        -
+      </button>
+    </div>
+  </div>
+);
 
 const EventPanel = ({ title, tone, events, disabled, onEvent }: EventPanelProps) => (
   <section className={`rounded border p-3 ${tone === 'century' ? 'border-teal-300 bg-teal-950/60' : 'border-slate-300 bg-slate-800'}`}>
@@ -1095,6 +1169,8 @@ interface SetupSheetProps {
   onPickLineupSlot: (rotation: Rotation) => void;
   onClose: () => void;
   onStart: () => void;
+  onEndSet: () => void;
+  canEndSet: boolean;
 }
 
 const SetupSheet = ({
@@ -1111,6 +1187,8 @@ const SetupSheet = ({
   onPickLineupSlot,
   onClose,
   onStart,
+  onEndSet,
+  canEndSet,
 }: SetupSheetProps) => {
   const [newNumber, setNewNumber] = useState('');
   const [newName, setNewName] = useState('');
@@ -1297,6 +1375,15 @@ const SetupSheet = ({
           </button>
         </div>
 
+        <button
+          type="button"
+          onClick={onEndSet}
+          disabled={!canEndSet}
+          className="mt-3 min-h-12 w-full rounded border border-amber-300 bg-amber-100 px-3 font-black text-amber-950 disabled:border-slate-200 disabled:bg-slate-200 disabled:text-slate-500"
+        >
+          Review / End Current Set Early
+        </button>
+
         {editor === 'roster' ? (
           <section className="mt-3 rounded border border-slate-300 bg-white p-3">
             <div className="flex items-center justify-between gap-3">
@@ -1409,53 +1496,88 @@ const SetupSheet = ({
 interface PickerSheetProps {
   pending: PendingSelection;
   players: PrototypePlayer[];
+  lineup: LineupSlots;
   onPlayer: (playerId: string) => void;
   onErrorSubtype: (subtype: ErrorSubtype) => void;
   onCancel: () => void;
 }
 
-const PickerSheet = ({ pending, players, onPlayer, onErrorSubtype, onCancel }: PickerSheetProps) => (
-  <div className="fixed inset-0 z-30 flex items-end bg-black/70 p-3">
-    <section className="w-full rounded bg-slate-100 p-3 text-slate-950 shadow-xl sm:p-4">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-lg font-black sm:text-xl">{pending.mode === 'player' ? `Player for ${eventLabels[pending.event]}` : 'Their Error Type'}</h2>
-        <button type="button" onClick={onCancel} className="min-h-14 rounded bg-slate-950 px-4 font-black text-white">
-          Back
-        </button>
-      </div>
-      {pending.mode === 'error' ? (
-        <div className="grid grid-cols-3 gap-2">
-          {(['Serve', 'Attack', 'Other'] satisfies ErrorSubtype[]).map((subtype) => (
-            <button key={subtype} type="button" onClick={() => onErrorSubtype(subtype)} className="min-h-20 rounded bg-teal-500 text-xl font-black">
-              {subtype}
-            </button>
-          ))}
+const PickerSheet = ({ pending, players, lineup, onPlayer, onErrorSubtype, onCancel }: PickerSheetProps) => {
+  const lineupPlayerIds = rotations.map((rotation) => lineup[rotation]).filter((playerId): playerId is string => Boolean(playerId));
+  const lineupPlayers = lineupPlayerIds
+    .map((playerId) => players.find((player) => player.id === playerId))
+    .filter((player): player is PrototypePlayer => Boolean(player));
+  const reservePlayers = players.filter((player) => !lineupPlayerIds.includes(player.id));
+  const showTeamButton = eventNeedsPlayer(pending.event) === 'charged' || pending.event === 'century_block';
+
+  return (
+    <div className="fixed inset-0 z-30 flex items-end bg-black/70 p-3">
+      <section className="w-full rounded bg-slate-100 p-3 text-slate-950 shadow-xl sm:p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-black sm:text-xl">{pending.mode === 'player' ? `Player for ${eventLabels[pending.event]}` : 'Their Error Type'}</h2>
+          <button type="button" onClick={onCancel} className="min-h-14 rounded bg-slate-950 px-4 font-black text-white">
+            Back
+          </button>
         </div>
-      ) : (
-        <div className="grid grid-cols-4 gap-2 sm:grid-cols-7 xl:grid-cols-8">
-          {eventNeedsPlayer(pending.event) === 'charged' || pending.event === 'century_block' ? (
-            <button type="button" onClick={() => onPlayer(TEAM_ATTRIBUTION_ID)} className="min-h-14 rounded bg-slate-950 px-2 text-center text-white">
-              <span className="block text-sm font-black leading-tight">TEAM</span>
-              <span className="block text-[0.65rem] font-bold leading-tight text-slate-300">UNCLEAR</span>
-            </button>
-          ) : null}
-          {players.map((player) => (
-            <button
-              key={player.id}
-              type="button"
-              aria-label={`Choose ${getPlayerLabel(players, player.id)}`}
-              onClick={() => onPlayer(player.id)}
-              className="min-h-14 rounded border border-slate-300 bg-white px-2 py-1 text-center shadow-sm"
-            >
-              <span className="block text-2xl font-black leading-none sm:text-3xl">#{player.number}</span>
-              <span className="mt-1 block truncate text-[0.68rem] font-bold leading-tight text-slate-600 sm:text-xs">{getShortPlayerName(player)}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </section>
-  </div>
-);
+        {pending.mode === 'error' ? (
+          <div className="grid grid-cols-3 gap-2">
+            {(['Serve', 'Attack', 'Other'] satisfies ErrorSubtype[]).map((subtype) => (
+              <button key={subtype} type="button" onClick={() => onErrorSubtype(subtype)} className="min-h-20 rounded bg-teal-500 text-xl font-black">
+                {subtype}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            <section>
+              <p className="mb-1.5 text-xs font-black uppercase text-slate-500">Current Lineup</p>
+              <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 xl:grid-cols-7">
+                {showTeamButton ? (
+                  <button type="button" onClick={() => onPlayer(TEAM_ATTRIBUTION_ID)} className="min-h-14 rounded bg-slate-950 px-2 text-center text-white">
+                    <span className="block text-sm font-black leading-tight">TEAM</span>
+                    <span className="block text-[0.65rem] font-bold leading-tight text-slate-300">UNCLEAR</span>
+                  </button>
+                ) : null}
+                {lineupPlayers.map((player) => (
+                  <button
+                    key={player.id}
+                    type="button"
+                    aria-label={`Choose lineup ${getPlayerLabel(players, player.id)}`}
+                    onClick={() => onPlayer(player.id)}
+                    className="min-h-14 rounded border border-teal-700 bg-teal-300 px-2 py-1 text-center text-slate-950 shadow-sm"
+                  >
+                    <span className="block text-2xl font-black leading-none sm:text-3xl">#{player.number}</span>
+                    <span className="mt-1 block truncate text-[0.68rem] font-bold leading-tight sm:text-xs">{getShortPlayerName(player)}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            {reservePlayers.length > 0 ? (
+              <section>
+                <p className="mb-1.5 text-xs font-black uppercase text-slate-500">Reserves</p>
+                <div className="grid grid-cols-4 gap-2 sm:grid-cols-7 xl:grid-cols-8">
+                  {reservePlayers.map((player) => (
+                    <button
+                      key={player.id}
+                      type="button"
+                      aria-label={`Choose reserve ${getPlayerLabel(players, player.id)}`}
+                      onClick={() => onPlayer(player.id)}
+                      className="min-h-14 rounded border border-slate-300 bg-white px-2 py-1 text-center shadow-sm"
+                    >
+                      <span className="block text-2xl font-black leading-none sm:text-3xl">#{player.number}</span>
+                      <span className="mt-1 block truncate text-[0.68rem] font-bold leading-tight text-slate-600 sm:text-xs">{getShortPlayerName(player)}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+};
 
 interface SetCompletionSheetProps {
   review: SetCompletionReview;

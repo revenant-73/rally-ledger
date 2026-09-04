@@ -36,7 +36,8 @@ export type TerminalEvent =
   | 'serve_error'
   | 'attack_error'
   | 'ball_control_error'
-  | 'violation';
+  | 'violation'
+  | 'score_adjustment';
 
 export interface RallyRecord {
   id: string;
@@ -51,6 +52,7 @@ export interface RallyRecord {
   creditedPlayerId?: string;
   chargedPlayerId?: string;
   teamAttribution?: boolean;
+  scoreAdjustment?: Partial<Record<TeamSide, number>>;
   active: boolean;
 }
 
@@ -69,6 +71,7 @@ export interface PendingRallyInput {
   creditedPlayerId?: string;
   chargedPlayerId?: string;
   teamAttribution?: boolean;
+  scoreAdjustment?: Partial<Record<TeamSide, number>>;
 }
 
 export interface TeamSummary {
@@ -235,6 +238,15 @@ export const deriveSetState = (setup: SetSetup, rallies: RallyRecord[]): Derived
   };
 
   for (const rally of rallies.filter((item) => item.active).sort((a, b) => a.sequence - b.sequence)) {
+    if (rally.event === 'score_adjustment') {
+      state = {
+        ...state,
+        centuryScore: Math.max(0, state.centuryScore + (rally.scoreAdjustment?.century ?? 0)),
+        opponentScore: Math.max(0, state.opponentScore + (rally.scoreAdjustment?.opponent ?? 0)),
+      };
+      continue;
+    }
+
     const startedServing = rally.startMode === 'serving';
     const centuryWon = rally.winner === 'century';
     const score = {
@@ -291,6 +303,7 @@ export const buildRally = (
     creditedPlayerId: input.creditedPlayerId,
     chargedPlayerId: input.chargedPlayerId,
     teamAttribution: input.teamAttribution,
+    scoreAdjustment: input.scoreAdjustment,
     active: true,
   };
 };
@@ -321,6 +334,7 @@ const pointSourceLabels: Record<TerminalEvent, string> = {
   attack_error: 'Attacking',
   ball_control_error: 'Ball Control',
   violation: 'Violations',
+  score_adjustment: 'Score Adjustment',
 };
 
 const countBreakdown = (
@@ -337,8 +351,10 @@ const countBreakdown = (
     .filter((item) => item.total > 0)
     .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label));
 
+const isTrackedRally = (rally: RallyRecord) => rally.active && rally.event !== 'score_adjustment';
+
 export const summarizeSet = (rallies: RallyRecord[], players: PrototypePlayer[]): SetSummary => {
-  const activeRallies = rallies.filter((rally) => rally.active).sort((a, b) => a.sequence - b.sequence);
+  const activeRallies = rallies.filter(isTrackedRally).sort((a, b) => a.sequence - b.sequence);
   const serviceRallies = activeRallies.filter((rally) => rally.startMode === 'serving');
   const receiveRallies = activeRallies.filter((rally) => rally.startMode === 'receiving');
   const centuryServiceWins = serviceRallies.filter((rally) => rally.winner === 'century').length;
@@ -440,7 +456,7 @@ export const summarizeSet = (rallies: RallyRecord[], players: PrototypePlayer[])
 export const summarizeMatchReport = (match: PrototypeMatchInput, players: PrototypePlayer[]): PrototypeMatchReport => {
   const setReports = match.sets.map((set) => {
     const finalState = deriveSetState(set.setup, set.rallies);
-    const activeRallies = set.rallies.filter((rally) => rally.active);
+    const activeRallies = set.rallies.filter(isTrackedRally);
 
     return {
       id: set.id,
@@ -451,7 +467,7 @@ export const summarizeMatchReport = (match: PrototypeMatchInput, players: Protot
       summary: summarizeSet(set.rallies, players),
     };
   });
-  const activeRallies = match.sets.flatMap((set) => set.rallies.filter((rally) => rally.active));
+  const activeRallies = match.sets.flatMap((set) => set.rallies.filter(isTrackedRally));
 
   return {
     id: match.id,
@@ -468,7 +484,7 @@ export const summarizeMatchReport = (match: PrototypeMatchInput, players: Protot
 
 export const summarizeSeasonReport = (matches: PrototypeMatchInput[], players: PrototypePlayer[]): PrototypeSeasonReport => {
   const matchReports = matches.map((match) => summarizeMatchReport(match, players));
-  const activeRallies = matches.flatMap((match) => match.sets.flatMap((set) => set.rallies.filter((rally) => rally.active)));
+  const activeRallies = matches.flatMap((match) => match.sets.flatMap((set) => set.rallies.filter(isTrackedRally)));
 
   return {
     matchesPlayed: matches.length,
@@ -493,4 +509,5 @@ export const eventLabels: Record<TerminalEvent, string> = {
   attack_error: 'ATTACK ERROR',
   ball_control_error: 'BALL-CONTROL ERROR',
   violation: 'VIOLATION',
+  score_adjustment: 'SCORE ADJUSTMENT',
 };
