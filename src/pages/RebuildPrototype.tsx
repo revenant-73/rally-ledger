@@ -179,6 +179,7 @@ interface PersistedPrototype {
   roster: PrototypePlayer[];
   currentLineup: LineupSlots;
   courtSide: CourtSide;
+  seasonMatches: PrototypeMatchInput[];
 }
 
 interface PendingSelection {
@@ -193,7 +194,14 @@ interface LineupSelection {
 }
 
 const getInitialPrototype = (): PersistedPrototype => {
-  const fallback = { setup: defaultSetup, rallies: [], roster: mockRoster, currentLineup: defaultLineup, courtSide: 'left' as CourtSide };
+  const fallback = {
+    setup: defaultSetup,
+    rallies: [],
+    roster: mockRoster,
+    currentLineup: defaultLineup,
+    courtSide: 'left' as CourtSide,
+    seasonMatches: priorSeasonMatches,
+  };
 
   try {
     const saved = localStorage.getItem(storageKey);
@@ -207,6 +215,7 @@ const getInitialPrototype = (): PersistedPrototype => {
       roster: parsed.roster ?? mockRoster,
       currentLineup: parsed.currentLineup ?? parsed.setup?.lineup ?? defaultLineup,
       courtSide: parsed.courtSide ?? 'left',
+      seasonMatches: parsed.seasonMatches ?? priorSeasonMatches,
     };
   } catch {
     localStorage.removeItem(storageKey);
@@ -306,6 +315,7 @@ const RebuildPrototype = () => {
   const [draftSetup, setDraftSetup] = useState(initialPrototype.setup);
   const [currentLineup, setCurrentLineup] = useState<LineupSlots>(initialPrototype.currentLineup);
   const [courtSide, setCourtSide] = useState<CourtSide>(initialPrototype.courtSide);
+  const [seasonMatches, setSeasonMatches] = useState<PrototypeMatchInput[]>(initialPrototype.seasonMatches);
   const [rallies, setRallies] = useState<RallyRecord[]>(initialPrototype.rallies);
   const [restorable, setRestorable] = useState<RallyRecord | null>(null);
   const [pending, setPending] = useState<PendingSelection | null>(null);
@@ -318,9 +328,9 @@ const RebuildPrototype = () => {
   const [lineupSelection, setLineupSelection] = useState<LineupSelection | null>(null);
 
   useEffect(() => {
-    const payload: PersistedPrototype = { setup, rallies, roster, currentLineup, courtSide };
+    const payload: PersistedPrototype = { setup, rallies, roster, currentLineup, courtSide, seasonMatches };
     localStorage.setItem(storageKey, JSON.stringify(payload));
-  }, [setup, rallies, roster, currentLineup, courtSide]);
+  }, [setup, rallies, roster, currentLineup, courtSide, seasonMatches]);
 
   useEffect(() => {
     if (!locked) {
@@ -343,7 +353,7 @@ const RebuildPrototype = () => {
     }),
     [rallies, setup],
   );
-  const seasonReport = useMemo(() => summarizeSeasonReport([...priorSeasonMatches, currentMatch], roster), [currentMatch, roster]);
+  const seasonReport = useMemo(() => summarizeSeasonReport([...seasonMatches, currentMatch], roster), [currentMatch, roster, seasonMatches]);
   const currentMatchReport = seasonReport.matchReports.find((match) => match.id === currentMatch.id) ?? seasonReport.matchReports[seasonReport.matchReports.length - 1];
   const currentServer = roster.find((player) => player.id === state.serverId);
   const lastRally = [...rallies].reverse().find((rally) => rally.active);
@@ -478,22 +488,8 @@ const RebuildPrototype = () => {
     setFeedback(`R${rotation} changed to ${getPlayerLabel(roster, playerId)}`);
   };
 
-  const resetPrototype = () => {
-    setSetup(defaultSetup);
-    setDraftSetup(defaultSetup);
-    setRoster(mockRoster);
-    setCurrentLineup(defaultLineup);
-    setCourtSide('left');
-    setRallies([]);
-    setRestorable(null);
-    setPending(null);
-    setFeedback('Prototype reset');
-    setSetupOpen(true);
-    localStorage.removeItem(storageKey);
-  };
-
   const clearMatchData = () => {
-    const confirmed = window.confirm('Clear match data for this prototype? This removes the current test rallies but keeps the roster and lineup.');
+    const confirmed = window.confirm('Clear current match data? This removes the current test rallies but keeps the roster, lineup, and prior match reports.');
     if (!confirmed) {
       return;
     }
@@ -502,12 +498,11 @@ const RebuildPrototype = () => {
     setPending(null);
     setCorrectionOpen(false);
     setSummaryOpen(false);
-    setReportOpen(false);
     setFeedback('Match data cleared');
   };
 
   const deleteRosterData = () => {
-    const confirmed = window.confirm('Delete this prototype roster and all current match data? This removes players, lineup, and test rallies from this device.');
+    const confirmed = window.confirm('Delete this roster and all match data from this device? This removes players, lineup, current rallies, and saved match reports.');
     if (!confirmed) {
       return;
     }
@@ -521,6 +516,7 @@ const RebuildPrototype = () => {
     setDraftSetup(emptySetup);
     setRoster([]);
     setCurrentLineup({});
+    setSeasonMatches([]);
     setRallies([]);
     setRestorable(null);
     setPending(null);
@@ -529,6 +525,30 @@ const RebuildPrototype = () => {
     setReportOpen(false);
     setFeedback('Roster and match data deleted');
     setSetupOpen(true);
+  };
+
+  const deleteMatchData = (matchId: string) => {
+    const match = seasonReport.matchReports.find((item) => item.id === matchId);
+    if (!match) {
+      return;
+    }
+    const confirmed = window.confirm(`Delete match data for Century vs ${match.opponent}? This removes that match from reports.`);
+    if (!confirmed) {
+      return;
+    }
+
+    if (matchId === currentMatch.id) {
+      setRallies([]);
+      setRestorable(null);
+      setPending(null);
+      setCorrectionOpen(false);
+      setSummaryOpen(false);
+      setFeedback('Current match data deleted');
+      return;
+    }
+
+    setSeasonMatches((matches) => matches.filter((item) => item.id !== matchId));
+    setFeedback(`Deleted match vs ${match.opponent}`);
   };
 
   return (
@@ -688,6 +708,9 @@ const RebuildPrototype = () => {
           seasonReport={seasonReport}
           currentMatchReport={currentMatchReport}
           players={roster}
+          onDeleteMatch={deleteMatchData}
+          onClearMatchData={clearMatchData}
+          onDeleteRosterData={deleteRosterData}
           onClose={() => setReportOpen(false)}
         />
       ) : null}
@@ -706,9 +729,6 @@ const RebuildPrototype = () => {
           onPickLineupSlot={(rotation) => setLineupSelection({ rotation, context: 'setup' })}
           onClose={() => setSetupOpen(false)}
           onStart={startSet}
-          onReset={resetPrototype}
-          onClearMatchData={clearMatchData}
-          onDeleteRosterData={deleteRosterData}
         />
       ) : null}
 
@@ -881,9 +901,6 @@ interface SetupSheetProps {
   onPickLineupSlot: (rotation: Rotation) => void;
   onClose: () => void;
   onStart: () => void;
-  onReset: () => void;
-  onClearMatchData: () => void;
-  onDeleteRosterData: () => void;
 }
 
 const SetupSheet = ({
@@ -899,9 +916,6 @@ const SetupSheet = ({
   onPickLineupSlot,
   onClose,
   onStart,
-  onReset,
-  onClearMatchData,
-  onDeleteRosterData,
 }: SetupSheetProps) => {
   const [newNumber, setNewNumber] = useState('');
   const [newName, setNewName] = useState('');
@@ -1011,7 +1025,7 @@ const SetupSheet = ({
           </div>
         </section>
 
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
           <button
             type="button"
             onClick={() => setEditor((value) => (value === 'roster' ? null : 'roster'))}
@@ -1026,25 +1040,7 @@ const SetupSheet = ({
           >
             Edit Lineup
           </button>
-          <button type="button" onClick={onReset} className="min-h-12 rounded bg-slate-950 px-3 font-black text-white">
-            Reset Prototype
-          </button>
         </div>
-
-        <section className="mt-3 rounded border border-red-200 bg-red-50 p-3">
-          <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-center">
-            <div>
-              <h3 className="text-sm font-black uppercase text-red-900">Test Data Cleanup</h3>
-              <p className="text-xs font-bold text-red-800">Use this to remove demo entries before real matches.</p>
-            </div>
-            <button type="button" onClick={onClearMatchData} className="min-h-12 rounded bg-white px-3 font-black text-red-950">
-              Clear Match Data
-            </button>
-            <button type="button" onClick={onDeleteRosterData} className="min-h-12 rounded bg-red-700 px-3 font-black text-white">
-              Delete Roster
-            </button>
-          </div>
-        </section>
 
         {editor === 'roster' ? (
           <section className="mt-3 rounded border border-slate-300 bg-white p-3">
@@ -1294,6 +1290,9 @@ interface ReportSheetProps {
   seasonReport: PrototypeSeasonReport;
   currentMatchReport: PrototypeMatchReport;
   players: PrototypePlayer[];
+  onDeleteMatch: (matchId: string) => void;
+  onClearMatchData: () => void;
+  onDeleteRosterData: () => void;
   onClose: () => void;
 }
 
@@ -1302,10 +1301,24 @@ const formatReportDate = (date: string) =>
 
 const formatMatchScore = (match: PrototypeMatchReport) => `${match.centurySetsWon}-${match.opponentSetsWon}`;
 
-const ReportSheet = ({ seasonReport, currentMatchReport, players, onClose }: ReportSheetProps) => {
+const ReportSheet = ({
+  seasonReport,
+  currentMatchReport,
+  players,
+  onDeleteMatch,
+  onClearMatchData,
+  onDeleteRosterData,
+  onClose,
+}: ReportSheetProps) => {
   const [view, setView] = useState<'match' | 'season'>('match');
-  const activeReport = view === 'match' ? currentMatchReport : undefined;
+  const [selectedMatchId, setSelectedMatchId] = useState(currentMatchReport.id);
+  const selectedMatchReport = seasonReport.matchReports.find((match) => match.id === selectedMatchId) ?? currentMatchReport;
+  const activeReport = view === 'match' ? selectedMatchReport : undefined;
   const summary = activeReport?.summary ?? seasonReport.summary;
+  const showMatch = (matchId: string) => {
+    setSelectedMatchId(matchId);
+    setView('match');
+  };
 
   return (
     <div className="fixed inset-0 z-30 flex items-end bg-black/70 p-3 sm:items-center sm:justify-center">
@@ -1328,7 +1341,7 @@ const ReportSheet = ({ seasonReport, currentMatchReport, players, onClose }: Rep
               onClick={() => setView(item)}
               className={`min-h-12 rounded text-sm font-black uppercase ${view === item ? 'bg-teal-400 text-slate-950' : 'text-white'}`}
             >
-              {item === 'match' ? 'Current Match' : 'Season'}
+              {item === 'match' ? 'Match Detail' : 'Season'}
             </button>
           ))}
         </div>
@@ -1336,19 +1349,40 @@ const ReportSheet = ({ seasonReport, currentMatchReport, players, onClose }: Rep
         {view === 'match' ? (
           <div className="mt-3 grid gap-3 lg:grid-cols-[0.9fr_1.1fr]">
             <section className="rounded border border-slate-300 bg-white p-3">
+              <div className="mb-3 grid gap-2">
+                <p className="text-xs font-black uppercase text-slate-500">Choose Match</p>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {seasonReport.matchReports.map((match) => (
+                    <button
+                      key={match.id}
+                      type="button"
+                      onClick={() => showMatch(match.id)}
+                      className={`min-h-12 rounded border px-2 text-left text-sm font-black ${
+                        selectedMatchReport.id === match.id ? 'border-teal-700 bg-teal-300 text-slate-950' : 'border-slate-300 bg-slate-50'
+                      }`}
+                    >
+                      <span className="block truncate">vs {match.opponent}</span>
+                      <span className="block text-[0.68rem] font-bold text-slate-600">{formatReportDate(match.date)}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-black uppercase text-slate-500">Current Match</p>
-                  <h3 className="text-2xl font-black">Century vs {currentMatchReport.opponent}</h3>
+                  <p className="text-xs font-black uppercase text-slate-500">
+                    {selectedMatchReport.id === currentMatchReport.id ? 'Current Match' : 'Saved Match'}
+                  </p>
+                  <h3 className="text-2xl font-black">Century vs {selectedMatchReport.opponent}</h3>
                   <p className="text-sm font-bold text-slate-600">
-                    {formatReportDate(currentMatchReport.date)} · {currentMatchReport.result} · Match {formatMatchScore(currentMatchReport)}
+                    {formatReportDate(selectedMatchReport.date)} · {selectedMatchReport.result} · Match {formatMatchScore(selectedMatchReport)}
                   </p>
                 </div>
-                <span className="rounded bg-slate-900 px-3 py-2 text-sm font-black text-white">{currentMatchReport.ralliesTracked} rallies</span>
+                <span className="rounded bg-slate-900 px-3 py-2 text-sm font-black text-white">{selectedMatchReport.ralliesTracked} rallies</span>
               </div>
 
               <div className="mt-3 grid gap-2">
-                {currentMatchReport.setReports.map((set) => (
+                {selectedMatchReport.setReports.map((set) => (
                   <div key={set.id} className="rounded border border-slate-200 bg-slate-50 p-2">
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-black">Set {set.setNumber}</p>
@@ -1362,6 +1396,13 @@ const ReportSheet = ({ seasonReport, currentMatchReport, players, onClose }: Rep
                   </div>
                 ))}
               </div>
+              <button
+                type="button"
+                onClick={() => onDeleteMatch(selectedMatchReport.id)}
+                className="mt-3 min-h-12 w-full rounded bg-red-700 px-3 font-black text-white"
+              >
+                Delete This Match
+              </button>
             </section>
 
             <ReportInsightGrid summary={summary} players={players} />
@@ -1391,9 +1432,30 @@ const ReportSheet = ({ seasonReport, currentMatchReport, players, onClose }: Rep
                     <p className="mt-1 text-xs font-bold text-slate-500">
                       Earned {match.summary.team.earnedPoints} · Gifts in {match.summary.team.giftsReceived} · Gifts out {match.summary.team.giftsConceded}
                     </p>
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <button type="button" onClick={() => showMatch(match.id)} className="min-h-10 rounded bg-slate-900 px-3 text-sm font-black text-white">
+                        View Match
+                      </button>
+                      <button type="button" onClick={() => onDeleteMatch(match.id)} className="min-h-10 rounded bg-red-700 px-3 text-sm font-black text-white">
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
+
+              <section className="mt-3 rounded border border-red-200 bg-red-50 p-3">
+                <h3 className="text-sm font-black uppercase text-red-900">Data Cleanup</h3>
+                <p className="text-xs font-bold text-red-800">Remove test runs from the report data when needed.</p>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  <button type="button" onClick={onClearMatchData} className="min-h-12 rounded bg-white px-3 font-black text-red-950">
+                    Clear Current Match
+                  </button>
+                  <button type="button" onClick={onDeleteRosterData} className="min-h-12 rounded bg-red-700 px-3 font-black text-white">
+                    Delete Roster + Matches
+                  </button>
+                </div>
+              </section>
             </section>
 
             <ReportInsightGrid summary={summary} players={players} />
