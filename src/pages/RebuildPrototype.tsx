@@ -403,6 +403,7 @@ const RebuildPrototype = () => {
   const [setupOpen, setSetupOpen] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [correctionOpen, setCorrectionOpen] = useState(false);
   const [lineupSelection, setLineupSelection] = useState<LineupSelection | null>(null);
   const [setCompletion, setSetCompletion] = useState<SetCompletionReview | null>(null);
@@ -599,7 +600,7 @@ const RebuildPrototype = () => {
   };
 
   const endSet = () => {
-    if (activeRallies.length === 0) {
+    if (activeEntries.length === 0) {
       setSetupOpen(true);
       setFeedback('Add rallies before ending a set');
       return;
@@ -651,6 +652,7 @@ const RebuildPrototype = () => {
     setSetCompletion(null);
     setCorrectionOpen(false);
     setSummaryOpen(false);
+    setMoreOpen(false);
     if (matchComplete) {
       setFeedback(`Match complete: Century ${nextCompletedResults.filter((result) => result === 'Win').length}-${nextCompletedResults.filter((result) => result === 'Loss').length}`);
       setSetupOpen(false);
@@ -758,78 +760,66 @@ const RebuildPrototype = () => {
   return (
     <main className="min-h-screen bg-slate-950 text-white">
       <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-3 py-3 sm:px-5 lg:max-h-screen lg:overflow-hidden">
-        <header className="grid gap-3 border-b border-white/15 pb-3 lg:grid-cols-[1fr_auto] lg:items-center">
+        <header className="grid gap-3 border-b border-white/15 pb-3">
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
             <ScoreCard
               label="Century"
               score={state.centuryScore}
               tone="century"
+              serving={state.mode === 'serving'}
               onIncrement={() => adjustScore('century', 1)}
               onDecrement={() => adjustScore('century', -1)}
             />
             <div className="text-center">
               <p className="text-xs font-black uppercase text-slate-300">Set {setup.setNumber}</p>
               <p className="mt-1 text-2xl font-black text-white">R{state.rotation}</p>
+              {state.mode === 'serving' && currentServer ? <p className="mt-1 text-xs font-black text-teal-200">#{currentServer.number}</p> : null}
             </div>
             <ScoreCard
               label={setup.opponent}
               score={state.opponentScore}
               tone="opponent"
               align="right"
+              serving={state.mode === 'receiving'}
               onIncrement={() => adjustScore('opponent', 1)}
               onDecrement={() => adjustScore('opponent', -1)}
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 lg:w-[42rem]">
+          <div className="grid grid-cols-4 gap-2">
             <button
               type="button"
               onClick={() => setSetupOpen(true)}
-              className="min-h-14 rounded border border-white/15 bg-white/10 px-3 text-left font-black"
+              className="min-h-11 rounded border border-white/15 bg-white/10 px-2 text-left text-sm font-black"
             >
-              Match Setup
-              <span className="block text-xs font-bold text-slate-300">
-                {state.mode === 'serving'
-                  ? currentServer
-                    ? `Serving: #${currentServer.number} ${getShortPlayerName(currentServer)}`
-                    : 'Serving: pick server'
-                  : 'Receiving: Century'}
+              Setup
+              <span className="block truncate text-[0.68rem] font-bold text-slate-300">
+                {state.mode === 'serving' && currentServer ? `Serve #${currentServer.number} · R${state.rotation}` : `Receive · R${state.rotation}`}
               </span>
             </button>
             <button
               type="button"
               onClick={undo}
               disabled={!lastRally}
-              className="min-h-14 rounded bg-slate-200 px-3 text-left font-black text-slate-950 disabled:opacity-50"
+              className="min-h-11 rounded bg-slate-200 px-2 text-sm font-black text-slate-950 disabled:opacity-50"
             >
               Undo
-              <span className="block text-xs font-bold">Immediate</span>
             </button>
             <button
               type="button"
               onClick={() => setCorrectionOpen(true)}
               disabled={!lastRally}
-              className="min-h-14 rounded border border-amber-300 bg-amber-300 px-3 text-left font-black text-slate-950 disabled:opacity-50"
+              className="min-h-11 rounded border border-amber-300 bg-amber-300 px-2 text-sm font-black text-slate-950 disabled:opacity-50"
             >
               Correct
-              <span className="block text-xs font-bold">Edit last rally</span>
             </button>
             <button
               type="button"
-              onClick={() => setSummaryOpen((value) => !value)}
-              aria-expanded={summaryOpen}
-              className="min-h-14 rounded border border-white/15 bg-white/10 px-3 text-left font-black"
+              onClick={() => setMoreOpen(true)}
+              aria-expanded={moreOpen}
+              className="min-h-11 rounded border border-white/15 bg-white/10 px-2 text-sm font-black"
             >
-              {summaryOpen ? 'Hide Summary' : 'Summary'}
-              <span className="block text-xs font-bold text-slate-300">{activeRallies.length} rallies</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setReportOpen(true)}
-              className="min-h-14 rounded border border-white/15 bg-white/10 px-3 text-left font-black"
-            >
-              Reports
-              <span className="block text-xs font-bold text-slate-300">Match + season</span>
+              More
             </button>
           </div>
         </header>
@@ -918,6 +908,27 @@ const RebuildPrototype = () => {
 
       {summaryOpen ? <SummaryPanel summary={summary} players={roster} onClose={() => setSummaryOpen(false)} /> : null}
 
+      {moreOpen ? (
+        <MoreSheet
+          ralliesTracked={activeRallies.length}
+          entriesTracked={activeEntries.length}
+          canEndSet={activeEntries.length > 0}
+          onSummary={() => {
+            setMoreOpen(false);
+            setSummaryOpen(true);
+          }}
+          onReports={() => {
+            setMoreOpen(false);
+            setReportOpen(true);
+          }}
+          onEndSet={() => {
+            setMoreOpen(false);
+            endSet();
+          }}
+          onClose={() => setMoreOpen(false)}
+        />
+      ) : null}
+
       {reportOpen && currentMatchReport ? (
         <ReportSheet
           seasonReport={seasonReport}
@@ -946,7 +957,7 @@ const RebuildPrototype = () => {
           onClose={() => setSetupOpen(false)}
           onStart={startSet}
           onEndSet={endSet}
-          canEndSet={activeRallies.length > 0}
+          canEndSet={activeEntries.length > 0}
         />
       ) : null}
 
@@ -1014,12 +1025,17 @@ interface ScoreCardProps {
   score: number;
   tone: 'century' | 'opponent';
   align?: 'left' | 'right';
+  serving?: boolean;
   onIncrement: () => void;
   onDecrement: () => void;
 }
 
-const ScoreCard = ({ label, score, tone, align = 'left', onIncrement, onDecrement }: ScoreCardProps) => (
-  <div className={`grid grid-cols-[1fr_auto] items-center gap-2 rounded px-4 py-3 text-slate-950 ${tone === 'century' ? 'bg-teal-400' : 'bg-white'}`}>
+const ScoreCard = ({ label, score, tone, align = 'left', serving = false, onIncrement, onDecrement }: ScoreCardProps) => (
+  <div
+    className={`grid grid-cols-[1fr_auto] items-center gap-2 rounded border-4 px-4 py-3 text-slate-950 ${
+      serving ? 'border-amber-300 shadow-[0_0_0_2px_rgba(253,224,71,0.28)]' : 'border-transparent'
+    } ${tone === 'century' ? 'bg-teal-400' : 'bg-white'}`}
+  >
     <div className={align === 'right' ? 'text-right' : 'text-left'}>
       <p className="truncate text-xs font-black uppercase">{label}</p>
       <p className="text-5xl font-black leading-none sm:text-6xl">{score}</p>
@@ -1043,6 +1059,53 @@ const ScoreCard = ({ label, score, tone, align = 'left', onIncrement, onDecremen
         -
       </button>
     </div>
+  </div>
+);
+
+interface MoreSheetProps {
+  ralliesTracked: number;
+  entriesTracked: number;
+  canEndSet: boolean;
+  onSummary: () => void;
+  onReports: () => void;
+  onEndSet: () => void;
+  onClose: () => void;
+}
+
+const MoreSheet = ({ ralliesTracked, entriesTracked, canEndSet, onSummary, onReports, onEndSet, onClose }: MoreSheetProps) => (
+  <div className="fixed inset-0 z-30 flex items-end bg-black/70 p-3 sm:items-center sm:justify-center">
+    <section className="w-full rounded bg-slate-100 p-3 text-slate-950 shadow-xl sm:max-w-md sm:p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-black">Review</h2>
+          <p className="text-xs font-bold text-slate-600">
+            {ralliesTracked} rallies · {entriesTracked} entries
+          </p>
+        </div>
+        <button type="button" onClick={onClose} className="min-h-12 rounded bg-slate-950 px-4 font-black text-white">
+          Back
+        </button>
+      </div>
+      <div className="grid gap-2">
+        <button type="button" onClick={onSummary} className="min-h-12 rounded bg-white px-3 text-left font-black">
+          Summary
+          <span className="block text-xs font-bold text-slate-500">Live set read</span>
+        </button>
+        <button type="button" onClick={onReports} className="min-h-12 rounded bg-white px-3 text-left font-black">
+          Reports
+          <span className="block text-xs font-bold text-slate-500">Match + season</span>
+        </button>
+        <button
+          type="button"
+          onClick={onEndSet}
+          disabled={!canEndSet}
+          className="min-h-12 rounded border border-amber-300 bg-amber-100 px-3 text-left font-black text-amber-950 disabled:border-slate-200 disabled:bg-slate-200 disabled:text-slate-500"
+        >
+          End Set Early
+          <span className="block text-xs font-bold">Review score first</span>
+        </button>
+      </div>
+    </section>
   </div>
 );
 
