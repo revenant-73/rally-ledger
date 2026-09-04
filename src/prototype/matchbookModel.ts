@@ -1,5 +1,6 @@
 export type TeamSide = 'century' | 'opponent';
 export type RallyMode = 'serving' | 'receiving';
+export type PrototypeMatchFormat = 'best-of-3' | 'best-of-5' | 'fixed-2' | 'single-set';
 export type Rotation = 1 | 2 | 3 | 4 | 5 | 6;
 export type ErrorSubtype = 'Serve' | 'Attack' | 'Other';
 export type LineupSlots = Partial<Record<Rotation, string>>;
@@ -14,6 +15,9 @@ export interface PrototypePlayer {
 export interface SetSetup {
   opponent: string;
   setNumber: number;
+  matchFormat?: PrototypeMatchFormat;
+  standardSetTarget?: number;
+  decidingSetTarget?: number;
   initialMode: RallyMode;
   initialRotation: Rotation;
   initialServerId?: string;

@@ -12,6 +12,7 @@ import {
   type ErrorSubtype,
   type LineupSlots,
   type PendingRallyInput,
+  type PrototypeMatchFormat,
   type PrototypeMatchInput,
   type PrototypeMatchReport,
   type PrototypeSeasonReport,
@@ -21,8 +22,16 @@ import {
   type RallyMode,
   type Rotation,
   type SetSetup,
+  type TeamSide,
   type TerminalEvent,
 } from '../prototype/matchbookModel';
+import {
+  getMatchFormatSettings,
+  getSetTarget,
+  isMatchCompleteAfterSet,
+  MATCH_FORMAT_OPTIONS,
+  type MatchFormatSettings,
+} from '../utils/matchFormat';
 
 const storageKey = 'century-matchbook-rebuild-prototype';
 const rotations = [1, 2, 3, 4, 5, 6] as const;
@@ -66,6 +75,9 @@ const defaultLineup = {
 const defaultSetup: SetSetup = {
   opponent: 'Liberty',
   setNumber: 1,
+  matchFormat: 'best-of-3',
+  standardSetTarget: 25,
+  decidingSetTarget: 15,
   initialMode: 'serving',
   initialRotation: 1,
   initialServerId: 'p1',
@@ -195,6 +207,16 @@ interface LineupSelection {
   context: 'setup' | 'live';
 }
 
+interface SetCompletionReview {
+  setNumber: number;
+  centuryScore: number;
+  opponentScore: number;
+  targetScore: number;
+  winner?: TeamSide;
+  matchComplete: boolean;
+  reason: 'automatic' | 'manual';
+}
+
 const getInitialPrototype = (): PersistedPrototype => {
   const fallback = {
     setup: defaultSetup,
@@ -312,6 +334,50 @@ const makeInput = (event: TerminalEvent, playerId?: string, errorSubtype?: Error
   };
 };
 
+const getPrototypeMatchSettings = (setup: SetSetup): MatchFormatSettings =>
+  getMatchFormatSettings({
+    metadata: {
+      matchFormat: setup.matchFormat,
+      standardSetTarget: setup.standardSetTarget,
+      decidingSetTarget: setup.decidingSetTarget,
+    },
+  });
+
+const getCompletedSetResult = (set: PrototypeSetInput): 'Win' | 'Loss' | undefined => {
+  const state = deriveSetState(set.setup, set.rallies);
+  if (state.centuryScore === state.opponentScore) {
+    return undefined;
+  }
+  return state.centuryScore > state.opponentScore ? 'Win' : 'Loss';
+};
+
+const getSetWinner = (centuryScore: number, opponentScore: number, targetScore: number): TeamSide | undefined => {
+  const scoreReached = Math.max(centuryScore, opponentScore) >= targetScore;
+  const twoPointLead = Math.abs(centuryScore - opponentScore) >= 2;
+  if (!scoreReached || !twoPointLead) {
+    return undefined;
+  }
+  return centuryScore > opponentScore ? 'century' : 'opponent';
+};
+
+const getReviewWinner = (centuryScore: number, opponentScore: number, targetScore: number): TeamSide | undefined =>
+  getSetWinner(centuryScore, opponentScore, targetScore) ??
+  (centuryScore === opponentScore ? undefined : centuryScore > opponentScore ? 'century' : 'opponent');
+
+const getMatchResultFromSets = (settings: MatchFormatSettings, results: Array<'Win' | 'Loss'>): 'Win' | 'Loss' | 'Open' => {
+  if (!isMatchCompleteAfterSet(settings, results)) {
+    return 'Open';
+  }
+
+  const wins = results.filter((result) => result === 'Win').length;
+  const losses = results.filter((result) => result === 'Loss').length;
+  if (wins === losses) {
+    return 'Open';
+  }
+
+  return wins > losses ? 'Win' : 'Loss';
+};
+
 const RebuildPrototype = () => {
   const [initialPrototype] = useState<PersistedPrototype>(() => getInitialPrototype());
   const [roster, setRoster] = useState<PrototypePlayer[]>(initialPrototype.roster);
@@ -331,6 +397,7 @@ const RebuildPrototype = () => {
   const [reportOpen, setReportOpen] = useState(false);
   const [correctionOpen, setCorrectionOpen] = useState(false);
   const [lineupSelection, setLineupSelection] = useState<LineupSelection | null>(null);
+  const [setCompletion, setSetCompletion] = useState<SetCompletionReview | null>(null);
 
   useEffect(() => {
     const payload: PersistedPrototype = { setup, rallies, completedSets, roster, currentLineup, courtSide, seasonMatches };
@@ -346,6 +413,13 @@ const RebuildPrototype = () => {
   }, [locked]);
 
   const state = useMemo(() => deriveSetState(setup, rallies), [setup, rallies]);
+  const matchSettings = useMemo(() => getPrototypeMatchSettings(setup), [setup]);
+  const setTarget = getSetTarget(matchSettings, setup.setNumber);
+  const completedSetResults = useMemo(
+    () => completedSets.map(getCompletedSetResult).filter((result): result is 'Win' | 'Loss' => Boolean(result)),
+    [completedSets],
+  );
+  const currentMatchResult = getMatchResultFromSets(matchSettings, completedSetResults);
   const activeRoster = useMemo(() => roster.filter((player) => player.active), [roster]);
   const summary = useMemo(() => summarizeSet(rallies, roster), [rallies, roster]);
   const currentMatch = useMemo<PrototypeMatchInput>(
@@ -353,13 +427,13 @@ const RebuildPrototype = () => {
       id: 'live-match',
       opponent: setup.opponent,
       date: new Date().toISOString().slice(0, 10),
-      result: 'Open',
+      result: currentMatchResult,
       sets:
         rallies.some((rally) => rally.active) || completedSets.length === 0
           ? [...completedSets, { id: 'live-set', setNumber: setup.setNumber, setup, rallies }]
           : completedSets,
     }),
-    [completedSets, rallies, setup],
+    [completedSets, currentMatchResult, rallies, setup],
   );
   const seasonReport = useMemo(() => summarizeSeasonReport([...seasonMatches, currentMatch], roster), [currentMatch, roster, seasonMatches]);
   const currentMatchReport = seasonReport.matchReports.find((match) => match.id === currentMatch.id) ?? seasonReport.matchReports[seasonReport.matchReports.length - 1];
@@ -373,11 +447,29 @@ const RebuildPrototype = () => {
       return;
     }
     const rally = buildRally(setup, rallies, input);
+    const nextRallies = [...rallies, rally];
+    const nextState = deriveSetState(setup, nextRallies);
+    const winner = getSetWinner(nextState.centuryScore, nextState.opponentScore, setTarget);
+    const winningResult: 'Win' | 'Loss' | undefined = winner ? (winner === 'century' ? 'Win' : 'Loss') : undefined;
+    const nextCompletedResults: Array<'Win' | 'Loss'> = winningResult ? [...completedSetResults, winningResult] : completedSetResults;
+
     setRallies((current) => [...current, rally]);
     setRestorable(null);
     setPending(null);
     setFeedback(getRallyDescription(rally, roster));
     setLocked(true);
+
+    if (winner) {
+      setSetCompletion({
+        setNumber: setup.setNumber,
+        centuryScore: nextState.centuryScore,
+        opponentScore: nextState.opponentScore,
+        targetScore: setTarget,
+        winner,
+        matchComplete: isMatchCompleteAfterSet(matchSettings, nextCompletedResults),
+        reason: 'automatic',
+      });
+    }
   };
 
   const updateLastRally = (input: PendingRallyInput, rallyId: string) => {
@@ -465,6 +557,7 @@ const RebuildPrototype = () => {
     setCurrentLineup(normalized.lineup ?? {});
     setRallies([]);
     setRestorable(null);
+    setSetCompletion(null);
     setSetupOpen(false);
     setFeedback('Set started');
   };
@@ -476,8 +569,19 @@ const RebuildPrototype = () => {
       return;
     }
 
-    const confirmed = window.confirm(`End set ${setup.setNumber} and keep it with the current match report?`);
-    if (!confirmed) {
+    setSetCompletion({
+      setNumber: setup.setNumber,
+      centuryScore: state.centuryScore,
+      opponentScore: state.opponentScore,
+      targetScore: setTarget,
+      winner: getReviewWinner(state.centuryScore, state.opponentScore, setTarget),
+      matchComplete: false,
+      reason: 'manual',
+    });
+  };
+
+  const saveCompletedSet = () => {
+    if (!setCompletion) {
       return;
     }
 
@@ -487,6 +591,13 @@ const RebuildPrototype = () => {
       setup,
       rallies,
     };
+    const savedSetResult = setCompletion.winner
+      ? setCompletion.winner === 'century'
+        ? 'Win'
+        : 'Loss'
+      : getCompletedSetResult(finishedSet);
+    const nextCompletedResults = [...completedSetResults, savedSetResult].filter((result): result is 'Win' | 'Loss' => Boolean(result));
+    const matchComplete = isMatchCompleteAfterSet(matchSettings, nextCompletedResults);
     const nextSetup = {
       ...setup,
       setNumber: setup.setNumber + 1,
@@ -501,9 +612,17 @@ const RebuildPrototype = () => {
     setRallies([]);
     setRestorable(null);
     setPending(null);
+    setSetCompletion(null);
     setCorrectionOpen(false);
     setSummaryOpen(false);
-    setFeedback(`Set ${setup.setNumber} ended`);
+    if (matchComplete) {
+      setFeedback(`Match complete: Century ${nextCompletedResults.filter((result) => result === 'Win').length}-${nextCompletedResults.filter((result) => result === 'Loss').length}`);
+      setSetupOpen(false);
+      setReportOpen(true);
+      return;
+    }
+
+    setFeedback(`Set ${setup.setNumber} saved`);
     setSetupOpen(true);
   };
 
@@ -780,6 +899,7 @@ const RebuildPrototype = () => {
       {setupOpen ? (
         <SetupSheet
           setup={draftSetup}
+          matchSettings={getPrototypeMatchSettings(draftSetup)}
           stateMode={state.mode}
           currentRotation={state.rotation}
           roster={roster}
@@ -791,6 +911,17 @@ const RebuildPrototype = () => {
           onPickLineupSlot={(rotation) => setLineupSelection({ rotation, context: 'setup' })}
           onClose={() => setSetupOpen(false)}
           onStart={startSet}
+        />
+      ) : null}
+
+      {setCompletion ? (
+        <SetCompletionSheet
+          review={setCompletion}
+          setup={setup}
+          settings={matchSettings}
+          completedSetResults={completedSetResults}
+          onSave={saveCompletedSet}
+          onCancel={() => setSetCompletion(null)}
         />
       ) : null}
 
@@ -952,6 +1083,7 @@ const CourtLineupGrid = ({
 
 interface SetupSheetProps {
   setup: SetSetup;
+  matchSettings: MatchFormatSettings;
   stateMode: RallyMode;
   currentRotation: Rotation;
   roster: PrototypePlayer[];
@@ -967,6 +1099,7 @@ interface SetupSheetProps {
 
 const SetupSheet = ({
   setup,
+  matchSettings,
   stateMode,
   currentRotation,
   roster,
@@ -1028,6 +1161,66 @@ const SetupSheet = ({
                 onChange={(event) => onChange({ ...setup, setNumber: Number(event.target.value) || 1 })}
               />
             </label>
+          </div>
+
+          <div className="mt-3 grid gap-3 lg:grid-cols-[1.5fr_1fr]">
+            <div>
+              <p className="mb-2 text-xs font-black uppercase text-slate-600">Match Format</p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {MATCH_FORMAT_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => onChange({ ...setup, matchFormat: option.value as PrototypeMatchFormat })}
+                    className={`min-h-14 rounded border px-2 text-left ${
+                      matchSettings.format === option.value ? 'border-teal-700 bg-teal-500 text-slate-950' : 'border-slate-300 bg-white'
+                    }`}
+                  >
+                    <span className="block text-sm font-black">{option.label}</span>
+                    <span className="block text-[0.68rem] font-bold text-slate-600">{option.description}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <label className="grid gap-1">
+                <span className="text-xs font-black uppercase text-slate-600">Standard Target</span>
+                <select
+                  className={inputClass}
+                  value={matchSettings.standardSetTarget}
+                  onChange={(event) => onChange({ ...setup, standardSetTarget: Number(event.target.value) })}
+                >
+                  {[25, 21, 15].map((target) => (
+                    <option key={target} value={target}>
+                      {target}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-1">
+                <span className="text-xs font-black uppercase text-slate-600">Deciding Target</span>
+                <select
+                  className={inputClass}
+                  value={matchSettings.decidingSetTarget}
+                  onChange={(event) => onChange({ ...setup, decidingSetTarget: Number(event.target.value) })}
+                >
+                  {[15, 25, 11].map((target) => (
+                    <option key={target} value={target}>
+                      {target}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div className="mt-3 rounded border border-slate-200 bg-slate-50 px-3 py-2">
+            <p className="text-xs font-black uppercase text-slate-600">Set {setup.setNumber} target</p>
+            <p className="text-sm font-bold text-slate-700">
+              Playing {MATCH_FORMAT_OPTIONS.find((option) => option.value === matchSettings.format)?.label ?? 'Match'} · this set to{' '}
+              {getSetTarget(matchSettings, setup.setNumber)}
+            </p>
           </div>
 
           <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1.2fr_1fr]">
@@ -1263,6 +1456,71 @@ const PickerSheet = ({ pending, players, onPlayer, onErrorSubtype, onCancel }: P
     </section>
   </div>
 );
+
+interface SetCompletionSheetProps {
+  review: SetCompletionReview;
+  setup: SetSetup;
+  settings: MatchFormatSettings;
+  completedSetResults: Array<'Win' | 'Loss'>;
+  onSave: () => void;
+  onCancel: () => void;
+}
+
+const SetCompletionSheet = ({ review, setup, settings, completedSetResults, onSave, onCancel }: SetCompletionSheetProps) => {
+  const reviewedResult: 'Win' | 'Loss' | undefined = review.winner ? (review.winner === 'century' ? 'Win' : 'Loss') : undefined;
+  const nextResults = reviewedResult ? [...completedSetResults, reviewedResult] : completedSetResults;
+  const wins = nextResults.filter((result) => result === 'Win').length;
+  const losses = nextResults.filter((result) => result === 'Loss').length;
+  const formatLabel = MATCH_FORMAT_OPTIONS.find((option) => option.value === settings.format)?.label ?? 'Match';
+  const matchComplete = isMatchCompleteAfterSet(settings, nextResults);
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-end bg-black/75 p-3 sm:items-center sm:justify-center">
+      <section className="w-full rounded bg-slate-100 p-4 text-slate-950 shadow-xl sm:max-w-xl">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-black uppercase text-slate-500">{review.reason === 'automatic' ? 'Set Complete' : 'Review Set'}</p>
+            <h2 className="text-2xl font-black">Verify Set {review.setNumber}</h2>
+          </div>
+          <button type="button" onClick={onCancel} className="min-h-12 rounded bg-slate-200 px-4 font-black text-slate-950">
+            Keep Scoring
+          </button>
+        </div>
+
+        <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded border border-slate-300 bg-white p-3">
+          <div>
+            <p className="text-xs font-black uppercase text-slate-500">Century</p>
+            <p className="text-5xl font-black leading-none">{review.centuryScore}</p>
+          </div>
+          <p className="text-xl font-black text-slate-400">-</p>
+          <div className="text-right">
+            <p className="text-xs font-black uppercase text-slate-500">{setup.opponent}</p>
+            <p className="text-5xl font-black leading-none">{review.opponentScore}</p>
+          </div>
+        </div>
+
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          <Metric label="Winner" value={review.winner ? (review.winner === 'century' ? 'Century' : setup.opponent) : 'Verify'} compact />
+          <Metric label="Target" value={review.targetScore} compact />
+          <Metric label="Match" value={`${wins}-${losses}`} compact />
+        </div>
+
+        <div className="mt-3 rounded border border-slate-300 bg-white p-3">
+          <p className="text-sm font-black">{formatLabel}</p>
+          <p className="text-xs font-bold text-slate-600">
+            {matchComplete
+              ? 'Saving this set completes the match and opens the report.'
+              : `Saving this set opens setup for set ${review.setNumber + 1}.`}
+          </p>
+        </div>
+
+        <button type="button" onClick={onSave} className="mt-3 min-h-14 w-full rounded bg-teal-500 px-4 text-lg font-black text-slate-950">
+          Save Set
+        </button>
+      </section>
+    </div>
+  );
+};
 
 interface LineupPickerSheetProps {
   rotation: Rotation;
