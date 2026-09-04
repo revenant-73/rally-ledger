@@ -30,6 +30,9 @@ The rebuild should keep protecting the core concept: record the terminal rally e
 8. Provide explicit test-data cleanup.
    Production testing will create disposable rosters and match runs. The prototype needs report-level controls to delete a specific match, clear the current match, or delete the current roster plus lineup and match data, with confirmations before destructive actions.
 
+9. Make set boundaries explicit.
+   A set should be ended deliberately so reports can link multiple sets inside the same match. Ending a set should preserve the completed set in the current match report, clear the rally-entry surface, and send the scorer back through setup for the next set's side, serve/receive, rotation, and lineup confirmation.
+
 ## Started Implementation
 
 - Make the app open directly to the live scoring screen with saved/default setup.
@@ -41,6 +44,7 @@ The rebuild should keep protecting the core concept: record the terminal rally e
 - Add a 45-rally scripted set fixture that verifies a 25-20 result, earned/gifted totals, player attribution, undo, and correction recalculation.
 - Add prototype match and season report aggregation so the new concept can show a match-by-match breakdown and a combined season report.
 - Move data cleanup out of Start Set and into Reports, with per-match deletion plus current-match and roster cleanup actions.
+- Rename the live setup control from serving/receiving status to Match Setup, add a dedicated End Set action, and keep ended sets linked in the current match report.
 
 ## Validation Added
 

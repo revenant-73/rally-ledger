@@ -15,6 +15,7 @@ import {
   type PrototypeMatchInput,
   type PrototypeMatchReport,
   type PrototypeSeasonReport,
+  type PrototypeSetInput,
   type PrototypePlayer,
   type RallyRecord,
   type RallyMode,
@@ -176,6 +177,7 @@ const actionClass =
 interface PersistedPrototype {
   setup: SetSetup;
   rallies: RallyRecord[];
+  completedSets: PrototypeSetInput[];
   roster: PrototypePlayer[];
   currentLineup: LineupSlots;
   courtSide: CourtSide;
@@ -197,6 +199,7 @@ const getInitialPrototype = (): PersistedPrototype => {
   const fallback = {
     setup: defaultSetup,
     rallies: [],
+    completedSets: [],
     roster: mockRoster,
     currentLineup: defaultLineup,
     courtSide: 'left' as CourtSide,
@@ -212,6 +215,7 @@ const getInitialPrototype = (): PersistedPrototype => {
     return {
       setup: { ...defaultSetup, ...(parsed.setup ?? {}) },
       rallies: parsed.rallies ?? [],
+      completedSets: parsed.completedSets ?? [],
       roster: parsed.roster ?? mockRoster,
       currentLineup: parsed.currentLineup ?? parsed.setup?.lineup ?? defaultLineup,
       courtSide: parsed.courtSide ?? 'left',
@@ -317,6 +321,7 @@ const RebuildPrototype = () => {
   const [courtSide, setCourtSide] = useState<CourtSide>(initialPrototype.courtSide);
   const [seasonMatches, setSeasonMatches] = useState<PrototypeMatchInput[]>(initialPrototype.seasonMatches);
   const [rallies, setRallies] = useState<RallyRecord[]>(initialPrototype.rallies);
+  const [completedSets, setCompletedSets] = useState<PrototypeSetInput[]>(initialPrototype.completedSets);
   const [restorable, setRestorable] = useState<RallyRecord | null>(null);
   const [pending, setPending] = useState<PendingSelection | null>(null);
   const [feedback, setFeedback] = useState('Ready');
@@ -328,9 +333,9 @@ const RebuildPrototype = () => {
   const [lineupSelection, setLineupSelection] = useState<LineupSelection | null>(null);
 
   useEffect(() => {
-    const payload: PersistedPrototype = { setup, rallies, roster, currentLineup, courtSide, seasonMatches };
+    const payload: PersistedPrototype = { setup, rallies, completedSets, roster, currentLineup, courtSide, seasonMatches };
     localStorage.setItem(storageKey, JSON.stringify(payload));
-  }, [setup, rallies, roster, currentLineup, courtSide, seasonMatches]);
+  }, [setup, rallies, completedSets, roster, currentLineup, courtSide, seasonMatches]);
 
   useEffect(() => {
     if (!locked) {
@@ -349,9 +354,12 @@ const RebuildPrototype = () => {
       opponent: setup.opponent,
       date: new Date().toISOString().slice(0, 10),
       result: 'Open',
-      sets: [{ id: 'live-set', setNumber: setup.setNumber, setup, rallies }],
+      sets:
+        rallies.some((rally) => rally.active) || completedSets.length === 0
+          ? [...completedSets, { id: 'live-set', setNumber: setup.setNumber, setup, rallies }]
+          : completedSets,
     }),
-    [rallies, setup],
+    [completedSets, rallies, setup],
   );
   const seasonReport = useMemo(() => summarizeSeasonReport([...seasonMatches, currentMatch], roster), [currentMatch, roster, seasonMatches]);
   const currentMatchReport = seasonReport.matchReports.find((match) => match.id === currentMatch.id) ?? seasonReport.matchReports[seasonReport.matchReports.length - 1];
@@ -461,6 +469,44 @@ const RebuildPrototype = () => {
     setFeedback('Set started');
   };
 
+  const endSet = () => {
+    if (activeRallies.length === 0) {
+      setSetupOpen(true);
+      setFeedback('Add rallies before ending a set');
+      return;
+    }
+
+    const confirmed = window.confirm(`End set ${setup.setNumber} and keep it with the current match report?`);
+    if (!confirmed) {
+      return;
+    }
+
+    const finishedSet: PrototypeSetInput = {
+      id: `live-set-${setup.setNumber}-${Date.now()}`,
+      setNumber: setup.setNumber,
+      setup,
+      rallies,
+    };
+    const nextSetup = {
+      ...setup,
+      setNumber: setup.setNumber + 1,
+      initialMode: state.mode,
+      initialRotation: state.rotation,
+      initialServerId: state.mode === 'serving' ? state.serverId : undefined,
+    };
+
+    setCompletedSets((sets) => [...sets, finishedSet]);
+    setSetup(nextSetup);
+    setDraftSetup(nextSetup);
+    setRallies([]);
+    setRestorable(null);
+    setPending(null);
+    setCorrectionOpen(false);
+    setSummaryOpen(false);
+    setFeedback(`Set ${setup.setNumber} ended`);
+    setSetupOpen(true);
+  };
+
   const updateDraftLineup = (rotation: Rotation, playerId: string) => {
     const lineup = setLineupSlot(draftSetup.lineup ?? getDefaultLineup(roster), rotation, playerId);
     setDraftSetup({
@@ -494,6 +540,7 @@ const RebuildPrototype = () => {
       return;
     }
     setRallies([]);
+    setCompletedSets([]);
     setRestorable(null);
     setPending(null);
     setCorrectionOpen(false);
@@ -518,6 +565,7 @@ const RebuildPrototype = () => {
     setCurrentLineup({});
     setSeasonMatches([]);
     setRallies([]);
+    setCompletedSets([]);
     setRestorable(null);
     setPending(null);
     setCorrectionOpen(false);
@@ -539,6 +587,7 @@ const RebuildPrototype = () => {
 
     if (matchId === currentMatch.id) {
       setRallies([]);
+      setCompletedSets([]);
       setRestorable(null);
       setPending(null);
       setCorrectionOpen(false);
@@ -570,16 +619,29 @@ const RebuildPrototype = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 lg:w-[42rem]">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-6 lg:w-[50rem]">
             <button
               type="button"
               onClick={() => setSetupOpen(true)}
               className="min-h-14 rounded border border-white/15 bg-white/10 px-3 text-left font-black"
             >
-              {state.mode === 'serving' ? 'SERVING' : 'RECEIVING'}
+              Match Setup
               <span className="block text-xs font-bold text-slate-300">
-                {state.mode === 'serving' ? currentServer ? `#${currentServer.number} ${getShortPlayerName(currentServer)}` : 'Pick server' : 'Century receive'}
+                {state.mode === 'serving'
+                  ? currentServer
+                    ? `Serving: #${currentServer.number} ${getShortPlayerName(currentServer)}`
+                    : 'Serving: pick server'
+                  : 'Receiving: Century'}
               </span>
+            </button>
+            <button
+              type="button"
+              onClick={endSet}
+              disabled={activeRallies.length === 0}
+              className="min-h-14 rounded border border-white/15 bg-white/10 px-3 text-left font-black disabled:opacity-50"
+            >
+              End Set
+              <span className="block text-xs font-bold text-slate-300">Keep with match</span>
             </button>
             <button
               type="button"
