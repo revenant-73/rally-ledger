@@ -939,9 +939,6 @@ const RebuildPrototype = () => {
               className="min-h-11 rounded border border-white/15 bg-white/10 px-2 text-left text-sm font-black"
             >
               Setup
-              <span className="block truncate text-[0.68rem] font-bold text-slate-300">
-                {state.mode === 'serving' && currentServer ? `Serve #${currentServer.number} · R${state.rotation}` : `Receive · R${state.rotation}`}
-              </span>
             </button>
             <button
               type="button"
