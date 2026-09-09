@@ -33,17 +33,23 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
 
   // Queries
-  const { data: teams = [] } = useTeams(user?.id);
+  const { data: teamsData = [], isLoading: teamsLoading } = useTeams(user?.id);
   const { data: access } = useAccess(user?.id);
-  
-  const teamIds = useMemo(() => teams.map(t => t.id), [teams]);
+
   const manageableTeamIds = useMemo(() => access?.manageableTeamIds ?? [], [access]);
   const manageableTeamIdSet = useMemo(() => new Set(manageableTeamIds), [manageableTeamIds]);
-  
+  const teams = useMemo(
+    () => access?.isAdmin ? teamsData : teamsData.filter((team) => manageableTeamIdSet.has(team.id)),
+    [access?.isAdmin, manageableTeamIdSet, teamsData],
+  );
+  const teamIds = useMemo(() => teams.map(t => t.id), [teams]);
+  const authorizedActiveMatch = activeMatch && (access?.isAdmin || manageableTeamIdSet.has(activeMatch.teamId)) ? activeMatch : null;
+  const authorizedActiveTeam = activeTeam && (access?.isAdmin || manageableTeamIdSet.has(activeTeam.id)) ? activeTeam : null;
+
   const { data: playersData = [] } = usePlayers(user?.id, teamIds);
   const { data: matchesData = [] } = useMatches(user?.id, teamIds);
-  const { data: activeSetData } = useActiveSet(user?.id, activeMatch?.id);
-  const { data: ralliesData = [] } = useRallies(user?.id, activeMatch?.id);
+  const { data: activeSetData } = useActiveSet(user?.id, authorizedActiveMatch?.id);
+  const { data: ralliesData = [] } = useRallies(user?.id, authorizedActiveMatch?.id);
 
   // Mutations
   const addTeamMutation = useAddTeam();
@@ -260,15 +266,16 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   return (
     <MatchContext.Provider value={{ 
-      activeMatch, 
+      activeMatch: authorizedActiveMatch,
       activeSet: activeSetData || null, 
-      activeTeam,
+      activeTeam: authorizedActiveTeam,
       rallies: ralliesData, 
       teams, 
       players: playersData,
       matches: matchesData,
       isAdmin: access?.isAdmin === true,
       isSyncing,
+      teamsLoading,
       manageableTeamIds,
       canManageTeam,
       startMatch,

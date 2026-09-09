@@ -11,6 +11,7 @@ export interface MatchContextType {
   matches: Match[];
   isAdmin: boolean;
   isSyncing: boolean;
+  teamsLoading: boolean;
   manageableTeamIds: string[];
   canManageTeam: (teamId?: string) => boolean;
   startMatch: (match: Match) => Promise<void>;

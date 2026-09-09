@@ -1,10 +1,12 @@
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, defaultShouldDehydrateQuery, type Query } from '@tanstack/react-query';
 import { registerSW } from './pwaRegistration';
 import { addRallyMutationFn, undoLastRallyMutationFn } from './hooks/queries/useRallies';
 import { updateSetMutationFn } from './hooks/queries/useSets';
 import { APP_UPDATE_READY_EVENT } from './appUpdateEvents';
 
 export const ONE_DAY = 1000 * 60 * 60 * 24;
+export const shouldPersistQuery = (query: Query) =>
+  defaultShouldDehydrateQuery(query) && query.queryKey[0] !== 'access';
 
 export const createAppQueryClient = () => {
   const queryClient = new QueryClient({

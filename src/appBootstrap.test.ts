@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+import type { Query } from '@tanstack/react-query';
 import { registerSW } from './pwaRegistration';
-import { createAppQueryClient, ONE_DAY, registerAppServiceWorker } from './appBootstrap';
+import { createAppQueryClient, ONE_DAY, registerAppServiceWorker, shouldPersistQuery } from './appBootstrap';
 import { APP_UPDATE_READY_EVENT } from './appUpdateEvents';
 
 vi.mock('./pwaRegistration', () => ({
@@ -36,5 +37,17 @@ describe('app bootstrap', () => {
     expect(queryClient.getMutationDefaults(['addRally'])?.mutationFn).toBeTypeOf('function');
     expect(queryClient.getMutationDefaults(['undoLastRally'])?.mutationFn).toBeTypeOf('function');
     expect(queryClient.getMutationDefaults(['updateSet'])?.mutationFn).toBeTypeOf('function');
+  });
+
+  it('never persists authorization decisions for offline restoration', () => {
+    const query = (queryKey: unknown[], status: 'pending' | 'error' | 'success') => ({
+      queryKey,
+      state: { status },
+    }) as unknown as Query;
+
+    expect(shouldPersistQuery(query(['access', 'coach-1'], 'success'))).toBe(false);
+    expect(shouldPersistQuery(query(['teams', 'coach-1'], 'success'))).toBe(true);
+    expect(shouldPersistQuery(query(['teams', 'coach-1'], 'pending'))).toBe(false);
+    expect(shouldPersistQuery(query(['teams', 'coach-1'], 'error'))).toBe(false);
   });
 });

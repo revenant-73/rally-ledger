@@ -2,7 +2,7 @@ import type { Handler } from '@netlify/functions';
 import { createClient, type Client } from '@libsql/client/web';
 import type { Player } from '../../src/types';
 import { requireSession } from './_session';
-import { canManagePlayer, canManageTeam, canViewProgram, ensureTeamAccessTable } from './_access';
+import { canManagePlayer, canManageTeam, filterViewableTeamIds, ensureTeamAccessTable } from './_access';
 
 let cachedClient: Client | null = null;
 
@@ -89,11 +89,10 @@ const handleList = async (payload: ListPlayersPayload) => {
   }
   const client = getClient();
   await ensureTeamAccessTable(client);
-  if (!await canViewProgram(client, { userId, email: payload.email || '' })) {
-    return json(200, { players: [] });
-  }
+  const allowedTeamIds = await filterViewableTeamIds(client, { userId, email: payload.email || '' }, teamIds);
+  if (allowedTeamIds.length === 0) return json(200, { players: [] });
 
-  const placeholders = teamIds.map(() => '?').join(', ');
+  const placeholders = allowedTeamIds.map(() => '?').join(', ');
   const result = await client.execute({
     sql: `select
       players.id,
@@ -110,7 +109,7 @@ const handleList = async (payload: ListPlayersPayload) => {
     from players
     where players.team_id in (${placeholders})
     order by cast(players.jersey_number as integer), players.jersey_number`,
-    args: teamIds,
+    args: allowedTeamIds,
   });
 
   return json(200, {

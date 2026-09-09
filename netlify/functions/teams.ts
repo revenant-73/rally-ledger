@@ -85,19 +85,22 @@ const handleList = async (payload: ListTeamsPayload) => {
     return json(200, { teams: [] });
   }
 
+  const admin = isAdmin({ userId: payload.userId, email: payload.email || '' });
   const result = await client.execute({
-    sql: `select
-      id,
-      owner_id as ownerId,
-      name,
-      level,
-      season,
-      created_at as createdAt,
-      updated_at as updatedAt,
-      metadata
+    sql: `select distinct
+      teams.id,
+      teams.owner_id as ownerId,
+      teams.name,
+      teams.level,
+      teams.season,
+      teams.created_at as createdAt,
+      teams.updated_at as updatedAt,
+      teams.metadata
     from teams
-    order by name`,
-    args: [],
+    ${admin ? '' : `left join team_access on team_access.team_id = teams.id and team_access.user_id = ?
+    where teams.owner_id = ? or team_access.role = 'coach'`}
+    order by teams.name`,
+    args: admin ? [] : [payload.userId, payload.userId],
   });
 
   return json(200, {
@@ -114,7 +117,7 @@ const handleAdd = async (payload: AddTeamPayload) => {
   if (!team?.id || !team.name || !team.level || !team.season) {
     return json(400, { error: 'Invalid team payload' });
   }
-  if (!canCreateTeam({ userId, email: payload.email || '' })) {
+  if (!await canCreateTeam(getClient(), { userId, email: payload.email || '' })) {
     return json(403, { error: 'Only admins can create teams' });
   }
 

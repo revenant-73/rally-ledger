@@ -98,6 +98,8 @@ const Login: React.FC = () => {
 
           {error && (
             <motion.p 
+              role="alert"
+              aria-live="assertive"
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               className="text-brand-red text-xs font-black text-center uppercase tracking-wider"
@@ -123,7 +125,7 @@ const Login: React.FC = () => {
           transition={{ delay: 0.3 }}
           className="text-center text-[10px] text-brand-text-secondary font-bold leading-relaxed max-w-[280px] mx-auto uppercase tracking-widest"
         >
-          Access your rosters and match history. <br/>First time here? This password creates your account.
+          Access is invitation-only. Use the email authorized by your program administrator; invited users can set a password on first sign-in.
         </motion.p>
       </motion.div>
     </div>

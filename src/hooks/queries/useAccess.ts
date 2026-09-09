@@ -23,6 +23,8 @@ export const useAccess = (userId?: string) => {
     },
     enabled: Boolean(userId),
     retry: false,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 };
 

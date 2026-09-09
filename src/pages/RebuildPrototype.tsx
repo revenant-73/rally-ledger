@@ -1,4 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useMatch } from '../hooks/useMatch';
+import { useAuth } from '../hooks/useAuth';
+import { useAccess } from '../hooks/queries/useAccess';
+import type { Team } from '../types';
 import {
   type BreakdownItem,
   buildRally,
@@ -32,142 +36,23 @@ import {
   MATCH_FORMAT_OPTIONS,
   type MatchFormatSettings,
 } from '../utils/matchFormat';
+import {
+  archiveMatchOnce,
+  createFreshPrototypeDocument,
+  createNeutralSetup,
+  getTeamPrototypeStorageKey,
+  isCompleteLineup,
+  LEGACY_PROTOTYPE_STORAGE_KEY,
+  PROTOTYPE_METADATA_KEY,
+  sanitizePrototypeDocument,
+  upsertSavedLineup,
+  type CourtSide,
+  type PrototypeCloudDocument,
+  type PrototypeSyncStatus,
+  type SavedPrototypeLineup,
+} from '../prototype/prototypeCloudState';
 
-const storageKey = 'century-matchbook-rebuild-prototype';
 const rotations = [1, 2, 3, 4, 5, 6] as const;
-type CourtSide = 'left' | 'right';
-
-const mockRoster: PrototypePlayer[] = [
-  { id: 'p1', number: '1', name: 'Avery Nguyen', active: true },
-  { id: 'p2', number: '2', name: 'Blake Carter', active: true },
-  { id: 'p3', number: '3', name: 'Casey Lopez', active: true },
-  { id: 'p4', number: '4', name: 'Drew Martin', active: true },
-  { id: 'p5', number: '5', name: 'Emerson Hall', active: true },
-  { id: 'p6', number: '6', name: 'Finley Reed', active: true },
-  { id: 'p7', number: '7', name: 'Gray Wilson', active: true },
-  { id: 'p8', number: '8', name: 'Harper Kim', active: true },
-  { id: 'p9', number: '9', name: 'Jordan Price', active: true },
-  { id: 'p10', number: '10', name: 'Kai Brooks', active: true },
-  { id: 'p11', number: '11', name: 'Logan Rivera', active: true },
-  { id: 'p12', number: '12', name: 'Morgan Lee', active: true },
-  { id: 'p13', number: '13', name: 'Parker Stone', active: true },
-  { id: 'p14', number: '14', name: 'Quinn Torres', active: true },
-];
-
-const defaultRotationServers = {
-  1: 'p1',
-  2: 'p2',
-  3: 'p3',
-  4: 'p4',
-  5: 'p5',
-  6: 'p6',
-} satisfies Partial<Record<Rotation, string>>;
-
-const defaultLineup = {
-  1: 'p1',
-  2: 'p2',
-  3: 'p3',
-  4: 'p4',
-  5: 'p5',
-  6: 'p6',
-} satisfies LineupSlots;
-
-const defaultSetup: SetSetup = {
-  opponent: 'Liberty',
-  setNumber: 1,
-  matchFormat: 'best-of-3',
-  standardSetTarget: 25,
-  decidingSetTarget: 15,
-  initialMode: 'serving',
-  initialRotation: 1,
-  initialServerId: 'p1',
-  lineup: defaultLineup,
-  rotationServers: defaultRotationServers,
-};
-
-const buildPrototypeRallies = (setup: SetSetup, inputs: PendingRallyInput[], prefix: string) =>
-  inputs.reduce<RallyRecord[]>(
-    (rallies, input, index) => [
-      ...rallies,
-      buildRally(
-        setup,
-        rallies,
-        input,
-        () => `${prefix}-${index + 1}`,
-        () => `2026-09-${String(index + 1).padStart(2, '0')}T19:00:00.000Z`,
-      ),
-    ],
-    [],
-  );
-
-const priorSeasonMatches: PrototypeMatchInput[] = [
-  {
-    id: 'prior-liberty',
-    opponent: 'Glencoe',
-    date: '2026-09-01',
-    result: 'Win',
-    sets: [
-      {
-        id: 'prior-liberty-1',
-        setNumber: 1,
-        setup: { ...defaultSetup, opponent: 'Glencoe', setNumber: 1 },
-        rallies: buildPrototypeRallies(
-          { ...defaultSetup, opponent: 'Glencoe', setNumber: 1 },
-          [
-            { winner: 'century', event: 'century_ace' },
-            { winner: 'century', event: 'century_kill', creditedPlayerId: 'p2' },
-            { winner: 'opponent', event: 'serve_error' },
-            { winner: 'century', event: 'century_block', creditedPlayerId: 'p6' },
-            { winner: 'opponent', event: 'opponent_kill' },
-            { winner: 'century', event: 'opponent_error', errorSubtype: 'Attack' },
-          ],
-          'glencoe-s1',
-        ),
-      },
-      {
-        id: 'prior-liberty-2',
-        setNumber: 2,
-        setup: { ...defaultSetup, opponent: 'Glencoe', setNumber: 2, initialMode: 'receiving', initialServerId: undefined },
-        rallies: buildPrototypeRallies(
-          { ...defaultSetup, opponent: 'Glencoe', setNumber: 2, initialMode: 'receiving', initialServerId: undefined },
-          [
-            { winner: 'opponent', event: 'opponent_block' },
-            { winner: 'century', event: 'century_kill', creditedPlayerId: 'p3' },
-            { winner: 'opponent', event: 'attack_error', chargedPlayerId: 'p4' },
-            { winner: 'century', event: 'century_ace' },
-            { winner: 'century', event: 'century_kill', creditedPlayerId: 'p5' },
-          ],
-          'glencoe-s2',
-        ),
-      },
-    ],
-  },
-  {
-    id: 'prior-central',
-    opponent: 'Central',
-    date: '2026-09-03',
-    result: 'Loss',
-    sets: [
-      {
-        id: 'prior-central-1',
-        setNumber: 1,
-        setup: { ...defaultSetup, opponent: 'Central', setNumber: 1, initialRotation: 4, initialServerId: 'p4' },
-        rallies: buildPrototypeRallies(
-          { ...defaultSetup, opponent: 'Central', setNumber: 1, initialRotation: 4, initialServerId: 'p4' },
-          [
-            { winner: 'century', event: 'century_kill', creditedPlayerId: 'p4' },
-            { winner: 'opponent', event: 'opponent_kill' },
-            { winner: 'opponent', event: 'receive_error', chargedPlayerId: 'p1' },
-            { winner: 'century', event: 'century_block', teamAttribution: true },
-            { winner: 'opponent', event: 'attack_error', chargedPlayerId: 'p2' },
-            { winner: 'opponent', event: 'opponent_block' },
-          ],
-          'central-s1',
-        ),
-      },
-    ],
-  },
-];
 
 const centuryEvents: TerminalEvent[] = ['century_ace', 'century_kill', 'century_block', 'opponent_error'];
 const opponentEvents: TerminalEvent[] = [
@@ -181,20 +66,10 @@ const opponentEvents: TerminalEvent[] = [
 ];
 
 const inputClass =
-  'h-12 rounded border border-white/15 bg-white px-3 text-base font-bold text-slate-950 outline-none focus:border-teal-300';
+  'h-12 w-full min-w-0 rounded border border-white/15 bg-white px-3 text-base font-bold text-slate-950 outline-none focus:border-teal-300';
 
 const actionClass =
   'min-h-14 rounded border border-white/15 px-3 py-2 text-left text-lg font-black uppercase tracking-normal shadow-sm transition active:scale-[0.98] disabled:opacity-50';
-
-interface PersistedPrototype {
-  setup: SetSetup;
-  rallies: RallyRecord[];
-  completedSets: PrototypeSetInput[];
-  roster: PrototypePlayer[];
-  currentLineup: LineupSlots;
-  courtSide: CourtSide;
-  seasonMatches: PrototypeMatchInput[];
-}
 
 interface PendingSelection {
   event: TerminalEvent;
@@ -217,37 +92,11 @@ interface SetCompletionReview {
   reason: 'automatic' | 'manual';
 }
 
-const getInitialPrototype = (): PersistedPrototype => {
-  const fallback = {
-    setup: defaultSetup,
-    rallies: [],
-    completedSets: [],
-    roster: mockRoster,
-    currentLineup: defaultLineup,
-    courtSide: 'left' as CourtSide,
-    seasonMatches: priorSeasonMatches,
-  };
-
-  try {
-    const saved = localStorage.getItem(storageKey);
-    if (!saved) {
-      return fallback;
-    }
-    const parsed = JSON.parse(saved) as PersistedPrototype;
-    return {
-      setup: { ...defaultSetup, ...(parsed.setup ?? {}) },
-      rallies: parsed.rallies ?? [],
-      completedSets: parsed.completedSets ?? [],
-      roster: parsed.roster ?? mockRoster,
-      currentLineup: parsed.currentLineup ?? parsed.setup?.lineup ?? defaultLineup,
-      courtSide: parsed.courtSide ?? 'left',
-      seasonMatches: parsed.seasonMatches ?? priorSeasonMatches,
-    };
-  } catch {
-    localStorage.removeItem(storageKey);
-    return fallback;
-  }
-};
+interface EligibleLineupUser {
+  id: string;
+  email: string;
+  name?: string | null;
+}
 
 const getCourtPositions = (courtSide: CourtSide): Rotation[] =>
   courtSide === 'left' ? [5, 4, 6, 3, 1, 2] : [2, 1, 3, 6, 4, 5];
@@ -387,15 +236,30 @@ const getMatchResultFromSets = (settings: MatchFormatSettings, results: Array<'W
 };
 
 const RebuildPrototype = () => {
-  const [initialPrototype] = useState<PersistedPrototype>(() => getInitialPrototype());
+  const { user, logout } = useAuth();
+  const { data: access } = useAccess(user?.id);
+  const { activeTeam, teams, teamsLoading, selectTeam, addTeam, updateTeam } = useMatch();
+  const selectedTeam = teams.find((team) => team.id === activeTeam?.id) ?? teams[0] ?? null;
+  const [initialPrototype] = useState<PrototypeCloudDocument>(() => createFreshPrototypeDocument());
   const [roster, setRoster] = useState<PrototypePlayer[]>(initialPrototype.roster);
   const [setup, setSetup] = useState(initialPrototype.setup);
-  const [draftSetup, setDraftSetup] = useState(initialPrototype.setup);
+  const [draftSetup, setDraftSetup] = useState(initialPrototype.draftSetup);
   const [currentLineup, setCurrentLineup] = useState<LineupSlots>(initialPrototype.currentLineup);
   const [courtSide, setCourtSide] = useState<CourtSide>(initialPrototype.courtSide);
   const [seasonMatches, setSeasonMatches] = useState<PrototypeMatchInput[]>(initialPrototype.seasonMatches);
   const [rallies, setRallies] = useState<RallyRecord[]>(initialPrototype.rallies);
   const [completedSets, setCompletedSets] = useState<PrototypeSetInput[]>(initialPrototype.completedSets);
+  const [savedLineups, setSavedLineups] = useState<SavedPrototypeLineup[]>(initialPrototype.savedLineups);
+  const [currentMatchId, setCurrentMatchId] = useState(initialPrototype.currentMatchId);
+  const [currentMatchStartedAt, setCurrentMatchStartedAt] = useState(initialPrototype.currentMatchStartedAt);
+  const [hydratedTeamId, setHydratedTeamId] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<PrototypeSyncStatus>('loading');
+  const [teamName, setTeamName] = useState('');
+  const [teamLevel, setTeamLevel] = useState('Varsity');
+  const [teamSeason, setTeamSeason] = useState(() => String(new Date().getFullYear()));
+  const [creatingTeam, setCreatingTeam] = useState(false);
+  const [teamCreateError, setTeamCreateError] = useState('');
+  const [syncAttempt, setSyncAttempt] = useState(0);
   const [restorable, setRestorable] = useState<RallyRecord | null>(null);
   const [pending, setPending] = useState<PendingSelection | null>(null);
   const [feedback, setFeedback] = useState('Ready');
@@ -407,11 +271,115 @@ const RebuildPrototype = () => {
   const [correctionOpen, setCorrectionOpen] = useState(false);
   const [lineupSelection, setLineupSelection] = useState<LineupSelection | null>(null);
   const [setCompletion, setSetCompletion] = useState<SetCompletionReview | null>(null);
+  const selectedTeamId = selectedTeam?.id ?? null;
+  const eligibleLineupUsers = useMemo(() => {
+    if (!user) return [];
+    const candidates: EligibleLineupUser[] = [{ id: user.id, email: user.email, name: user.name }];
+    if (access?.isAdmin && selectedTeamId) {
+      access.assignments.forEach((assignment) => {
+        if (assignment.teamId === selectedTeamId) candidates.push({ id: assignment.userId, email: assignment.email, name: assignment.name });
+      });
+    }
+    return [...new Map(candidates.map((candidate) => [candidate.id, candidate])).values()];
+  }, [access, selectedTeamId, user]);
+  const revisionRef = useRef(0);
+  const latestRevisionRef = useRef(0);
+  const writeChainRef = useRef(Promise.resolve());
+  const selectedTeamRef = useRef<Team | null>(selectedTeam);
+  const updateTeamRef = useRef(updateTeam);
 
   useEffect(() => {
-    const payload: PersistedPrototype = { setup, rallies, completedSets, roster, currentLineup, courtSide, seasonMatches };
-    localStorage.setItem(storageKey, JSON.stringify(payload));
-  }, [setup, rallies, completedSets, roster, currentLineup, courtSide, seasonMatches]);
+    selectedTeamRef.current = selectedTeam;
+    updateTeamRef.current = updateTeam;
+  }, [selectedTeam, updateTeam]);
+
+  useEffect(() => {
+    if (!activeTeam && teams[0]) selectTeam(teams[0].id);
+  }, [activeTeam, selectTeam, teams]);
+
+  useEffect(() => {
+    const team = selectedTeamRef.current;
+    if (!team) {
+      setHydratedTeamId(null);
+      return;
+    }
+
+    setHydratedTeamId(null);
+    setSyncStatus('loading');
+    let source: unknown = team.metadata?.[PROTOTYPE_METADATA_KEY];
+    let migratedLegacy = false;
+    if (!source) {
+      const localValue = localStorage.getItem(getTeamPrototypeStorageKey(team.id));
+      const legacyValue = localStorage.getItem(LEGACY_PROTOTYPE_STORAGE_KEY);
+      try {
+        source = localValue ? JSON.parse(localValue) : legacyValue ? JSON.parse(legacyValue) : undefined;
+        migratedLegacy = !localValue && Boolean(legacyValue);
+      } catch {
+        source = undefined;
+      }
+    }
+
+    const document = sanitizePrototypeDocument(source);
+    revisionRef.current = document.revision;
+    latestRevisionRef.current = document.revision;
+    setRoster(document.roster);
+    setSetup(document.setup);
+    setDraftSetup(document.draftSetup);
+    setCurrentLineup(document.currentLineup);
+    setCourtSide(document.courtSide);
+    setSeasonMatches(document.seasonMatches);
+    setRallies(document.rallies);
+    setCompletedSets(document.completedSets);
+    setSavedLineups(document.savedLineups);
+    setCurrentMatchId(document.currentMatchId);
+    setCurrentMatchStartedAt(document.currentMatchStartedAt);
+    setRestorable(null);
+    setHydratedTeamId(team.id);
+    setSyncStatus(navigator.onLine ? (source && !migratedLegacy ? 'saved' : 'saving') : 'offline');
+    if (migratedLegacy) localStorage.removeItem(LEGACY_PROTOTYPE_STORAGE_KEY);
+  }, [selectedTeamId]);
+
+  useEffect(() => {
+    if (!selectedTeamId || hydratedTeamId !== selectedTeamId) return;
+    const revision = ++revisionRef.current;
+    latestRevisionRef.current = revision;
+    const payload: PrototypeCloudDocument = {
+      version: 1,
+      revision,
+      updatedAt: new Date().toISOString(),
+      currentMatchId,
+      currentMatchStartedAt,
+      setup,
+      draftSetup,
+      rallies,
+      completedSets,
+      roster,
+      currentLineup,
+      courtSide,
+      seasonMatches,
+      savedLineups,
+    };
+    localStorage.setItem(getTeamPrototypeStorageKey(selectedTeamId), JSON.stringify(payload));
+    if (!navigator.onLine) {
+      const offlineTimeout = window.setTimeout(() => setSyncStatus('offline'), 0);
+      return () => window.clearTimeout(offlineTimeout);
+    }
+    const savingTimeout = window.setTimeout(() => setSyncStatus('saving'), 0);
+    const timeout = window.setTimeout(() => {
+      const teamId = selectedTeamId;
+      writeChainRef.current = writeChainRef.current.catch(() => undefined).then(async () => {
+        const latestTeam = selectedTeamRef.current?.id === teamId ? selectedTeamRef.current : null;
+        await updateTeamRef.current(teamId, { metadata: { ...(latestTeam?.metadata ?? {}), [PROTOTYPE_METADATA_KEY]: payload } });
+        if (hydratedTeamId === teamId && latestRevisionRef.current === revision) setSyncStatus('saved');
+      }).catch(() => {
+        if (hydratedTeamId === teamId && latestRevisionRef.current === revision) setSyncStatus(navigator.onLine ? 'error' : 'offline');
+      });
+    }, 700);
+    return () => {
+      window.clearTimeout(savingTimeout);
+      window.clearTimeout(timeout);
+    };
+  }, [completedSets, courtSide, currentLineup, currentMatchId, currentMatchStartedAt, draftSetup, hydratedTeamId, rallies, roster, savedLineups, seasonMatches, selectedTeamId, setup, syncAttempt]);
 
   useEffect(() => {
     if (!locked) {
@@ -420,6 +388,17 @@ const RebuildPrototype = () => {
     const timeout = window.setTimeout(() => setLocked(false), 260);
     return () => window.clearTimeout(timeout);
   }, [locked]);
+
+  useEffect(() => {
+    const handleOnline = () => setSyncAttempt((attempt) => attempt + 1);
+    const handleOffline = () => setSyncStatus('offline');
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const state = useMemo(() => deriveSetState(setup, rallies), [setup, rallies]);
   const matchSettings = useMemo(() => getPrototypeMatchSettings(setup), [setup]);
@@ -433,19 +412,28 @@ const RebuildPrototype = () => {
   const summary = useMemo(() => summarizeSet(rallies, roster), [rallies, roster]);
   const currentMatch = useMemo<PrototypeMatchInput>(
     () => ({
-      id: 'live-match',
+      id: currentMatchId,
       opponent: setup.opponent,
-      date: new Date().toISOString().slice(0, 10),
+      date: currentMatchStartedAt.slice(0, 10),
       result: currentMatchResult,
       sets:
         rallies.some((rally) => rally.active) || completedSets.length === 0
-          ? [...completedSets, { id: 'live-set', setNumber: setup.setNumber, setup, rallies }]
+          ? [...completedSets, { id: `${currentMatchId}-set-${setup.setNumber}-current`, setNumber: setup.setNumber, setup, rallies }]
           : completedSets,
     }),
-    [completedSets, currentMatchResult, rallies, setup],
+    [completedSets, currentMatchId, currentMatchResult, currentMatchStartedAt, rallies, setup],
   );
-  const seasonReport = useMemo(() => summarizeSeasonReport([...seasonMatches, currentMatch], roster), [currentMatch, roster, seasonMatches]);
-  const currentMatchReport = seasonReport.matchReports.find((match) => match.id === currentMatch.id) ?? seasonReport.matchReports[seasonReport.matchReports.length - 1];
+  const currentMatchHasData = completedSets.length > 0 || rallies.some((rally) => rally.active);
+  const reportMatches = useMemo(
+    () => seasonMatches.some((match) => match.id === currentMatch.id) || !currentMatchHasData ? seasonMatches : [...seasonMatches, currentMatch],
+    [currentMatch, currentMatchHasData, seasonMatches],
+  );
+  const seasonReport = useMemo(() => summarizeSeasonReport(reportMatches, roster), [reportMatches, roster]);
+  const aggregateSeasonReport = useMemo(() => summarizeSeasonReport(seasonMatches, roster), [roster, seasonMatches]);
+  const currentMatchReport = useMemo(
+    () => seasonReport.matchReports.find((match) => match.id === currentMatch.id) ?? summarizeSeasonReport([currentMatch], roster).matchReports[0],
+    [currentMatch, roster, seasonReport.matchReports],
+  );
   const currentServer = roster.find((player) => player.id === state.serverId);
   const lastRally = [...rallies].reverse().find((rally) => rally.active);
   const activeEntries = rallies.filter((rally) => rally.active);
@@ -654,6 +642,15 @@ const RebuildPrototype = () => {
     setSummaryOpen(false);
     setMoreOpen(false);
     if (matchComplete) {
+      const result: 'Win' | 'Loss' = nextCompletedResults.filter((item) => item === 'Win').length > nextCompletedResults.filter((item) => item === 'Loss').length ? 'Win' : 'Loss';
+      const finishedMatch: PrototypeMatchInput = {
+        id: currentMatchId,
+        opponent: setup.opponent.trim() || 'Opponent',
+        date: currentMatchStartedAt.slice(0, 10),
+        result,
+        sets: [...completedSets, finishedSet],
+      };
+      setSeasonMatches((matches) => archiveMatchOnce(matches, finishedMatch));
       setFeedback(`Match complete: Century ${nextCompletedResults.filter((result) => result === 'Win').length}-${nextCompletedResults.filter((result) => result === 'Loss').length}`);
       setSetupOpen(false);
       setReportOpen(true);
@@ -692,12 +689,14 @@ const RebuildPrototype = () => {
   };
 
   const clearMatchData = () => {
-    const confirmed = window.confirm('Clear current match data? This removes the current test rallies but keeps the roster, lineup, and prior match reports.');
+    const confirmed = window.confirm('Clear current match data from the shared team cloud? Saved finished-match reports, roster, and lineups will remain.');
     if (!confirmed) {
       return;
     }
     setRallies([]);
     setCompletedSets([]);
+    setCurrentMatchId(`match-${crypto.randomUUID()}`);
+    setCurrentMatchStartedAt(new Date().toISOString());
     setRestorable(null);
     setPending(null);
     setCorrectionOpen(false);
@@ -705,13 +704,23 @@ const RebuildPrototype = () => {
     setFeedback('Match data cleared');
   };
 
+  const clearSharedRoster = () => {
+    if (!window.confirm('Clear the shared team roster? This removes all players, the current lineup, and saved lineup templates for everyone with team access. Finished match reports remain.')) return;
+    setRoster([]);
+    setCurrentLineup({});
+    setSavedLineups([]);
+    setSetup((current) => ({ ...current, lineup: {}, initialServerId: undefined, rotationServers: {} }));
+    setDraftSetup((current) => ({ ...current, lineup: {}, initialServerId: undefined, rotationServers: {} }));
+    setFeedback('Shared roster and lineups cleared');
+  };
+
   const deleteRosterData = () => {
-    const confirmed = window.confirm('Delete this roster and all match data from this device? This removes players, lineup, current rallies, and saved match reports.');
+    const confirmed = window.confirm('Delete this roster and all match data from the shared team cloud? This removes players, lineups, current rallies, and saved match reports for everyone with team access.');
     if (!confirmed) {
       return;
     }
     const emptySetup = {
-      ...defaultSetup,
+      ...createNeutralSetup(),
       initialServerId: undefined,
       lineup: {},
       rotationServers: {},
@@ -721,6 +730,7 @@ const RebuildPrototype = () => {
     setRoster([]);
     setCurrentLineup({});
     setSeasonMatches([]);
+    setSavedLineups([]);
     setRallies([]);
     setCompletedSets([]);
     setRestorable(null);
@@ -737,12 +747,15 @@ const RebuildPrototype = () => {
     if (!match) {
       return;
     }
-    const confirmed = window.confirm(`Delete match data for Century vs ${match.opponent}? This removes that match from reports.`);
+    const confirmed = window.confirm(`Delete shared cloud match data for Century vs ${match.opponent}? This removes that match from reports for everyone with team access.`);
     if (!confirmed) {
       return;
     }
 
     if (matchId === currentMatch.id) {
+      setSeasonMatches((matches) => matches.filter((item) => item.id !== matchId));
+      setCurrentMatchId(`match-${crypto.randomUUID()}`);
+      setCurrentMatchStartedAt(new Date().toISOString());
       setRallies([]);
       setCompletedSets([]);
       setRestorable(null);
@@ -757,13 +770,146 @@ const RebuildPrototype = () => {
     setFeedback(`Deleted match vs ${match.opponent}`);
   };
 
+  const startNewMatch = () => {
+    if (!window.confirm('Start a new match? The completed match will remain in shared season reports.')) return;
+    const now = new Date();
+    const nextSetup = {
+      ...createNeutralSetup(),
+      lineup: { ...currentLineup },
+      rotationServers: getRotationServers(currentLineup),
+      initialServerId: currentLineup[1],
+    };
+    setCurrentMatchId(`match-${crypto.randomUUID()}`);
+    setCurrentMatchStartedAt(now.toISOString());
+    setSetup(nextSetup);
+    setDraftSetup(nextSetup);
+    setRallies([]);
+    setCompletedSets([]);
+    setRestorable(null);
+    setReportOpen(false);
+    setSetupOpen(true);
+    setFeedback('New match ready');
+  };
+
+  const createFirstTeam = async () => {
+    const name = teamName.trim();
+    if (!name || creatingTeam) return;
+    setCreatingTeam(true);
+    setTeamCreateError('');
+    const now = new Date().toISOString();
+    try {
+      await addTeam({
+        id: crypto.randomUUID(),
+        name,
+        level: teamLevel.trim() || 'Varsity',
+        season: teamSeason.trim() || String(new Date().getFullYear()),
+        createdAt: now,
+        updatedAt: now,
+        metadata: { [PROTOTYPE_METADATA_KEY]: createFreshPrototypeDocument() },
+      });
+    } catch (error) {
+      setTeamCreateError(error instanceof Error ? error.message : 'Could not create team');
+    } finally {
+      setCreatingTeam(false);
+    }
+  };
+
+  const saveNamedLineup = (name: string, lineup: LineupSlots, linkedUserId: string) => {
+    if (!user) return;
+    const linkedUser = eligibleLineupUsers.find((candidate) => candidate.id === linkedUserId) ?? eligibleLineupUsers[0];
+    setSavedLineups((items) => upsertSavedLineup(items, name, lineup, new Date(), {
+      userId: user.id,
+      email: user.email,
+      linkedUserId: linkedUser?.id ?? user.id,
+      linkedUserEmail: linkedUser?.email ?? user.email,
+    }));
+    setFeedback(`Lineup ${name.trim()} saved`);
+  };
+
+  const loadNamedLineup = (lineup: LineupSlots) => {
+    const next = { ...lineup };
+    setDraftSetup((draft) => ({
+      ...draft,
+      lineup: next,
+      initialServerId: draft.initialMode === 'serving' ? next[draft.initialRotation] : undefined,
+      rotationServers: getRotationServers(next),
+    }));
+  };
+
+  if (teamsLoading) {
+    return <div className="flex min-h-screen items-center justify-center bg-slate-950 text-sm font-black uppercase text-teal-200">Loading teams…</div>;
+  }
+
+  if (!selectedTeam) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-950 p-4 text-white">
+        <section className="w-full max-w-md rounded border border-white/15 bg-slate-900 p-5 shadow-xl">
+          <p className="text-xs font-black uppercase tracking-wider text-teal-300">Century Matchbook</p>
+          <h1 className="mt-2 text-3xl font-black">Create your first team</h1>
+          <p className="mt-2 text-sm font-bold text-slate-300">This team owns its roster, lineups, live match, and season reports in the shared cloud.</p>
+          <div className="mt-5 grid gap-3">
+            <label className="grid min-w-0 gap-1">
+              <span className="text-xs font-black uppercase text-slate-300">Team name</span>
+              <input className={inputClass} value={teamName} onChange={(event) => setTeamName(event.target.value)} placeholder="CHS Varsity" autoFocus />
+            </label>
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
+              <label className="grid min-w-0 gap-1">
+                <span className="text-xs font-black uppercase text-slate-300">Level</span>
+                <input className={inputClass} value={teamLevel} onChange={(event) => setTeamLevel(event.target.value)} />
+              </label>
+              <label className="grid min-w-0 gap-1">
+                <span className="text-xs font-black uppercase text-slate-300">Season</span>
+                <input className={inputClass} value={teamSeason} onChange={(event) => setTeamSeason(event.target.value)} />
+              </label>
+            </div>
+            <button type="button" onClick={createFirstTeam} disabled={!teamName.trim() || creatingTeam} className="min-h-14 rounded bg-teal-500 px-4 text-lg font-black text-slate-950 disabled:opacity-50">
+              {creatingTeam ? 'Creating…' : 'Create Team'}
+            </button>
+            {teamCreateError ? <p className="text-sm font-black text-red-300" role="alert">{teamCreateError}</p> : null}
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  if (hydratedTeamId !== selectedTeam.id) {
+    return <div className="flex min-h-screen items-center justify-center bg-slate-950 text-sm font-black uppercase text-teal-200">Loading {selectedTeam.name}…</div>;
+  }
+
+  const syncLabel = syncStatus === 'error' ? 'Sync failed' : syncStatus.charAt(0).toUpperCase() + syncStatus.slice(1);
+
   return (
     <main className="min-h-screen bg-slate-950 text-white">
-      <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-3 py-3 sm:px-5 lg:max-h-screen lg:overflow-hidden">
+      <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-3 py-3 sm:px-5">
+        <div className="mb-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,16rem)]">
+          <label className="min-w-0">
+            <span className="sr-only">Selected team</span>
+            <select
+              aria-label="Selected team"
+              value={selectedTeam.id}
+              onChange={(event) => selectTeam(event.target.value)}
+              className="min-h-11 w-full rounded border border-white/15 bg-slate-900 px-3 text-sm font-black text-white"
+            >
+              {teams.map((team) => <option key={team.id} value={team.id}>{team.name} · {team.season}</option>)}
+            </select>
+          </label>
+          <div className="flex items-center gap-1">
+            <span role="status" aria-live="polite" className={`rounded border px-2 py-2 text-xs font-black uppercase ${syncStatus === 'saved' ? 'border-teal-400/50 text-teal-200' : syncStatus === 'error' ? 'border-red-400/60 text-red-200' : 'border-amber-300/50 text-amber-200'}`}>
+              {syncLabel}
+            </span>
+            {syncStatus === 'error' ? <button type="button" onClick={() => setSyncAttempt((attempt) => attempt + 1)} className="min-h-11 rounded bg-red-700 px-3 text-xs font-black uppercase text-white">Retry</button> : null}
+          </div>
+          <div className="col-span-2 flex min-w-0 items-center justify-between gap-2 border-t border-white/10 pt-2 lg:col-span-1 lg:border-l lg:border-t-0 lg:pl-3 lg:pt-0">
+            <span className="min-w-0 truncate text-xs font-bold text-slate-300" title={user?.email}>{user?.name || user?.email}</span>
+            <button type="button" onClick={logout} className="min-h-11 shrink-0 rounded border border-white/15 bg-slate-900 px-3 text-xs font-black uppercase text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-300">
+              Sign Out
+            </button>
+          </div>
+        </div>
         <header className="grid gap-3 border-b border-white/15 pb-3">
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
             <ScoreCard
-              label="Century"
+              label={selectedTeam.name}
               score={state.centuryScore}
               tone="century"
               serving={state.mode === 'serving'}
@@ -824,7 +970,7 @@ const RebuildPrototype = () => {
           </div>
         </header>
 
-        <section className="mt-3 flex min-h-0 flex-1 flex-col gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_21rem]">
+        <section className="mt-3 flex min-h-0 flex-1 flex-col gap-3 xl:grid xl:grid-cols-[minmax(0,1fr)_21rem]">
           <div className="grid min-h-0 content-start gap-3">
             <div className="grid gap-3 md:grid-cols-2">
               <EventPanel
@@ -854,7 +1000,7 @@ const RebuildPrototype = () => {
                     <button
                       type="button"
                       onClick={() => setSetupOpen(true)}
-                      className="min-h-10 rounded bg-white px-3 text-sm font-black text-slate-950"
+                      className="min-h-11 rounded bg-white px-3 text-sm font-black text-slate-950"
                     >
                       Edit Lineup
                     </button>
@@ -877,7 +1023,7 @@ const RebuildPrototype = () => {
                     <p className="text-xs font-bold text-slate-500">Last {Math.min(activeEntries.length, 3)} of {activeEntries.length}</p>
                   </div>
                   {restorable ? (
-                    <button type="button" onClick={restore} className="rounded bg-teal-300 px-3 py-2 text-sm font-black text-slate-950">
+                    <button type="button" onClick={restore} className="min-h-11 rounded bg-teal-300 px-3 py-2 text-sm font-black text-slate-950">
                       Restore
                     </button>
                   ) : null}
@@ -932,17 +1078,21 @@ const RebuildPrototype = () => {
       {reportOpen && currentMatchReport ? (
         <ReportSheet
           seasonReport={seasonReport}
+          aggregateSeasonReport={aggregateSeasonReport}
           currentMatchReport={currentMatchReport}
           players={roster}
           onDeleteMatch={deleteMatchData}
           onClearMatchData={clearMatchData}
           onDeleteRosterData={deleteRosterData}
+          onNewMatch={startNewMatch}
+          matchComplete={currentMatchResult !== 'Open'}
           onClose={() => setReportOpen(false)}
         />
       ) : null}
 
-      {setupOpen ? (
+      {setupOpen && !lineupSelection ? (
         <SetupSheet
+          key={selectedTeam.id}
           setup={draftSetup}
           matchSettings={getPrototypeMatchSettings(draftSetup)}
           stateMode={state.mode}
@@ -950,10 +1100,18 @@ const RebuildPrototype = () => {
           roster={roster}
           activeRoster={activeRoster}
           courtSide={courtSide}
+          teamName={selectedTeam.name}
+          savedLineups={savedLineups}
+          eligibleLineupUsers={eligibleLineupUsers}
+          currentUserId={user?.id ?? ''}
+          syncStatus={syncStatus}
           onChange={setDraftSetup}
           onRosterChange={setRoster}
+          onClearRoster={clearSharedRoster}
           onCourtSideChange={setCourtSide}
           onPickLineupSlot={(rotation) => setLineupSelection({ rotation, context: 'setup' })}
+          onLoadLineup={loadNamedLineup}
+          onSaveLineup={saveNamedLineup}
           onClose={() => setSetupOpen(false)}
           onStart={startSet}
           onEndSet={endSet}
@@ -983,7 +1141,7 @@ const RebuildPrototype = () => {
         />
       ) : null}
 
-      {correctionOpen && lastRally ? (
+      {correctionOpen && lastRally && !pending ? (
         <CorrectionSheet
           rally={lastRally}
           players={roster}
@@ -1045,7 +1203,7 @@ const ScoreCard = ({ label, score, tone, align = 'left', serving = false, onIncr
         type="button"
         onClick={onIncrement}
         aria-label={`Add ${label} score`}
-        className="h-9 w-9 rounded bg-slate-950 text-lg font-black leading-none text-white active:scale-95"
+        className="h-11 w-11 rounded bg-slate-950 text-lg font-black leading-none text-white active:scale-95"
       >
         +
       </button>
@@ -1054,7 +1212,7 @@ const ScoreCard = ({ label, score, tone, align = 'left', serving = false, onIncr
         onClick={onDecrement}
         disabled={score === 0}
         aria-label={`Subtract ${label} score`}
-        className="h-9 w-9 rounded bg-slate-950 text-lg font-black leading-none text-white active:scale-95 disabled:opacity-35"
+        className="h-11 w-11 rounded bg-slate-950 text-lg font-black leading-none text-white active:scale-95 disabled:opacity-35"
       >
         -
       </button>
@@ -1072,12 +1230,62 @@ interface MoreSheetProps {
   onClose: () => void;
 }
 
+const dialogControls = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+const DialogBackdrop = ({ children, onClose, labelledBy, className }: { children: ReactNode; onClose: () => void; labelledBy: string; className: string }) => {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef(onClose);
+
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const dialog = dialogRef.current;
+    const focusTimer = window.setTimeout(() => {
+      (dialog?.querySelector<HTMLElement>(dialogControls) ?? dialog)?.focus();
+    }, 0);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeRef.current();
+        return;
+      }
+      if (event.key !== 'Tab' || !dialog) return;
+      const controls = [...dialog.querySelectorAll<HTMLElement>(dialogControls)];
+      if (controls.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.removeEventListener('keydown', handleKeyDown);
+      previousFocus?.focus();
+    };
+  }, []);
+
+  return <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={labelledBy} tabIndex={-1} className={className}>{children}</div>;
+};
+
 const MoreSheet = ({ ralliesTracked, entriesTracked, canEndSet, onSummary, onReports, onEndSet, onClose }: MoreSheetProps) => (
-  <div className="fixed inset-0 z-30 flex items-end bg-black/70 p-3 sm:items-center sm:justify-center">
+  <DialogBackdrop onClose={onClose} labelledBy="more-sheet-title" className="fixed inset-0 z-30 flex items-end bg-black/70 p-3 sm:items-center sm:justify-center">
     <section className="w-full rounded bg-slate-100 p-3 text-slate-950 shadow-xl sm:max-w-md sm:p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-black">Review</h2>
+          <h2 id="more-sheet-title" className="text-xl font-black">Review</h2>
           <p className="text-xs font-bold text-slate-600">
             {ralliesTracked} rallies · {entriesTracked} entries
           </p>
@@ -1106,7 +1314,7 @@ const MoreSheet = ({ ralliesTracked, entriesTracked, canEndSet, onSummary, onRep
         </button>
       </div>
     </section>
-  </div>
+  </DialogBackdrop>
 );
 
 const EventPanel = ({ title, tone, events, disabled, onEvent }: EventPanelProps) => (
@@ -1139,13 +1347,14 @@ interface SideToggleProps {
 }
 
 const SideToggle = ({ courtSide, compact = false, onChange }: SideToggleProps) => (
-  <div className={`grid grid-cols-2 rounded bg-slate-800 p-1 ${compact ? 'w-28' : 'w-36'}`}>
+  <div className={`grid shrink-0 grid-cols-2 rounded bg-slate-800 p-1 ${compact ? 'min-w-28 w-28' : 'min-w-36 w-36'}`}>
     {(['left', 'right'] satisfies CourtSide[]).map((side) => (
       <button
         key={side}
         type="button"
+        aria-pressed={courtSide === side}
         onClick={() => onChange(side)}
-        className={`min-h-8 rounded px-2 text-xs font-black uppercase ${
+        className={`min-h-11 min-w-11 rounded px-2 text-xs font-black uppercase ${
           courtSide === side ? 'bg-teal-300 text-slate-950' : 'text-slate-200'
         }`}
       >
@@ -1226,10 +1435,18 @@ interface SetupSheetProps {
   roster: PrototypePlayer[];
   activeRoster: PrototypePlayer[];
   courtSide: CourtSide;
+  teamName: string;
+  savedLineups: SavedPrototypeLineup[];
+  eligibleLineupUsers: EligibleLineupUser[];
+  currentUserId: string;
+  syncStatus: PrototypeSyncStatus;
   onChange: (setup: SetSetup) => void;
   onRosterChange: (roster: PrototypePlayer[]) => void;
+  onClearRoster: () => void;
   onCourtSideChange: (courtSide: CourtSide) => void;
   onPickLineupSlot: (rotation: Rotation) => void;
+  onLoadLineup: (lineup: LineupSlots) => void;
+  onSaveLineup: (name: string, lineup: LineupSlots, linkedUserId: string) => void;
   onClose: () => void;
   onStart: () => void;
   onEndSet: () => void;
@@ -1244,10 +1461,18 @@ const SetupSheet = ({
   roster,
   activeRoster,
   courtSide,
+  teamName,
+  savedLineups,
+  eligibleLineupUsers,
+  currentUserId,
+  syncStatus,
   onChange,
   onRosterChange,
+  onClearRoster,
   onCourtSideChange,
   onPickLineupSlot,
+  onLoadLineup,
+  onSaveLineup,
   onClose,
   onStart,
   onEndSet,
@@ -1256,6 +1481,10 @@ const SetupSheet = ({
   const [newNumber, setNewNumber] = useState('');
   const [newName, setNewName] = useState('');
   const [editor, setEditor] = useState<'roster' | 'lineup' | null>(null);
+  const [lineupName, setLineupName] = useState(teamName);
+  const [linkedUserId, setLinkedUserId] = useState(currentUserId);
+  const [selectedSavedLineupId, setSelectedSavedLineupId] = useState('');
+  const [lineupFeedback, setLineupFeedback] = useState('');
   const lineup = setup.lineup ?? getDefaultLineup(roster);
 
   const addPlayer = () => {
@@ -1274,12 +1503,12 @@ const SetupSheet = ({
   };
 
   return (
-    <div className="fixed inset-0 z-20 flex items-end bg-black/70 p-3 sm:items-center sm:justify-center">
+    <DialogBackdrop onClose={onClose} labelledBy="setup-sheet-title" className="fixed inset-0 z-20 flex items-end bg-black/70 p-3 sm:items-center sm:justify-center">
       <section className="max-h-[92vh] w-full overflow-auto rounded bg-slate-100 p-4 text-slate-950 shadow-xl sm:max-w-4xl">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-2xl font-black">Start Set</h2>
-            <p className="text-sm font-bold text-slate-600">{activeRoster.length} active players. Lineup and roster are saved on this device.</p>
+            <h2 id="setup-sheet-title" className="text-2xl font-black">Start Set</h2>
+            <p className="text-sm font-bold text-slate-600">{activeRoster.length} active players. Lineup and roster sync to the shared team cloud.</p>
           </div>
           <button type="button" onClick={onClose} className="min-h-12 rounded bg-slate-950 px-4 font-black text-white">
             Done
@@ -1312,6 +1541,7 @@ const SetupSheet = ({
                   <button
                     key={option.value}
                     type="button"
+                    aria-pressed={matchSettings.format === option.value}
                     onClick={() => onChange({ ...setup, matchFormat: option.value as PrototypeMatchFormat })}
                     className={`min-h-14 rounded border px-2 text-left ${
                       matchSettings.format === option.value ? 'border-teal-700 bg-teal-500 text-slate-950' : 'border-slate-300 bg-white'
@@ -1372,6 +1602,7 @@ const SetupSheet = ({
                   <button
                     key={mode}
                     type="button"
+                    aria-pressed={setup.initialMode === mode}
                     onClick={() => onChange({ ...setup, initialMode: mode })}
                     className={`min-h-12 rounded text-sm font-black uppercase ${
                       setup.initialMode === mode ? 'bg-teal-500 text-slate-950' : 'text-white'
@@ -1385,12 +1616,13 @@ const SetupSheet = ({
 
             <div>
               <p className="mb-2 text-xs font-black uppercase text-slate-600">Starting Rotation</p>
-              <div className="grid grid-cols-6 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {rotations.map((rotation) => (
                   <button
                     key={rotation}
                     type="button"
                     aria-label={`Starting rotation R${rotation}`}
+                    aria-pressed={setup.initialRotation === rotation}
                     onClick={() => onChange({ ...setup, initialRotation: rotation, initialServerId: setup.lineup?.[rotation] ?? setup.initialServerId })}
                     className={`min-h-12 rounded border text-base font-black ${
                       setup.initialRotation === rotation ? 'border-teal-700 bg-teal-500 text-slate-950' : 'border-slate-300 bg-white'
@@ -1424,6 +1656,7 @@ const SetupSheet = ({
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           <button
             type="button"
+            aria-pressed={editor === 'roster'}
             onClick={() => setEditor((value) => (value === 'roster' ? null : 'roster'))}
             className={`min-h-12 rounded px-3 font-black ${editor === 'roster' ? 'bg-teal-500 text-slate-950' : 'bg-white text-slate-950'}`}
           >
@@ -1431,6 +1664,7 @@ const SetupSheet = ({
           </button>
           <button
             type="button"
+            aria-pressed={editor === 'lineup'}
             onClick={() => setEditor((value) => (value === 'lineup' ? null : 'lineup'))}
             className={`min-h-12 rounded px-3 font-black ${editor === 'lineup' ? 'bg-teal-500 text-slate-950' : 'bg-white text-slate-950'}`}
           >
@@ -1457,23 +1691,10 @@ const SetupSheet = ({
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    onRosterChange([]);
-                    onChange({ ...setup, lineup: {}, initialServerId: undefined, rotationServers: {} });
-                  }}
-                  className="min-h-10 rounded bg-slate-200 px-3 text-sm font-black"
+                  onClick={onClearRoster}
+                  className="min-h-11 rounded bg-red-100 px-3 text-sm font-black text-red-900"
                 >
-                  Clear
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onRosterChange(mockRoster);
-                    onChange({ ...setup, lineup: defaultLineup, initialServerId: defaultLineup[setup.initialRotation], rotationServers: defaultRotationServers });
-                  }}
-                  className="min-h-10 rounded bg-slate-200 px-3 text-sm font-black"
-                >
-                  Reset
+                  Clear Shared Roster
                 </button>
               </div>
             </div>
@@ -1502,6 +1723,7 @@ const SetupSheet = ({
                   key={player.id}
                   type="button"
                   aria-label={`Toggle active ${getPlayerLabel(roster, player.id)}`}
+                  aria-pressed={player.active}
                   onClick={() => togglePlayer(player.id)}
                   className={`min-h-14 rounded border px-2 py-1 text-left ${
                     player.active ? 'border-slate-300 bg-slate-50' : 'border-slate-200 bg-slate-200 text-slate-500'
@@ -1525,6 +1747,62 @@ const SetupSheet = ({
               </div>
               <SideToggle courtSide={courtSide} onChange={onCourtSideChange} />
             </div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end">
+              <label className="grid gap-1">
+                <span className="text-xs font-black uppercase text-slate-600">Saved Lineup</span>
+                <select
+                  className={inputClass}
+                  value={selectedSavedLineupId}
+                  disabled={savedLineups.length === 0}
+                  onChange={(event) => {
+                    const saved = savedLineups.find((item) => item.id === event.target.value);
+                    if (!saved) return;
+                    setSelectedSavedLineupId(saved.id);
+                    setLineupName(saved.name);
+                    setLinkedUserId(saved.linkedUserId && eligibleLineupUsers.some((candidate) => candidate.id === saved.linkedUserId) ? saved.linkedUserId : currentUserId);
+                    onLoadLineup({ ...saved.slots });
+                    setLineupFeedback(`${saved.name} loaded`);
+                  }}
+                >
+                  <option value="">{savedLineups.length ? 'Choose a lineup…' : 'No saved lineups'}</option>
+                  {savedLineups.map((item) => <option key={item.id} value={item.id}>{item.name}{item.linkedUserEmail ? ` — ${item.linkedUserEmail}` : ''}</option>)}
+                </select>
+                {selectedSavedLineupId ? (() => {
+                  const selected = savedLineups.find((item) => item.id === selectedSavedLineupId);
+                  return selected ? <span className="text-[0.68rem] font-bold text-slate-500">Linked to {selected.linkedUserEmail ?? 'Team'}{selected.createdByEmail ? ` · created by ${selected.createdByEmail}` : ''}</span> : null;
+                })() : null}
+              </label>
+              <label className="grid gap-1">
+                <span className="text-xs font-black uppercase text-slate-600">Lineup Name</span>
+                <input className={inputClass} value={lineupName} onChange={(event) => setLineupName(event.target.value)} placeholder={teamName} />
+              </label>
+              <label className="grid gap-1">
+                <span className="text-xs font-black uppercase text-slate-600">Linked User</span>
+                {eligibleLineupUsers.length > 1 ? (
+                  <select className={inputClass} value={linkedUserId} onChange={(event) => setLinkedUserId(event.target.value)}>
+                    {eligibleLineupUsers.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name || candidate.email}</option>)}
+                  </select>
+                ) : (
+                  <div className={`${inputClass} flex items-center truncate bg-slate-100 text-sm`} title={eligibleLineupUsers[0]?.email}>
+                    {eligibleLineupUsers[0]?.name || eligibleLineupUsers[0]?.email || 'Signed-in user'}
+                  </div>
+                )}
+              </label>
+              <button
+                type="button"
+                disabled={!lineupName.trim() || !isCompleteLineup(lineup)}
+                onClick={() => {
+                  onSaveLineup(lineupName, lineup, linkedUserId || currentUserId);
+                  setLineupFeedback('Lineup updated');
+                }}
+                className="min-h-12 rounded bg-teal-500 px-4 font-black text-slate-950 disabled:bg-slate-200 disabled:text-slate-500"
+              >
+                Save Lineup
+              </button>
+            </div>
+            <p className={`mt-2 text-xs font-black ${syncStatus === 'error' ? 'text-red-700' : 'text-teal-800'}`} role="status">
+              {lineupFeedback ? `${lineupFeedback} · ` : ''}{syncStatus === 'error' ? 'Cloud sync failed; recovery copy kept' : syncStatus === 'offline' ? 'Offline; recovery copy kept' : syncStatus === 'saved' ? 'Saved to cloud' : 'Cloud syncing'}
+            </p>
             <CourtLineupGrid
               courtSide={courtSide}
               currentRotation={setup.initialRotation}
@@ -1552,7 +1830,7 @@ const SetupSheet = ({
           </section>
         ) : null}
       </section>
-    </div>
+    </DialogBackdrop>
   );
 };
 
@@ -1574,10 +1852,10 @@ const PickerSheet = ({ pending, players, lineup, onPlayer, onErrorSubtype, onCan
   const showTeamButton = eventNeedsPlayer(pending.event) === 'charged' || pending.event === 'century_block';
 
   return (
-    <div className="fixed inset-0 z-30 flex items-end bg-black/70 p-3">
+    <DialogBackdrop onClose={onCancel} labelledBy="picker-sheet-title" className="fixed inset-0 z-30 flex items-end bg-black/70 p-3">
       <section className="w-full rounded bg-slate-100 p-3 text-slate-950 shadow-xl sm:p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-black sm:text-xl">{pending.mode === 'player' ? `Player for ${eventLabels[pending.event]}` : 'Their Error Type'}</h2>
+          <h2 id="picker-sheet-title" className="text-lg font-black sm:text-xl">{pending.mode === 'player' ? `Player for ${eventLabels[pending.event]}` : 'Their Error Type'}</h2>
           <button type="button" onClick={onCancel} className="min-h-14 rounded bg-slate-950 px-4 font-black text-white">
             Back
           </button>
@@ -1638,7 +1916,7 @@ const PickerSheet = ({ pending, players, lineup, onPlayer, onErrorSubtype, onCan
           </div>
         )}
       </section>
-    </div>
+    </DialogBackdrop>
   );
 };
 
@@ -1660,12 +1938,12 @@ const SetCompletionSheet = ({ review, setup, settings, completedSetResults, onSa
   const matchComplete = isMatchCompleteAfterSet(settings, nextResults);
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end bg-black/75 p-3 sm:items-center sm:justify-center">
+    <DialogBackdrop onClose={onCancel} labelledBy="set-completion-title" className="fixed inset-0 z-40 flex items-end bg-black/75 p-3 sm:items-center sm:justify-center">
       <section className="w-full rounded bg-slate-100 p-4 text-slate-950 shadow-xl sm:max-w-xl">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-black uppercase text-slate-500">{review.reason === 'automatic' ? 'Set Complete' : 'Review Set'}</p>
-            <h2 className="text-2xl font-black">Verify Set {review.setNumber}</h2>
+            <h2 id="set-completion-title" className="text-2xl font-black">Verify Set {review.setNumber}</h2>
           </div>
           <button type="button" onClick={onCancel} className="min-h-12 rounded bg-slate-200 px-4 font-black text-slate-950">
             Keep Scoring
@@ -1703,7 +1981,7 @@ const SetCompletionSheet = ({ review, setup, settings, completedSetResults, onSa
           Save Set
         </button>
       </section>
-    </div>
+    </DialogBackdrop>
   );
 };
 
@@ -1717,11 +1995,11 @@ interface LineupPickerSheetProps {
 }
 
 const LineupPickerSheet = ({ rotation, context, players, lineup, onPlayer, onCancel }: LineupPickerSheetProps) => (
-  <div className="fixed inset-0 z-30 flex items-end bg-black/70 p-3">
+  <DialogBackdrop onClose={onCancel} labelledBy="lineup-picker-title" className="fixed inset-0 z-30 flex items-end bg-black/70 p-3">
     <section className="w-full rounded bg-slate-100 p-3 text-slate-950 shadow-xl sm:p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-black sm:text-xl">{context === 'setup' ? `Set R${rotation}` : `Substitute R${rotation}`}</h2>
+          <h2 id="lineup-picker-title" className="text-lg font-black sm:text-xl">{context === 'setup' ? `Set R${rotation}` : `Substitute R${rotation}`}</h2>
           <p className="text-xs font-bold text-slate-600">Choosing a player already in the lineup swaps the two spots.</p>
         </div>
         <button type="button" onClick={onCancel} className="min-h-14 rounded bg-slate-950 px-4 font-black text-white">
@@ -1755,7 +2033,7 @@ const LineupPickerSheet = ({ rotation, context, players, lineup, onPlayer, onCan
         })}
       </div>
     </section>
-  </div>
+  </DialogBackdrop>
 );
 
 interface CorrectionSheetProps {
@@ -1766,11 +2044,11 @@ interface CorrectionSheetProps {
 }
 
 const CorrectionSheet = ({ rally, players, onEvent, onClose }: CorrectionSheetProps) => (
-  <div className="fixed inset-0 z-20 flex items-end bg-black/70 p-3 sm:items-center sm:justify-center">
+  <DialogBackdrop onClose={onClose} labelledBy="correction-sheet-title" className="fixed inset-0 z-20 flex items-end bg-black/70 p-3 sm:items-center sm:justify-center">
     <section className="w-full rounded bg-slate-100 p-4 text-slate-950 shadow-xl sm:max-w-3xl">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-black">Correct Last Rally</h2>
+          <h2 id="correction-sheet-title" className="text-2xl font-black">Correct Last Rally</h2>
           <p className="text-sm font-bold text-slate-600">{getRallyDescription(rally, players)}</p>
         </div>
         <button type="button" onClick={onClose} className="min-h-14 rounded bg-slate-950 px-4 font-black text-white">
@@ -1782,7 +2060,7 @@ const CorrectionSheet = ({ rally, players, onEvent, onClose }: CorrectionSheetPr
         <EventPanel title="OPPONENT POINT" tone="opponent" events={opponentEvents} onEvent={onEvent} disabled={false} />
       </div>
     </section>
-  </div>
+  </DialogBackdrop>
 );
 
 interface SummaryPanelProps {
@@ -1793,11 +2071,14 @@ interface SummaryPanelProps {
 
 interface ReportSheetProps {
   seasonReport: PrototypeSeasonReport;
+  aggregateSeasonReport: PrototypeSeasonReport;
   currentMatchReport: PrototypeMatchReport;
   players: PrototypePlayer[];
   onDeleteMatch: (matchId: string) => void;
   onClearMatchData: () => void;
   onDeleteRosterData: () => void;
+  onNewMatch: () => void;
+  matchComplete: boolean;
   onClose: () => void;
 }
 
@@ -1808,29 +2089,32 @@ const formatMatchScore = (match: PrototypeMatchReport) => `${match.centurySetsWo
 
 const ReportSheet = ({
   seasonReport,
+  aggregateSeasonReport,
   currentMatchReport,
   players,
   onDeleteMatch,
   onClearMatchData,
   onDeleteRosterData,
+  onNewMatch,
+  matchComplete,
   onClose,
 }: ReportSheetProps) => {
   const [view, setView] = useState<'match' | 'season'>('match');
   const [selectedMatchId, setSelectedMatchId] = useState(currentMatchReport.id);
   const selectedMatchReport = seasonReport.matchReports.find((match) => match.id === selectedMatchId) ?? currentMatchReport;
   const activeReport = view === 'match' ? selectedMatchReport : undefined;
-  const summary = activeReport?.summary ?? seasonReport.summary;
+  const summary = activeReport?.summary ?? aggregateSeasonReport.summary;
   const showMatch = (matchId: string) => {
     setSelectedMatchId(matchId);
     setView('match');
   };
 
   return (
-    <div className="fixed inset-0 z-30 flex items-end bg-black/70 p-3 sm:items-center sm:justify-center">
+    <DialogBackdrop onClose={onClose} labelledBy="report-sheet-title" className="fixed inset-0 z-30 flex items-end bg-black/70 p-3 sm:items-center sm:justify-center">
       <section className="max-h-[88vh] w-full overflow-auto rounded bg-slate-100 p-3 text-slate-950 shadow-xl sm:max-w-5xl sm:p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-xl font-black">Reports</h2>
+            <h2 id="report-sheet-title" className="text-xl font-black">Reports</h2>
             <p className="text-sm font-bold text-slate-600">Match-by-match breakdown and combined season view.</p>
           </div>
           <button type="button" onClick={onClose} className="min-h-14 rounded bg-slate-950 px-4 font-black text-white">
@@ -1843,6 +2127,7 @@ const ReportSheet = ({
             <button
               key={item}
               type="button"
+              aria-pressed={view === item}
               onClick={() => setView(item)}
               className={`min-h-12 rounded text-sm font-black uppercase ${view === item ? 'bg-teal-400 text-slate-950' : 'text-white'}`}
             >
@@ -1861,6 +2146,7 @@ const ReportSheet = ({
                     <button
                       key={match.id}
                       type="button"
+                      aria-pressed={selectedMatchReport.id === match.id}
                       onClick={() => showMatch(match.id)}
                       className={`min-h-12 rounded border px-2 text-left text-sm font-black ${
                         selectedMatchReport.id === match.id ? 'border-teal-700 bg-teal-300 text-slate-950' : 'border-slate-300 bg-slate-50'
@@ -1908,6 +2194,11 @@ const ReportSheet = ({
               >
                 Delete This Match
               </button>
+              {matchComplete && selectedMatchReport.id === currentMatchReport.id ? (
+                <button type="button" onClick={onNewMatch} className="mt-2 min-h-14 w-full rounded bg-teal-500 px-3 text-lg font-black text-slate-950">
+                  New Match
+                </button>
+              ) : null}
             </section>
 
             <ReportInsightGrid summary={summary} players={players} />
@@ -1916,14 +2207,14 @@ const ReportSheet = ({
           <div className="mt-3 grid gap-3 lg:grid-cols-[0.95fr_1.05fr]">
             <section className="rounded border border-slate-300 bg-white p-3">
               <div className="grid grid-cols-4 gap-2">
-                <Metric label="Matches" value={seasonReport.matchesPlayed} />
-                <Metric label="Record" value={`${seasonReport.wins}-${seasonReport.losses}`} />
-                <Metric label="Open" value={seasonReport.openMatches} />
-                <Metric label="Rallies" value={seasonReport.ralliesTracked} />
+                <Metric label="Matches" value={aggregateSeasonReport.matchesPlayed} />
+                <Metric label="Record" value={`${aggregateSeasonReport.wins}-${aggregateSeasonReport.losses}`} />
+                <Metric label="Open" value={aggregateSeasonReport.openMatches} />
+                <Metric label="Rallies" value={aggregateSeasonReport.ralliesTracked} />
               </div>
 
               <div className="mt-3 grid gap-2">
-                {seasonReport.matchReports.map((match) => (
+                {aggregateSeasonReport.matchReports.map((match) => (
                   <div key={match.id} className="rounded border border-slate-200 bg-slate-50 p-2">
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
@@ -1938,10 +2229,10 @@ const ReportSheet = ({
                       Earned {match.summary.team.earnedPoints} · Gifts in {match.summary.team.giftsReceived} · Gifts out {match.summary.team.giftsConceded}
                     </p>
                     <div className="mt-2 grid grid-cols-2 gap-2">
-                      <button type="button" onClick={() => showMatch(match.id)} className="min-h-10 rounded bg-slate-900 px-3 text-sm font-black text-white">
+                      <button type="button" onClick={() => showMatch(match.id)} className="min-h-11 rounded bg-slate-900 px-3 text-sm font-black text-white">
                         View Match
                       </button>
-                      <button type="button" onClick={() => onDeleteMatch(match.id)} className="min-h-10 rounded bg-red-700 px-3 text-sm font-black text-white">
+                      <button type="button" onClick={() => onDeleteMatch(match.id)} className="min-h-11 rounded bg-red-700 px-3 text-sm font-black text-white">
                         Delete
                       </button>
                     </div>
@@ -1967,7 +2258,7 @@ const ReportSheet = ({
           </div>
         )}
       </section>
-    </div>
+    </DialogBackdrop>
   );
 };
 
@@ -1992,11 +2283,11 @@ const ReportInsightGrid = ({ summary, players }: { summary: ReturnType<typeof su
 );
 
 const SummaryPanel = ({ summary, players, onClose }: SummaryPanelProps) => (
-  <div className="fixed inset-0 z-30 flex items-end bg-black/70 p-3 sm:items-center sm:justify-center">
+  <DialogBackdrop onClose={onClose} labelledBy="summary-sheet-title" className="fixed inset-0 z-30 flex items-end bg-black/70 p-3 sm:items-center sm:justify-center">
     <section className="max-h-[86vh] w-full overflow-auto rounded bg-slate-100 p-3 text-slate-950 shadow-xl sm:max-w-3xl sm:p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-black">Set / Match Live Read</h2>
+          <h2 id="summary-sheet-title" className="text-xl font-black">Set / Match Live Read</h2>
           <p className="text-sm font-bold text-slate-600">Current scoring balance from the rally log.</p>
         </div>
         <button type="button" onClick={onClose} className="min-h-14 rounded bg-slate-950 px-4 font-black text-white">
@@ -2026,7 +2317,7 @@ const SummaryPanel = ({ summary, players, onClose }: SummaryPanelProps) => (
         </div>
       </div>
     </section>
-  </div>
+  </DialogBackdrop>
 );
 
 const Metric = ({ label, value, compact = false }: { label: string; value: string | number; compact?: boolean }) => (

@@ -59,19 +59,15 @@ const checkRateLimit = (key: string) => {
   );
 };
 
-const isSignupAllowed = (email: string) => {
-  if (process.env.AUTH_ALLOW_SIGNUP === 'false') {
-    return false;
-  }
+export const isSignupAllowed = (email: string) => {
+  if (process.env.AUTH_ALLOW_SIGNUP?.trim().toLowerCase() === 'true') return true;
 
   const allowlist = (process.env.AUTH_ALLOWED_EMAILS || '')
     .split(',')
     .map((entry) => entry.trim().toLowerCase())
     .filter(Boolean);
 
-  if (allowlist.length === 0) {
-    return true;
-  }
+  if (allowlist.length === 0) return false;
 
   const domain = email.split('@')[1];
   return allowlist.some((entry) => {
@@ -80,6 +76,8 @@ const isSignupAllowed = (email: string) => {
     return domain && entry === domain;
   });
 };
+
+export const isInvitedAccountClaim = (passwordHash: string | null | undefined) => !passwordHash;
 
 const toSafeUser = (user: {
   id: string;
@@ -166,7 +164,7 @@ export const handler: Handler = async (event) => {
 
     const existingUser = existing[0];
 
-    if (!existingUser.passwordHash) {
+    if (isInvitedAccountClaim(existingUser.passwordHash)) {
       // Account predates password auth - claim it with the password given now
       // rather than locking the coach out of their own existing data.
       const passwordHash = await bcrypt.hash(password, 10);

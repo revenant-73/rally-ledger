@@ -71,8 +71,39 @@ export const hasProgramAccess = async (client: Client, session: SessionUser) => 
 
 export const canViewProgram = hasProgramAccess;
 
-export const canCreateTeam = (session: SessionUser) => {
-  return isAdmin(session) || !hasAdminConfig();
+export const canViewTeam = async (client: Client, session: SessionUser, teamId: string) => {
+  if (isAdmin(session)) return true;
+  await ensureTeamAccessTable(client);
+
+  const result = await client.execute({
+    sql: `select teams.id
+      from teams
+      left join team_access on team_access.team_id = teams.id and team_access.user_id = ?
+      where teams.id = ? and (teams.owner_id = ? or team_access.role = 'coach')
+      limit 1`,
+    args: [session.userId, teamId, session.userId],
+  });
+
+  return result.rows.length > 0;
+};
+
+export const filterViewableTeamIds = async (client: Client, session: SessionUser, teamIds: string[]) => {
+  const uniqueIds = [...new Set(teamIds.filter(Boolean))];
+  if (isAdmin(session)) return uniqueIds;
+  const permissions = await Promise.all(uniqueIds.map(async (teamId) => ({
+    teamId,
+    allowed: await canViewTeam(client, session, teamId),
+  })));
+  return permissions.filter((permission) => permission.allowed).map((permission) => permission.teamId);
+};
+
+export const canCreateTeam = async (client: Client, session: SessionUser) => {
+  if (isAdmin(session)) return true;
+  const owned = await client.execute({
+    sql: 'select id from teams where owner_id = ? limit 1',
+    args: [session.userId],
+  });
+  return owned.rows.length > 0;
 };
 
 export const canManageTeam = async (client: Client, session: SessionUser, teamId: string) => {
@@ -170,11 +201,22 @@ export const canManagePlayer = async (client: Client, session: SessionUser, play
 };
 
 export const canViewMatch = async (client: Client, session: SessionUser, matchId: string) => {
-  if (!await canViewProgram(client, session)) return false;
-
+  if (isAdmin(session)) {
+    const result = await client.execute({
+      sql: 'select id from matches where id = ? limit 1',
+      args: [matchId],
+    });
+    return result.rows.length > 0;
+  }
+  await ensureTeamAccessTable(client);
   const result = await client.execute({
-    sql: 'select id from matches where id = ? limit 1',
-    args: [matchId],
+    sql: `select matches.id
+      from matches
+      inner join teams on teams.id = matches.team_id
+      left join team_access on team_access.team_id = teams.id and team_access.user_id = ?
+      where matches.id = ? and (teams.owner_id = ? or team_access.role = 'coach')
+      limit 1`,
+    args: [session.userId, matchId, session.userId],
   });
 
   return result.rows.length > 0;

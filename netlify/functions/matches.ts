@@ -2,7 +2,7 @@ import type { Handler } from '@netlify/functions';
 import { createClient, type Client } from '@libsql/client/web';
 import type { Match } from '../../src/types';
 import { requireSession } from './_session';
-import { canManageMatch, canManageTeam, canViewMatch, canViewProgram, ensureTeamAccessTable } from './_access';
+import { canManageMatch, canManageTeam, canViewMatch, filterViewableTeamIds, ensureTeamAccessTable } from './_access';
 
 let cachedClient: Client | null = null;
 
@@ -103,11 +103,10 @@ const handleList = async (payload: ListMatchesPayload) => {
   }
   const client = getClient();
   await ensureTeamAccessTable(client);
-  if (!await canViewProgram(client, { userId, email: payload.email || '' })) {
-    return json(200, { matches: [] });
-  }
+  const allowedTeamIds = await filterViewableTeamIds(client, { userId, email: payload.email || '' }, teamIds);
+  if (allowedTeamIds.length === 0) return json(200, { matches: [] });
 
-  const placeholders = teamIds.map(() => '?').join(', ');
+  const placeholders = allowedTeamIds.map(() => '?').join(', ');
   const result = await client.execute({
     sql: `select
       matches.id,
@@ -125,7 +124,7 @@ const handleList = async (payload: ListMatchesPayload) => {
     from matches
     where matches.team_id in (${placeholders})
     order by matches.match_date desc, matches.created_at desc`,
-    args: teamIds,
+    args: allowedTeamIds,
   });
 
   return json(200, {
@@ -267,11 +266,10 @@ const handleSeasonReport = async (payload: SeasonReportPayload) => {
 
   const client = getClient();
   await ensureTeamAccessTable(client);
-  if (!await canViewProgram(client, { userId, email: payload.email || '' })) {
-    return json(200, { matches: [], sets: [], rallies: [], players: [] });
-  }
+  const allowedTeamIds = await filterViewableTeamIds(client, { userId, email: payload.email || '' }, teamIds);
+  if (allowedTeamIds.length === 0) return json(200, { matches: [], sets: [], rallies: [], players: [] });
 
-  const teamPlaceholders = teamIds.map(() => '?').join(', ');
+  const teamPlaceholders = allowedTeamIds.map(() => '?').join(', ');
   const matchesResult = await client.execute({
     sql: `select
       matches.id,
@@ -289,7 +287,7 @@ const handleSeasonReport = async (payload: SeasonReportPayload) => {
     from matches
     where matches.team_id in (${teamPlaceholders})
     order by matches.match_date desc, matches.created_at desc`,
-    args: teamIds,
+    args: allowedTeamIds,
   });
 
   const matches = matchesResult.rows.map((row) => ({
@@ -362,7 +360,7 @@ const handleSeasonReport = async (payload: SeasonReportPayload) => {
       from players
       where players.team_id in (${teamPlaceholders})
       order by players.team_id, cast(players.jersey_number as integer), players.jersey_number`,
-      args: teamIds,
+      args: allowedTeamIds,
     }),
   ]);
 

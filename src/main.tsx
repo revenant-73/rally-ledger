@@ -6,7 +6,7 @@ import App from './App.tsx'
 import { AuthProvider } from './context/AuthContext'
 import { MatchProvider } from './context/MatchContext'
 import { indexedDbPersister } from './db/queryPersister'
-import { createAppQueryClient, ONE_DAY, registerAppServiceWorker } from './appBootstrap'
+import { createAppQueryClient, ONE_DAY, registerAppServiceWorker, shouldPersistQuery } from './appBootstrap'
 
 const queryClient = createAppQueryClient()
 registerAppServiceWorker()
@@ -20,6 +20,8 @@ createRoot(document.getElementById('root')!).render(
         maxAge: ONE_DAY,
         dehydrateOptions: {
           shouldDehydrateMutation: () => true,
+          // Authorization is a live security decision, never an offline cache.
+          shouldDehydrateQuery: shouldPersistQuery,
         },
       }}
       onSuccess={() => {
