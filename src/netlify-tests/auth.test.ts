@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { isInvitedAccountClaim, isSignupAllowed } from './auth';
+import { isInvitedAccountClaim, isSignupAllowed } from '../../netlify/functions/auth';
 
 const originalAllowSignup = process.env.AUTH_ALLOW_SIGNUP;
 const originalAllowedEmails = process.env.AUTH_ALLOWED_EMAILS;

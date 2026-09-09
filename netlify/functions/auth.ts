@@ -1,6 +1,7 @@
 import type { Handler } from '@netlify/functions';
 import { createClient, type Client } from '@libsql/client/web';
-import { construct as drizzle, type LibSQLDatabase } from 'drizzle-orm/libsql/driver-core';
+import { drizzle } from 'drizzle-orm/libsql/web';
+import type { LibSQLDatabase } from 'drizzle-orm/libsql/driver-core';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
@@ -174,7 +175,7 @@ export const handler: Handler = async (event) => {
       return json(200, { user: toSafeUser(existingUser), sessionToken: createSessionToken(existingUser) });
     }
 
-    const passwordMatches = await bcrypt.compare(password, existingUser.passwordHash);
+    const passwordMatches = await bcrypt.compare(password, existingUser.passwordHash!);
     if (!passwordMatches) {
       return json(401, { error: 'Invalid email or password' });
     }

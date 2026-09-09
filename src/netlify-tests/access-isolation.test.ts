@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canViewMatch, filterViewableTeamIds } from './_access';
+import { canViewMatch, filterViewableTeamIds } from '../../netlify/functions/_access';
 
 type FakeResult = { rows: Array<Record<string, unknown>> };
 
