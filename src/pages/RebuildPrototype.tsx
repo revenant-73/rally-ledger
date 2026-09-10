@@ -569,6 +569,11 @@ const RebuildPrototype = () => {
     setRestorable(null);
   };
 
+  const updateOpponent = (opponent: string) => {
+    setDraftSetup((current) => ({ ...current, opponent }));
+    setSetup((current) => ({ ...current, opponent }));
+  };
+
   const startSet = () => {
     const lineup = draftSetup.lineup ?? getDefaultLineup(roster);
     const normalized = {
@@ -1103,6 +1108,7 @@ const RebuildPrototype = () => {
           currentUserId={user?.id ?? ''}
           syncStatus={syncStatus}
           onChange={setDraftSetup}
+          onOpponentChange={updateOpponent}
           onRosterChange={setRoster}
           onClearRoster={clearSharedRoster}
           onCourtSideChange={setCourtSide}
@@ -1438,6 +1444,7 @@ interface SetupSheetProps {
   currentUserId: string;
   syncStatus: PrototypeSyncStatus;
   onChange: (setup: SetSetup) => void;
+  onOpponentChange: (opponent: string) => void;
   onRosterChange: (roster: PrototypePlayer[]) => void;
   onClearRoster: () => void;
   onCourtSideChange: (courtSide: CourtSide) => void;
@@ -1464,6 +1471,7 @@ const SetupSheet = ({
   currentUserId,
   syncStatus,
   onChange,
+  onOpponentChange,
   onRosterChange,
   onClearRoster,
   onCourtSideChange,
@@ -1516,7 +1524,7 @@ const SetupSheet = ({
           <div className="grid gap-3 sm:grid-cols-[1.4fr_0.6fr]">
             <label className="grid gap-1">
               <span className="text-xs font-black uppercase text-slate-600">Opponent</span>
-              <input className={inputClass} value={setup.opponent} onChange={(event) => onChange({ ...setup, opponent: event.target.value })} />
+              <input className={inputClass} value={setup.opponent} onChange={(event) => onOpponentChange(event.target.value)} />
             </label>
             <label className="grid gap-1">
               <span className="text-xs font-black uppercase text-slate-600">Set</span>
