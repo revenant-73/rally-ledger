@@ -99,7 +99,7 @@ export const getAvailableNextSetNumbers = (
 
 export const isMatchCompleteAfterSet = (
   settings: MatchFormatSettings,
-  completedSetResults: Array<'Win' | 'Loss'>,
+  completedSetResults: Array<'Win' | 'Loss' | 'Draw'>,
 ) => {
   if (completedSetResults.length >= settings.maxSets) return true;
   if (!settings.setsToWin) return false;

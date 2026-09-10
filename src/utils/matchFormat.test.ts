@@ -107,5 +107,7 @@ describe('matchFormat', () => {
 
     expect(isMatchCompleteAfterSet(settings, ['Win'])).toBe(false);
     expect(isMatchCompleteAfterSet(settings, ['Win', 'Loss'])).toBe(true);
+    expect(isMatchCompleteAfterSet(settings, ['Win', 'Draw'])).toBe(true);
+    expect(isMatchCompleteAfterSet(settings, ['Draw', 'Draw'])).toBe(true);
   });
 });

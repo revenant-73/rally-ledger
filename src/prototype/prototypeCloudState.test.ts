@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { PrototypeMatchInput, PrototypePlayer } from './matchbookModel';
 import {
-  archiveMatchOnce,
   createFreshPrototypeDocument,
   sanitizePrototypeDocument,
+  upsertArchivedMatch,
   upsertSavedLineup,
 } from './prototypeCloudState';
 
@@ -82,12 +82,12 @@ describe('prototype cloud state', () => {
     expect(slots[1]).toBe('player-1');
   });
 
-  it('archives a completed match exactly once', () => {
+  it('upserts a completed match without changing its history position', () => {
     const match: PrototypeMatchInput = { id: 'match-1', opponent: 'West', date: '2026-09-09', result: 'Win', sets: [] };
-    const once = archiveMatchOnce([], match);
-    const twice = archiveMatchOnce(once, { ...match, opponent: 'Changed' });
+    const later: PrototypeMatchInput = { id: 'match-2', opponent: 'North', date: '2026-09-10', result: 'Loss', sets: [] };
+    const once = upsertArchivedMatch([], match);
+    const twice = upsertArchivedMatch([...once, later], { ...match, opponent: 'Changed' });
 
-    expect(twice).toBe(once);
-    expect(twice).toEqual([match]);
+    expect(twice).toEqual([{ ...match, opponent: 'Changed' }, later]);
   });
 });

@@ -215,7 +215,10 @@ export const upsertSavedLineup = (
   return existing ? savedLineups.map((item) => item.id === existing.id ? next : item) : [...savedLineups, next];
 };
 
-export const archiveMatchOnce = (matches: PrototypeMatchInput[], match: PrototypeMatchInput) =>
-  matches.some((item) => item.id === match.id) ? matches : [...matches, match];
+export const upsertArchivedMatch = (matches: PrototypeMatchInput[], match: PrototypeMatchInput) => {
+  const existingIndex = matches.findIndex((item) => item.id === match.id);
+  if (existingIndex === -1) return [...matches, match];
+  return matches.map((item, index) => index === existingIndex ? match : item);
+};
 
 export const getTeamPrototypeStorageKey = (teamId: string) => `${LEGACY_PROTOTYPE_STORAGE_KEY}:team:${teamId}`;

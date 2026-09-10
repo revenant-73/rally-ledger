@@ -375,6 +375,7 @@ describe('matchbook prototype rally model', () => {
       matchesPlayed: 2,
       wins: 1,
       losses: 1,
+      draws: 0,
       openMatches: 0,
       ralliesTracked: 47,
     });
@@ -384,6 +385,20 @@ describe('matchbook prototype rally model', () => {
       giftsReceived: 5,
       opponentEarnedPoints: 11,
       giftsConceded: 10,
+    });
+  });
+
+  it('counts draws separately in season reports', () => {
+    const match: PrototypeMatchInput = {
+      id: 'draw-1', opponent: 'West', date: '2026-09-06', result: 'Draw', sets: [],
+    };
+
+    expect(summarizeSeasonReport([match], scriptedPlayers)).toMatchObject({
+      matchesPlayed: 1,
+      wins: 0,
+      losses: 0,
+      draws: 1,
+      openMatches: 0,
     });
   });
 });

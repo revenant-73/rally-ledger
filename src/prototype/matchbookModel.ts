@@ -140,11 +140,13 @@ export interface PrototypeSetInput {
   rallies: RallyRecord[];
 }
 
+export type PrototypeMatchResult = 'Win' | 'Loss' | 'Draw' | 'Open';
+
 export interface PrototypeMatchInput {
   id: string;
   opponent: string;
   date: string;
-  result?: 'Win' | 'Loss' | 'Open';
+  result?: PrototypeMatchResult;
   sets: PrototypeSetInput[];
 }
 
@@ -161,7 +163,7 @@ export interface PrototypeMatchReport {
   id: string;
   opponent: string;
   date: string;
-  result: 'Win' | 'Loss' | 'Open';
+  result: PrototypeMatchResult;
   centurySetsWon: number;
   opponentSetsWon: number;
   ralliesTracked: number;
@@ -173,6 +175,7 @@ export interface PrototypeSeasonReport {
   matchesPlayed: number;
   wins: number;
   losses: number;
+  draws: number;
   openMatches: number;
   ralliesTracked: number;
   summary: SetSummary;
@@ -490,6 +493,7 @@ export const summarizeSeasonReport = (matches: PrototypeMatchInput[], players: P
     matchesPlayed: matches.length,
     wins: matchReports.filter((match) => match.result === 'Win').length,
     losses: matchReports.filter((match) => match.result === 'Loss').length,
+    draws: matchReports.filter((match) => match.result === 'Draw').length,
     openMatches: matchReports.filter((match) => match.result === 'Open').length,
     ralliesTracked: activeRallies.length,
     summary: summarizeSet(activeRallies, players),
