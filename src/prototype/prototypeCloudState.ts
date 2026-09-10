@@ -14,6 +14,7 @@ export const PROTOTYPE_DOCUMENT_VERSION = 1;
 
 export type PrototypeSyncStatus = 'loading' | 'saving' | 'saved' | 'offline' | 'error';
 export type CourtSide = 'left' | 'right';
+export type PrototypeMatchLifecycle = 'idle' | 'setup' | 'live' | 'complete';
 
 export interface SavedPrototypeLineup {
   id: string;
@@ -40,6 +41,7 @@ export interface PrototypeCloudDocument {
   updatedAt: string;
   currentMatchId: string;
   currentMatchStartedAt: string;
+  lifecycle: PrototypeMatchLifecycle;
   setup: SetSetup;
   draftSetup: SetSetup;
   rallies: RallyRecord[];
@@ -81,6 +83,7 @@ export const createFreshPrototypeDocument = (now = new Date()): PrototypeCloudDo
   updatedAt: now.toISOString(),
   currentMatchId: makeId('match'),
   currentMatchStartedAt: now.toISOString(),
+  lifecycle: 'idle',
   setup: createNeutralSetup(),
   draftSetup: createNeutralSetup(),
   rallies: [],
@@ -154,6 +157,19 @@ export const sanitizePrototypeDocument = (value: unknown, now = new Date()): Pro
       linkedUserEmail: typeof item.linkedUserEmail === 'string' ? item.linkedUserEmail : undefined,
     }))
     .filter((item) => isCompleteLineup(item.slots));
+  const rallies = (Array.isArray(value.rallies) ? value.rallies : []) as RallyRecord[];
+  const completedSets = (Array.isArray(value.completedSets) ? value.completedSets : []) as PrototypeSetInput[];
+  const persistedLifecycle = value.lifecycle;
+  const lifecycle: PrototypeMatchLifecycle =
+    persistedLifecycle === 'idle' || persistedLifecycle === 'setup' || persistedLifecycle === 'live' || persistedLifecycle === 'complete'
+      ? persistedLifecycle
+      : seasonMatches.some((match) => match.id === value.currentMatchId)
+        ? 'complete'
+        : rallies.some((rally) => rally.active)
+          ? 'live'
+          : completedSets.length > 0
+            ? 'setup'
+            : 'idle';
 
   return {
     version: PROTOTYPE_DOCUMENT_VERSION,
@@ -161,10 +177,11 @@ export const sanitizePrototypeDocument = (value: unknown, now = new Date()): Pro
     updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : now.toISOString(),
     currentMatchId: typeof value.currentMatchId === 'string' && value.currentMatchId ? value.currentMatchId : fresh.currentMatchId,
     currentMatchStartedAt: typeof value.currentMatchStartedAt === 'string' ? value.currentMatchStartedAt : now.toISOString(),
+    lifecycle,
     setup,
     draftSetup,
-    rallies: (Array.isArray(value.rallies) ? value.rallies : []) as RallyRecord[],
-    completedSets: (Array.isArray(value.completedSets) ? value.completedSets : []) as PrototypeSetInput[],
+    rallies,
+    completedSets,
     roster,
     currentLineup: sanitizeLineup(value.currentLineup ?? lineup, playerIds),
     courtSide: value.courtSide === 'right' ? 'right' : 'left',

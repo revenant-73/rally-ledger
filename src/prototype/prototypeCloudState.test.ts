@@ -21,6 +21,7 @@ describe('prototype cloud state', () => {
     expect(fresh.roster).toEqual([]);
     expect(fresh.seasonMatches).toEqual([]);
     expect(fresh.setup.opponent).toBe('');
+    expect(fresh.lifecycle).toBe('idle');
 
     const sanitized = sanitizePrototypeDocument({
       ...fresh,
@@ -39,6 +40,14 @@ describe('prototype cloud state', () => {
     expect(sanitized.roster).toEqual(roster);
     expect(sanitized.seasonMatches.map((match) => match.id)).toEqual(['real-match']);
     expect(sanitized.currentLineup).toEqual(slots);
+  });
+
+  it('infers lifecycle for documents saved before lifecycle was persisted', () => {
+    const fresh = createFreshPrototypeDocument(new Date('2026-09-09T10:00:00.000Z'));
+    const legacy = { ...fresh, lifecycle: undefined, rallies: [{ active: true }] };
+
+    expect(sanitizePrototypeDocument(legacy).lifecycle).toBe('live');
+    expect(sanitizePrototypeDocument({ ...legacy, rallies: [], completedSets: [{ id: 'set-1' }] }).lifecycle).toBe('setup');
   });
 
   it('loads a complete saved lineup and updates the same case-insensitive name without duplication', () => {
