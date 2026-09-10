@@ -9,7 +9,6 @@ import { indexedDbPersister } from './db/queryPersister'
 import { createAppQueryClient, ONE_DAY, registerAppServiceWorker, shouldPersistQuery } from './appBootstrap'
 
 const queryClient = createAppQueryClient()
-registerAppServiceWorker()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -36,3 +35,7 @@ createRoot(document.getElementById('root')!).render(
     </PersistQueryClientProvider>
   </StrictMode>,
 )
+
+// Mount the application before asking the browser to register/update the PWA.
+// A service-worker failure must never leave users with an empty root element.
+registerAppServiceWorker()

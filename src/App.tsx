@@ -18,8 +18,9 @@ const Login = lazy(() => import('./pages/Login'));
 const RebuildPrototype = lazy(() => import('./pages/RebuildPrototype'));
 
 const LoadingScreen = () => (
-  <div className="min-h-screen bg-brand-bg flex items-center justify-center">
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-teal"></div>
+  <div className="min-h-screen bg-brand-bg flex flex-col items-center justify-center gap-4 text-brand-text">
+    <div className="animate-spin rounded-full h-12 w-12 border-2 border-brand-gray/20 border-b-brand-teal"></div>
+    <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-text-secondary">Loading Century Matchbook…</p>
   </div>
 );
 
