@@ -3,12 +3,27 @@ import type { User } from '../types';
 import { AuthContext } from './AuthContext.context';
 import { getSessionToken } from '../utils/api';
 
+const loadStoredUser = (): User | null => {
+  if (!getSessionToken()) return null;
+
+  const savedUser = localStorage.getItem('user');
+  if (!savedUser) return null;
+
+  try {
+    const parsed = JSON.parse(savedUser) as unknown;
+    if (!parsed || typeof parsed !== 'object' || typeof (parsed as User).id !== 'string' || typeof (parsed as User).email !== 'string') {
+      throw new Error('Invalid stored user');
+    }
+    return parsed as User;
+  } catch {
+    localStorage.removeItem('user');
+    localStorage.removeItem('sessionToken');
+    return null;
+  }
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    if (!getSessionToken()) return null;
-    const savedUser = localStorage.getItem('user');
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
+  const [user, setUser] = useState<User | null>(loadStoredUser);
   const [loading, setLoading] = useState(Boolean(getSessionToken()));
 
   useEffect(() => {
