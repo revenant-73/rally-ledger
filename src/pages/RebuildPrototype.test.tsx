@@ -52,10 +52,10 @@ describe('RebuildPrototype opponent display', () => {
     await user.click(screen.getByRole('button', { name: 'Setup' }));
     const opponent = screen.getByRole('textbox', { name: 'Opponent' });
     await user.clear(opponent);
-    await user.type(opponent, 'Central');
+    await user.type(opponent, 'Sherwood');
     await user.click(screen.getByRole('button', { name: 'Done' }));
 
-    expect(screen.getByText('Central')).toBeInTheDocument();
+    expect(screen.getByText('Sherwood')).toBeInTheDocument();
     expect(screen.queryByText('Liberty')).not.toBeInTheDocument();
   });
 });

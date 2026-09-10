@@ -435,6 +435,7 @@ const RebuildPrototype = () => {
     [currentMatch, roster, seasonReport.matchReports],
   );
   const currentServer = roster.find((player) => player.id === state.serverId);
+  const displayedOpponent = draftSetup.opponent.trim() || setup.opponent.trim() || 'Opponent';
   const lastRally = [...rallies].reverse().find((rally) => rally.active);
   const activeEntries = rallies.filter((rally) => rally.active);
   const activeRallies = activeEntries.filter((rally) => rally.event !== 'score_adjustment');
@@ -927,7 +928,7 @@ const RebuildPrototype = () => {
               {state.mode === 'serving' && currentServer ? <p className="mt-1 text-xs font-black text-teal-200">#{currentServer.number}</p> : null}
             </div>
             <ScoreCard
-              label={setup.opponent}
+              label={displayedOpponent}
               score={state.opponentScore}
               tone="opponent"
               align="right"
