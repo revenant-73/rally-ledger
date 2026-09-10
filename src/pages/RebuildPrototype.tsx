@@ -20,6 +20,7 @@ import {
   type PrototypeMatchInput,
   type PrototypeMatchResult,
   type PrototypeMatchReport,
+  type PlayerSummary,
   type PrototypeSeasonReport,
   type PrototypeSetInput,
   type PrototypePlayer,
@@ -2494,6 +2495,7 @@ const ReportSheet = ({
   onClose,
 }: ReportSheetProps) => {
   const [view, setView] = useState<'match' | 'season'>('match');
+  const [reportMode, setReportMode] = useState<'overview' | 'players'>('overview');
   const [selectedMatchId, setSelectedMatchId] = useState(currentMatchReport.id);
   const selectedMatchReport = seasonReport.matchReports.find((match) => match.id === selectedMatchId) ?? currentMatchReport;
   const activeReport = view === 'match' ? selectedMatchReport : undefined;
@@ -2530,8 +2532,26 @@ const ReportSheet = ({
           ))}
         </div>
 
+        <div className="mt-2 flex items-center gap-1 border-b-2 border-slate-300" role="group" aria-label="Report type">
+          {(['overview', 'players'] satisfies Array<typeof reportMode>).map((item) => (
+            <button
+              key={item}
+              type="button"
+              aria-pressed={reportMode === item}
+              onClick={() => setReportMode(item)}
+              className={`min-h-11 flex-1 border-b-4 px-3 text-sm font-black uppercase transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 sm:flex-none ${
+                reportMode === item
+                  ? 'border-teal-600 bg-white text-slate-950'
+                  : 'border-transparent text-slate-600 hover:bg-white/70 hover:text-slate-950'
+              }`}
+            >
+              {item === 'overview' ? 'Overview' : 'Player Report'}
+            </button>
+          ))}
+        </div>
+
         {view === 'match' ? (
-          <div className="mt-3 grid gap-3 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className={`mt-3 grid gap-3 ${reportMode === 'overview' ? 'lg:grid-cols-[0.9fr_1.1fr]' : ''}`}>
             <section className="rounded border border-slate-300 bg-white p-3">
               <div className="mb-3 grid gap-2">
                 <p className="text-xs font-black uppercase text-slate-500">Choose Match</p>
@@ -2553,53 +2573,67 @@ const ReportSheet = ({
                 </div>
               </div>
 
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-black uppercase text-slate-500">
-                    {selectedMatchReport.id === currentMatchReport.id ? 'Current Match' : 'Saved Match'}
-                  </p>
-                  <h3 className="text-2xl font-black">Century vs {selectedMatchReport.opponent}</h3>
-                  <p className="text-sm font-bold text-slate-600">
-                    {formatReportDate(selectedMatchReport.date)} · {selectedMatchReport.result} · Match {formatMatchScore(selectedMatchReport)}
-                  </p>
-                </div>
-                <span className="rounded bg-slate-900 px-3 py-2 text-sm font-black text-white">{selectedMatchReport.ralliesTracked} rallies</span>
-              </div>
-
-              <div className="mt-3 grid gap-2">
-                {selectedMatchReport.setReports.map((set) => (
-                  <div key={set.id} className="rounded border border-slate-200 bg-slate-50 p-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-black">Set {set.setNumber}</p>
-                      <p className="text-xl font-black">
-                        {set.centuryScore}-{set.opponentScore}
+              {reportMode === 'overview' ? (
+                <>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-black uppercase text-slate-500">
+                        {selectedMatchReport.id === currentMatchReport.id ? 'Current Match' : 'Saved Match'}
+                      </p>
+                      <h3 className="text-2xl font-black">Century vs {selectedMatchReport.opponent}</h3>
+                      <p className="text-sm font-bold text-slate-600">
+                        {formatReportDate(selectedMatchReport.date)} · {selectedMatchReport.result} · Match {formatMatchScore(selectedMatchReport)}
                       </p>
                     </div>
-                    <p className="text-xs font-bold text-slate-500">
-                      Earned {set.summary.team.earnedPoints} · Gifts in {set.summary.team.giftsReceived} · Gifts out {set.summary.team.giftsConceded}
-                    </p>
+                    <span className="rounded bg-slate-900 px-3 py-2 text-sm font-black text-white">{selectedMatchReport.ralliesTracked} rallies</span>
                   </div>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={() => onDeleteMatch(selectedMatchReport.id)}
-                className="mt-3 min-h-12 w-full rounded bg-red-700 px-3 font-black text-white"
-              >
-                Delete This Match
-              </button>
-              {matchComplete && selectedMatchReport.id === currentMatchReport.id ? (
-                <button type="button" onClick={onNewMatch} className="mt-2 min-h-14 w-full rounded bg-teal-500 px-3 text-lg font-black text-slate-950">
-                  New Match
-                </button>
+
+                  <div className="mt-3 grid gap-2">
+                    {selectedMatchReport.setReports.map((set) => (
+                      <div key={set.id} className="rounded border border-slate-200 bg-slate-50 p-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-black">Set {set.setNumber}</p>
+                          <p className="text-xl font-black">
+                            {set.centuryScore}-{set.opponentScore}
+                          </p>
+                        </div>
+                        <p className="text-xs font-bold text-slate-500">
+                          Earned {set.summary.team.earnedPoints} · Gifts in {set.summary.team.giftsReceived} · Gifts out {set.summary.team.giftsConceded}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onDeleteMatch(selectedMatchReport.id)}
+                    className="mt-3 min-h-12 w-full rounded bg-red-700 px-3 font-black text-white"
+                  >
+                    Delete This Match
+                  </button>
+                  {matchComplete && selectedMatchReport.id === currentMatchReport.id ? (
+                    <button type="button" onClick={onNewMatch} className="mt-2 min-h-14 w-full rounded bg-teal-500 px-3 text-lg font-black text-slate-950">
+                      New Match
+                    </button>
+                  ) : null}
+                </>
               ) : null}
             </section>
 
-            <ReportInsightGrid summary={summary} players={players} />
+            {reportMode === 'overview' ? (
+              <ReportInsightGrid summary={summary} players={players} />
+            ) : (
+              <PlayerReport
+                title="Match Player Report"
+                context={`Century vs ${selectedMatchReport.opponent} · ${formatReportDate(selectedMatchReport.date)}`}
+                summary={summary}
+                players={players}
+              />
+            )}
           </div>
         ) : (
-          <div className="mt-3 grid gap-3 lg:grid-cols-[0.95fr_1.05fr]">
-            <section className="rounded border border-slate-300 bg-white p-3">
+          <div className={`mt-3 grid gap-3 ${reportMode === 'overview' ? 'lg:grid-cols-[0.95fr_1.05fr]' : ''}`}>
+            {reportMode === 'overview' ? (
+              <section className="rounded border border-slate-300 bg-white p-3">
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                 <Metric label="Matches" value={aggregateSeasonReport.matchesPlayed} />
                 <Metric label="W-L" value={`${aggregateSeasonReport.wins}-${aggregateSeasonReport.losses}`} />
@@ -2647,13 +2681,231 @@ const ReportSheet = ({
                   </button>
                 </div>
               </section>
-            </section>
+              </section>
+            ) : null}
 
-            <ReportInsightGrid summary={summary} players={players} />
+            {reportMode === 'overview' ? (
+              <ReportInsightGrid summary={summary} players={players} />
+            ) : (
+              <PlayerReport
+                title="Season Player Report"
+                context={`${aggregateSeasonReport.matchesPlayed} finalized ${aggregateSeasonReport.matchesPlayed === 1 ? 'match' : 'matches'}`}
+                summary={summary}
+                players={players}
+              />
+            )}
           </div>
         )}
       </section>
     </DialogBackdrop>
+  );
+};
+
+const getBreakdownValue = (items: BreakdownItem[], key: string) =>
+  items.find((item) => item.key === key)?.total ?? 0;
+
+const getReconciledBreakdown = (
+  teamItems: BreakdownItem[],
+  playerSummaries: PlayerSummary[],
+  key: 'earnedByType' | 'giftsConcededByType',
+) =>
+  teamItems.flatMap((teamItem) => {
+    const attributed = playerSummaries.reduce(
+      (total, player) => total + getBreakdownValue(player[key], teamItem.key),
+      0,
+    );
+    const difference = Math.max(0, teamItem.total - attributed);
+    return difference > 0 ? [{ ...teamItem, total: difference }] : [];
+  });
+
+const compareRosterPlayers = (left: PrototypePlayer, right: PrototypePlayer) => {
+  const leftNumber = left.number.trim();
+  const rightNumber = right.number.trim();
+  const leftIsNumeric = /^\d+$/.test(leftNumber);
+  const rightIsNumeric = /^\d+$/.test(rightNumber);
+
+  if (leftIsNumeric && rightIsNumeric) {
+    const numberDifference = Number(leftNumber) - Number(rightNumber);
+    if (numberDifference !== 0) return numberDifference;
+  } else if (leftIsNumeric !== rightIsNumeric) {
+    return leftIsNumeric ? -1 : 1;
+  } else {
+    const numberDifference = leftNumber.localeCompare(rightNumber, undefined, { numeric: true, sensitivity: 'base' });
+    if (numberDifference !== 0) return numberDifference;
+  }
+
+  return left.name.localeCompare(right.name, undefined, { sensitivity: 'base' });
+};
+
+const formatSigned = (value: number) => (value > 0 ? `+${value}` : String(value));
+
+const PlayerTally = ({ label, value, tone }: { label: string; value: number; tone: 'earned' | 'gifted' | 'net' }) => {
+  const toneClass =
+    tone === 'earned'
+      ? 'text-teal-800'
+      : tone === 'gifted'
+        ? 'text-amber-800'
+        : value > 0
+          ? 'text-teal-800'
+          : value < 0
+            ? 'text-amber-800'
+            : 'text-slate-700';
+
+  return (
+    <div className="text-center tabular-nums" aria-label={`${label} ${tone === 'net' ? formatSigned(value) : value}`}>
+      <p className="text-[0.62rem] font-black uppercase tracking-wide text-slate-500">{label}</p>
+      <p className={`text-xl font-black leading-none ${toneClass}`}>{tone === 'net' ? formatSigned(value) : value}</p>
+    </div>
+  );
+};
+
+const EventBreakdown = ({
+  label,
+  items,
+  emptyText,
+  tone,
+}: {
+  label: string;
+  items: BreakdownItem[];
+  emptyText: string;
+  tone: 'earned' | 'gifted' | 'neutral';
+}) => {
+  const toneClass =
+    tone === 'earned'
+      ? 'border-teal-200 bg-teal-50 text-teal-950'
+      : tone === 'gifted'
+        ? 'border-amber-200 bg-amber-50 text-amber-950'
+        : 'border-slate-300 bg-white text-slate-800';
+
+  return (
+    <div>
+      <p className="text-[0.65rem] font-black uppercase tracking-wide text-slate-500">{label}</p>
+      {items.length > 0 ? (
+        <div className="mt-1 flex flex-wrap gap-1.5">
+          {items.map((item) => (
+            <span key={item.key} className={`border px-2 py-1 text-xs font-bold tabular-nums ${toneClass}`}>
+              {item.label} <strong className="font-black">{item.total}</strong>
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-1 text-xs font-bold text-slate-500">{emptyText}</p>
+      )}
+    </div>
+  );
+};
+
+const PlayerReport = ({
+  title,
+  context,
+  summary,
+  players,
+}: {
+  title: string;
+  context: string;
+  summary: ReturnType<typeof summarizeSet>;
+  players: PrototypePlayer[];
+}) => {
+  const playerSummaryById = new Map(summary.players.map((player) => [player.playerId, player]));
+  const rosterRows = [...players]
+    .sort(compareRosterPlayers)
+    .map((player) => ({ player, summary: playerSummaryById.get(player.id) }))
+    .filter((row): row is { player: PrototypePlayer; summary: PlayerSummary } => Boolean(row.summary));
+  const attributedEarned = summary.players.reduce((total, player) => total + player.earnedPoints, 0);
+  const attributedGifted = summary.players.reduce((total, player) => total + player.giftsConceded, 0);
+  const unclearEarned = Math.max(0, summary.team.earnedPoints - attributedEarned);
+  const unclearGifted = Math.max(0, summary.team.giftsConceded - attributedGifted);
+  const unclearEarnedByType = getReconciledBreakdown(summary.team.earnedByType, summary.players, 'earnedByType');
+  const unclearGiftedByType = getReconciledBreakdown(summary.team.giftsConcededByType, summary.players, 'giftsConcededByType');
+  const hasUnclearAttribution = unclearEarned > 0 || unclearGifted > 0;
+  const hasPlayerEvents = attributedEarned > 0 || attributedGifted > 0;
+
+  return (
+    <section className="overflow-hidden border border-slate-300 bg-white" aria-labelledby={`${title.replaceAll(' ', '-').toLowerCase()}-title`}>
+      <header className="border-b-2 border-slate-900 p-3">
+        <p className="text-xs font-black uppercase tracking-wide text-teal-800">{context}</p>
+        <h3 id={`${title.replaceAll(' ', '-').toLowerCase()}-title`} className="mt-0.5 text-2xl font-black text-slate-950">{title}</h3>
+        <p className="mt-1 text-sm font-bold leading-snug text-slate-600">
+          Earned points are credited actions. Gifted points are errors charged to a player.
+        </p>
+      </header>
+
+      <div className="grid grid-cols-3 border-b border-slate-300 bg-slate-50">
+        <div className="border-r border-slate-300 p-2.5 text-center tabular-nums">
+          <p className="text-[0.65rem] font-black uppercase tracking-wide text-slate-500">Attributed Earned</p>
+          <p className="text-2xl font-black text-teal-800">{attributedEarned}</p>
+        </div>
+        <div className="border-r border-slate-300 p-2.5 text-center tabular-nums">
+          <p className="text-[0.65rem] font-black uppercase tracking-wide text-slate-500">Attributed Gifted</p>
+          <p className="text-2xl font-black text-amber-800">{attributedGifted}</p>
+        </div>
+        <div className="p-2.5 text-center tabular-nums">
+          <p className="text-[0.65rem] font-black uppercase tracking-wide text-slate-500">Attributed Net</p>
+          <p className={`text-2xl font-black ${attributedEarned - attributedGifted >= 0 ? 'text-teal-800' : 'text-amber-800'}`}>
+            {formatSigned(attributedEarned - attributedGifted)}
+          </p>
+        </div>
+      </div>
+
+      {players.length === 0 ? (
+        <div className="m-3 border-l-4 border-slate-500 bg-slate-100 p-3">
+          <p className="font-black text-slate-900">No roster yet</p>
+          <p className="mt-1 text-sm font-bold text-slate-600">Player attribution will appear after a roster is added.</p>
+        </div>
+      ) : (
+        <div className="p-3">
+          {!hasPlayerEvents ? (
+            <p className="mb-3 border-l-4 border-teal-600 bg-teal-50 p-2.5 text-sm font-bold text-teal-950">
+              No player-attributed events are recorded yet. Every roster player is shown below.
+            </p>
+          ) : null}
+
+          <div className="grid gap-2">
+            {rosterRows.map(({ player, summary: playerSummary }) => (
+              <article key={player.id} aria-label={`Player ${player.number} ${player.name}`} className="border border-slate-300 bg-white shadow-[2px_2px_0_0_#cbd5e1]">
+                <div className="grid grid-cols-[minmax(0,1fr)_3.65rem_3.65rem_3.65rem] items-center gap-1 border-b border-slate-200 p-2.5 sm:grid-cols-[minmax(0,1fr)_4.5rem_4.5rem_4.5rem]">
+                  <div className="min-w-0 border-l-4 border-slate-900 pl-2">
+                    <p className="text-xs font-black uppercase text-slate-500">Jersey #{player.number}</p>
+                    <h4 className="break-words text-base font-black leading-tight text-slate-950">{player.name}</h4>
+                  </div>
+                  <PlayerTally label="Earned" value={playerSummary.earnedPoints} tone="earned" />
+                  <PlayerTally label="Gifted" value={playerSummary.giftsConceded} tone="gifted" />
+                  <PlayerTally label="Net" value={playerSummary.balance} tone="net" />
+                </div>
+                <div className="grid gap-2 bg-slate-50 p-2.5 sm:grid-cols-2">
+                  <EventBreakdown label="Earned by" items={playerSummary.earnedByType} emptyText="No earned points." tone="earned" />
+                  <EventBreakdown label="Gifted by" items={playerSummary.giftsConcededByType} emptyText="No gifts charged." tone="gifted" />
+                </div>
+              </article>
+            ))}
+          </div>
+
+        </div>
+      )}
+
+      {hasUnclearAttribution ? (
+        <article aria-label="Team or unclear attribution" className="m-3 mt-0 border-2 border-dashed border-slate-400 bg-slate-100">
+          <div className="grid grid-cols-[minmax(0,1fr)_3.65rem_3.65rem_3.65rem] items-center gap-1 border-b border-slate-300 p-2.5 sm:grid-cols-[minmax(0,1fr)_4.5rem_4.5rem_4.5rem]">
+            <div className="min-w-0 border-l-4 border-slate-500 pl-2">
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">Reconciliation</p>
+              <h4 className="text-base font-black text-slate-950">Team / Unclear</h4>
+            </div>
+            <PlayerTally label="Earned" value={unclearEarned} tone="earned" />
+            <PlayerTally label="Gifted" value={unclearGifted} tone="gifted" />
+            <PlayerTally label="Net" value={unclearEarned - unclearGifted} tone="net" />
+          </div>
+          <div className="p-2.5">
+            <p className="text-xs font-bold leading-snug text-slate-600">
+              Reconciles points entered without an individual player attribution.
+            </p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <EventBreakdown label="Earned by" items={unclearEarnedByType} emptyText="No unclear earned points." tone="neutral" />
+              <EventBreakdown label="Gifted by" items={unclearGiftedByType} emptyText="No unclear gifts." tone="neutral" />
+            </div>
+          </div>
+        </article>
+      ) : null}
+    </section>
   );
 };
 

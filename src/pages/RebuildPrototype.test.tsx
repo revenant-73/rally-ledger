@@ -4,7 +4,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuth } from '../hooks/useAuth';
 import { useMatch } from '../hooks/useMatch';
 import { useAccess } from '../hooks/queries/useAccess';
-import { buildRally, type PrototypeMatchInput } from '../prototype/matchbookModel';
+import {
+  buildRally,
+  type PendingRallyInput,
+  type PrototypeMatchInput,
+  type PrototypePlayer,
+  type SetSetup,
+} from '../prototype/matchbookModel';
 import {
   createFreshPrototypeDocument,
   getTeamPrototypeStorageKey,
@@ -31,6 +37,70 @@ const makeScore = (setup: PrototypeCloudDocument['setup'], centuryScore: number,
   }
   return rallies;
 };
+
+const reportRoster: PrototypePlayer[] = [
+  { id: 'p12', number: '12', name: 'Avery Twelve', active: true },
+  { id: 'p2', number: '2', name: 'Blake Two', active: true },
+  { id: 'p-libero', number: 'L', name: 'Casey Libero', active: false },
+];
+
+const makeReportSetup = (opponent: string, setNumber = 1): SetSetup => ({
+  opponent,
+  setNumber,
+  initialMode: 'serving',
+  initialRotation: 1,
+  initialServerId: 'p12',
+  lineup: { 1: 'p12', 2: 'p2' },
+  rotationServers: { 1: 'p12', 2: 'p2' },
+});
+
+const makeReportRallies = (
+  setup: SetSetup,
+  inputs: Array<PendingRallyInput & { active?: boolean }>,
+) => inputs.reduce<PrototypeCloudDocument['rallies']>((rallies, input, index) => {
+  const { active = true, ...rallyInput } = input;
+  const rally = buildRally(
+    setup,
+    rallies,
+    rallyInput,
+    () => `${setup.opponent}-rally-${index + 1}`,
+    () => `2026-09-0${setup.setNumber}T12:00:${String(index).padStart(2, '0')}.000Z`,
+  );
+  return [...rallies, { ...rally, active }];
+}, []);
+
+const makeReportMatch = (
+  id: string,
+  opponent: string,
+  date: string,
+  inputs: Array<PendingRallyInput & { active?: boolean }>,
+): PrototypeMatchInput => {
+  const setup = makeReportSetup(opponent);
+  return {
+    id,
+    opponent,
+    date,
+    result: 'Win',
+    sets: [{ id: `${id}-set-1`, setNumber: 1, setup, rallies: makeReportRallies(setup, inputs) }],
+  };
+};
+
+const libertyReportMatch = () => makeReportMatch('report-liberty', 'Liberty', '2026-09-01', [
+  { winner: 'century', event: 'century_ace' },
+  { winner: 'century', event: 'century_kill', creditedPlayerId: 'p2' },
+  { winner: 'century', event: 'century_block', teamAttribution: true },
+  { winner: 'opponent', event: 'serve_error' },
+  { winner: 'opponent', event: 'receive_error', chargedPlayerId: 'p2' },
+  { winner: 'opponent', event: 'ball_control_error', teamAttribution: true },
+  { winner: 'century', event: 'score_adjustment', scoreAdjustment: { century: 3 } },
+  { winner: 'century', event: 'century_kill', creditedPlayerId: 'p2', active: false },
+]);
+
+const centralReportMatch = () => makeReportMatch('report-central', 'Central', '2026-09-02', [
+  { winner: 'century', event: 'century_kill', creditedPlayerId: 'p2' },
+  { winner: 'opponent', event: 'attack_error', chargedPlayerId: 'p2' },
+  { winner: 'century', event: 'century_block', creditedPlayerId: 'p12' },
+]);
 
 const renderWithDocument = (document: PrototypeCloudDocument) => {
   const team = {
@@ -344,5 +414,144 @@ describe('RebuildPrototype match launch flow', () => {
     await user.click(screen.getByRole('button', { name: 'Back' }));
     expect(await screen.findByRole('heading', { name: 'Ready for the next serve?' })).toBeInTheDocument();
     expect(screen.queryByText('CENTURY POINT')).not.toBeInTheDocument();
+  });
+});
+
+describe('RebuildPrototype player reports', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.mocked(useAuth).mockReturnValue({
+      user: { id: 'coach-1', email: 'coach@example.com', name: 'Coach' }, logout: vi.fn(),
+    } as unknown as ReturnType<typeof useAuth>);
+  });
+
+  const makeReportDocument = () => {
+    const document = createFreshPrototypeDocument(new Date('2026-09-09T12:00:00.000Z'));
+    document.lifecycle = 'complete';
+    document.roster = reportRoster;
+    document.currentMatchId = 'report-liberty';
+    document.seasonMatches = [libertyReportMatch(), centralReportMatch()];
+    return document;
+  };
+
+  it('shows every roster player in jersey order with earned, gifted, and reconciled event details', async () => {
+    const user = userEvent.setup();
+    renderWithDocument(makeReportDocument());
+
+    await user.click(await screen.findByRole('button', { name: 'Season Reports' }));
+    await user.click(screen.getByRole('button', { name: 'Player Report' }));
+
+    expect(screen.getByRole('heading', { name: 'Match Player Report' })).toBeInTheDocument();
+    expect(screen.getByText('Earned points are credited actions. Gifted points are errors charged to a player.')).toBeInTheDocument();
+    const playerCards = screen.getAllByRole('article', { name: /^Player / });
+    expect(playerCards.map((card) => card.getAttribute('aria-label'))).toEqual([
+      'Player 2 Blake Two',
+      'Player 12 Avery Twelve',
+      'Player L Casey Libero',
+    ]);
+
+    const avery = screen.getByRole('article', { name: 'Player 12 Avery Twelve' });
+    expect(within(avery).getByLabelText('Earned 1')).toBeInTheDocument();
+    expect(within(avery).getByLabelText('Gifted 1')).toBeInTheDocument();
+    expect(within(avery).getByLabelText('Net 0')).toBeInTheDocument();
+    expect(within(avery).getByText(/Aces/)).toHaveTextContent('Aces 1');
+    expect(within(avery).getByText(/Serving/)).toHaveTextContent('Serving 1');
+
+    const blake = screen.getByRole('article', { name: 'Player 2 Blake Two' });
+    expect(within(blake).getByText(/Kills/)).toHaveTextContent('Kills 1');
+    expect(within(blake).getByText(/Serve Receive/)).toHaveTextContent('Serve Receive 1');
+
+    const zeroPlayer = screen.getByRole('article', { name: 'Player L Casey Libero' });
+    expect(within(zeroPlayer).getByLabelText('Earned 0')).toBeInTheDocument();
+    expect(within(zeroPlayer).getByLabelText('Gifted 0')).toBeInTheDocument();
+    expect(within(zeroPlayer).getByText('No earned points.')).toBeInTheDocument();
+    expect(within(zeroPlayer).getByText('No gifts charged.')).toBeInTheDocument();
+
+    const unclear = screen.getByRole('article', { name: 'Team or unclear attribution' });
+    expect(within(unclear).getByLabelText('Earned 1')).toBeInTheDocument();
+    expect(within(unclear).getByLabelText('Gifted 1')).toBeInTheDocument();
+    expect(within(unclear).getByText(/Blocks/)).toHaveTextContent('Blocks 1');
+    expect(within(unclear).getByText(/Ball Control/)).toHaveTextContent('Ball Control 1');
+    expect(screen.getByText('Attributed Earned').nextSibling).toHaveTextContent('2');
+    expect(screen.getByText('Attributed Gifted').nextSibling).toHaveTextContent('2');
+  });
+
+  it('updates the player ledger when the selected match changes', async () => {
+    const user = userEvent.setup();
+    renderWithDocument(makeReportDocument());
+
+    await user.click(await screen.findByRole('button', { name: 'Season Reports' }));
+    await user.click(screen.getByRole('button', { name: 'Player Report' }));
+    expect(screen.getByRole('article', { name: 'Team or unclear attribution' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /vs Central/ }));
+    expect(screen.getByText('Century vs Central · Sep 2')).toBeInTheDocument();
+    expect(screen.queryByRole('article', { name: 'Team or unclear attribution' })).not.toBeInTheDocument();
+    const avery = screen.getByRole('article', { name: 'Player 12 Avery Twelve' });
+    expect(within(avery).getByLabelText('Earned 1')).toBeInTheDocument();
+    expect(within(avery).getByLabelText('Gifted 0')).toBeInTheDocument();
+    const blake = screen.getByRole('article', { name: 'Player 2 Blake Two' });
+    expect(within(blake).getByLabelText('Earned 1')).toBeInTheDocument();
+    expect(within(blake).getByLabelText('Gifted 1')).toBeInTheDocument();
+  });
+
+  it('aggregates finalized matches for the season without including the live match', async () => {
+    const user = userEvent.setup();
+    const document = createFreshPrototypeDocument(new Date('2026-09-09T12:00:00.000Z'));
+    document.lifecycle = 'live';
+    document.roster = reportRoster;
+    document.currentMatchId = 'live-match';
+    document.setup = makeReportSetup('Live Opponent');
+    document.draftSetup = document.setup;
+    document.rallies = makeReportRallies(document.setup, [
+      { winner: 'century', event: 'century_ace' },
+      { winner: 'century', event: 'century_ace' },
+    ]);
+    document.seasonMatches = [libertyReportMatch(), centralReportMatch()];
+    renderWithDocument(document);
+
+    await user.click(await screen.findByRole('button', { name: 'Season Reports' }));
+    await user.click(screen.getByRole('button', { name: 'Season' }));
+    await user.click(screen.getByRole('button', { name: 'Player Report' }));
+
+    expect(screen.getByRole('heading', { name: 'Season Player Report' })).toBeInTheDocument();
+    expect(screen.getByText('2 finalized matches')).toBeInTheDocument();
+    expect(screen.getByText('Attributed Earned').nextSibling).toHaveTextContent('4');
+    expect(screen.getByText('Attributed Gifted').nextSibling).toHaveTextContent('3');
+    const avery = screen.getByRole('article', { name: 'Player 12 Avery Twelve' });
+    expect(within(avery).getByLabelText('Earned 2')).toBeInTheDocument();
+    expect(within(avery).getByLabelText('Gifted 1')).toBeInTheDocument();
+    expect(within(avery).getByLabelText('Net +1')).toBeInTheDocument();
+  });
+
+  it('keeps useful empty states and preserves the existing overview report', async () => {
+    const user = userEvent.setup();
+    const document = createFreshPrototypeDocument(new Date('2026-09-09T12:00:00.000Z'));
+    document.lifecycle = 'complete';
+    document.roster = reportRoster;
+    document.currentMatchId = 'empty-report';
+    document.seasonMatches = [{ id: 'empty-report', opponent: 'West', date: '2026-09-03', result: 'Draw', sets: [] }];
+    const { unmount } = renderWithDocument(document);
+
+    await user.click(await screen.findByRole('button', { name: 'Season Reports' }));
+    expect(screen.getByText('Where Earning')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Player Report' }));
+    expect(screen.getByText('No player-attributed events are recorded yet. Every roster player is shown below.')).toBeInTheDocument();
+    expect(screen.getAllByRole('article', { name: /^Player / })).toHaveLength(3);
+    await user.click(screen.getByRole('button', { name: 'Overview' }));
+    expect(screen.getByText('Where Earning')).toBeInTheDocument();
+
+    unmount();
+    localStorage.clear();
+    const noRosterDocument = createFreshPrototypeDocument(new Date('2026-09-09T12:00:00.000Z'));
+    noRosterDocument.lifecycle = 'complete';
+    noRosterDocument.currentMatchId = 'report-liberty';
+    noRosterDocument.seasonMatches = [libertyReportMatch()];
+    renderWithDocument(noRosterDocument);
+    await user.click(await screen.findByRole('button', { name: 'Season Reports' }));
+    await user.click(screen.getByRole('button', { name: 'Player Report' }));
+    expect(screen.getByText('No roster yet')).toBeInTheDocument();
+    expect(screen.getByText('Player attribution will appear after a roster is added.')).toBeInTheDocument();
+    expect(screen.getByRole('article', { name: 'Team or unclear attribution' })).toBeInTheDocument();
   });
 });
