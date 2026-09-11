@@ -76,7 +76,8 @@ const actionClass =
 
 interface PendingSelection {
   event: TerminalEvent;
-  mode: 'player' | 'error';
+  mode: 'player' | 'assist' | 'error';
+  attackPlayerId?: string;
   editingId?: string;
 }
 
@@ -167,21 +168,22 @@ const getRallyDescription = (rally: RallyRecord, players: PrototypePlayer[]) => 
 
   const playerId = rally.creditedPlayerId ?? rally.chargedPlayerId;
   const playerText = rally.teamAttribution ? 'TEAM / UNCLEAR' : getPlayerLabel(players, playerId);
-  const extra = rally.errorSubtype ? ` - ${rally.errorSubtype}` : playerId || rally.teamAttribution ? ` - ${playerText}` : '';
+  const assistText = rally.assistedByPlayerId ? ` - AST ${getPlayerLabel(players, rally.assistedByPlayerId)}` : '';
+  const extra = rally.errorSubtype ? ` - ${rally.errorSubtype}` : playerId || rally.teamAttribution ? ` - ${playerText}${assistText}` : assistText;
   return `${rally.winner === 'century' ? 'Century' : 'Opponent'} ${eventLabels[rally.event]}${extra}`;
 };
 
 const getTopPlayers = (
   summary: ReturnType<typeof summarizeSet>,
   players: PrototypePlayer[],
-  key: 'earnedPoints' | 'giftsConceded',
+  key: 'earnedPoints' | 'assists' | 'giftsConceded',
 ) =>
   summary.players
     .filter((item) => item[key] > 0)
     .sort((a, b) => b[key] - a[key] || getPlayerLabel(players, a.playerId).localeCompare(getPlayerLabel(players, b.playerId)))
     .slice(0, 2);
 
-const makeInput = (event: TerminalEvent, playerId?: string, errorSubtype?: ErrorSubtype): PendingRallyInput => {
+const makeInput = (event: TerminalEvent, playerId?: string, errorSubtype?: ErrorSubtype, assistedByPlayerId?: string): PendingRallyInput => {
   const attribution = eventNeedsPlayer(event);
   const teamAttribution = playerId === TEAM_ATTRIBUTION_ID;
   return {
@@ -189,6 +191,7 @@ const makeInput = (event: TerminalEvent, playerId?: string, errorSubtype?: Error
     event,
     errorSubtype,
     creditedPlayerId: attribution === 'credited' && !teamAttribution ? playerId : undefined,
+    assistedByPlayerId: event === 'century_kill' ? assistedByPlayerId : undefined,
     chargedPlayerId: attribution === 'charged' && !teamAttribution ? playerId : undefined,
     teamAttribution: teamAttribution || undefined,
   };
@@ -621,6 +624,23 @@ const RebuildPrototype = () => {
     if (!pending) {
       return;
     }
+
+    if (pending.event === 'century_kill' && pending.mode === 'player') {
+      setPending({ ...pending, mode: 'assist', attackPlayerId: playerId });
+      return;
+    }
+
+    if (pending.event === 'century_kill' && pending.mode === 'assist') {
+      const assistPlayerId = playerId === TEAM_ATTRIBUTION_ID ? undefined : playerId;
+      const input = makeInput(pending.event, pending.attackPlayerId, undefined, assistPlayerId);
+      if (pending.editingId) {
+        updateLastRally(input, pending.editingId);
+      } else {
+        recordRally(input);
+      }
+      return;
+    }
+
     const input = makeInput(pending.event, playerId);
     if (pending.editingId) {
       updateLastRally(input, pending.editingId);
@@ -2163,15 +2183,29 @@ const PickerSheet = ({ pending, players, lineup, onPlayer, onErrorSubtype, onCan
   const lineupPlayerIds = rotations.map((rotation) => lineup[rotation]).filter((playerId): playerId is string => Boolean(playerId));
   const lineupPlayers = lineupPlayerIds
     .map((playerId) => players.find((player) => player.id === playerId))
-    .filter((player): player is PrototypePlayer => Boolean(player));
-  const reservePlayers = players.filter((player) => !lineupPlayerIds.includes(player.id));
-  const showTeamButton = eventNeedsPlayer(pending.event) === 'charged' || pending.event === 'century_block';
+    .filter((player): player is PrototypePlayer => Boolean(player))
+    .filter((player) => player.id !== pending.attackPlayerId);
+  const reservePlayers = players
+    .filter((player) => !lineupPlayerIds.includes(player.id))
+    .filter((player) => player.id !== pending.attackPlayerId);
+  const showTeamButton = pending.mode === 'player' && (eventNeedsPlayer(pending.event) === 'charged' || pending.event === 'century_block');
+  const pickerTitle =
+    pending.mode === 'assist'
+      ? 'Assist?'
+      : pending.mode === 'player'
+        ? `Player for ${eventLabels[pending.event]}`
+        : 'Their Error Type';
 
   return (
     <DialogBackdrop onClose={onCancel} labelledBy="picker-sheet-title" className="fixed inset-0 z-30 flex items-end bg-black/70 p-3">
       <section className="w-full rounded bg-slate-100 p-3 text-slate-950 shadow-xl sm:p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 id="picker-sheet-title" className="text-lg font-black sm:text-xl">{pending.mode === 'player' ? `Player for ${eventLabels[pending.event]}` : 'Their Error Type'}</h2>
+          <div className="min-w-0">
+            <h2 id="picker-sheet-title" className="text-lg font-black sm:text-xl">{pickerTitle}</h2>
+            {pending.mode === 'assist' && pending.attackPlayerId ? (
+              <p className="truncate text-xs font-bold text-slate-600">Kill by {getPlayerLabel(players, pending.attackPlayerId)}</p>
+            ) : null}
+          </div>
           <button type="button" onClick={onCancel} className="min-h-14 rounded bg-slate-950 px-4 font-black text-white">
             Back
           </button>
@@ -2186,6 +2220,11 @@ const PickerSheet = ({ pending, players, lineup, onPlayer, onErrorSubtype, onCan
           </div>
         ) : (
           <div className="grid gap-3">
+            {pending.mode === 'assist' ? (
+              <button type="button" onClick={() => onPlayer(TEAM_ATTRIBUTION_ID)} className="min-h-14 rounded border border-slate-300 bg-white px-3 text-left text-base font-black text-slate-950 shadow-sm">
+                No Assist / Skip
+              </button>
+            ) : null}
             <section>
               <p className="mb-1.5 text-xs font-black uppercase text-slate-500">Current Lineup</p>
               <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 xl:grid-cols-7">
@@ -2739,10 +2778,12 @@ const compareRosterPlayers = (left: PrototypePlayer, right: PrototypePlayer) => 
 
 const formatSigned = (value: number) => (value > 0 ? `+${value}` : String(value));
 
-const PlayerTally = ({ label, value, tone }: { label: string; value: number; tone: 'earned' | 'gifted' | 'net' }) => {
+const PlayerTally = ({ label, value, tone }: { label: string; value: number; tone: 'earned' | 'assist' | 'gifted' | 'net' }) => {
   const toneClass =
     tone === 'earned'
       ? 'text-teal-800'
+      : tone === 'assist'
+        ? 'text-sky-800'
       : tone === 'gifted'
         ? 'text-amber-800'
         : value > 0
@@ -2812,13 +2853,14 @@ const PlayerReport = ({
     .map((player) => ({ player, summary: playerSummaryById.get(player.id) }))
     .filter((row): row is { player: PrototypePlayer; summary: PlayerSummary } => Boolean(row.summary));
   const attributedEarned = summary.players.reduce((total, player) => total + player.earnedPoints, 0);
+  const attributedAssists = summary.players.reduce((total, player) => total + player.assists, 0);
   const attributedGifted = summary.players.reduce((total, player) => total + player.giftsConceded, 0);
   const unclearEarned = Math.max(0, summary.team.earnedPoints - attributedEarned);
   const unclearGifted = Math.max(0, summary.team.giftsConceded - attributedGifted);
   const unclearEarnedByType = getReconciledBreakdown(summary.team.earnedByType, summary.players, 'earnedByType');
   const unclearGiftedByType = getReconciledBreakdown(summary.team.giftsConcededByType, summary.players, 'giftsConcededByType');
   const hasUnclearAttribution = unclearEarned > 0 || unclearGifted > 0;
-  const hasPlayerEvents = attributedEarned > 0 || attributedGifted > 0;
+  const hasPlayerEvents = attributedEarned > 0 || attributedAssists > 0 || attributedGifted > 0;
 
   return (
     <section className="overflow-hidden border border-slate-300 bg-white" aria-labelledby={`${title.replaceAll(' ', '-').toLowerCase()}-title`}>
@@ -2826,14 +2868,18 @@ const PlayerReport = ({
         <p className="text-xs font-black uppercase tracking-wide text-teal-800">{context}</p>
         <h3 id={`${title.replaceAll(' ', '-').toLowerCase()}-title`} className="mt-0.5 text-2xl font-black text-slate-950">{title}</h3>
         <p className="mt-1 text-sm font-bold leading-snug text-slate-600">
-          Earned points are credited actions. Gifted points are errors charged to a player.
+          Earned points are credited actions. Assists credit the setter on Century kills. Gifted points are errors charged to a player.
         </p>
       </header>
 
-      <div className="grid grid-cols-3 border-b border-slate-300 bg-slate-50">
+      <div className="grid grid-cols-2 border-b border-slate-300 bg-slate-50 sm:grid-cols-4">
         <div className="border-r border-slate-300 p-2.5 text-center tabular-nums">
           <p className="text-[0.65rem] font-black uppercase tracking-wide text-slate-500">Attributed Earned</p>
           <p className="text-2xl font-black text-teal-800">{attributedEarned}</p>
+        </div>
+        <div className="border-r border-slate-300 p-2.5 text-center tabular-nums">
+          <p className="text-[0.65rem] font-black uppercase tracking-wide text-slate-500">Attributed Assists</p>
+          <p className="text-2xl font-black text-sky-800">{attributedAssists}</p>
         </div>
         <div className="border-r border-slate-300 p-2.5 text-center tabular-nums">
           <p className="text-[0.65rem] font-black uppercase tracking-wide text-slate-500">Attributed Gifted</p>
@@ -2863,17 +2909,19 @@ const PlayerReport = ({
           <div className="grid gap-2">
             {rosterRows.map(({ player, summary: playerSummary }) => (
               <article key={player.id} aria-label={`Player ${player.number} ${player.name}`} className="border border-slate-300 bg-white shadow-[2px_2px_0_0_#cbd5e1]">
-                <div className="grid grid-cols-[minmax(0,1fr)_3.65rem_3.65rem_3.65rem] items-center gap-1 border-b border-slate-200 p-2.5 sm:grid-cols-[minmax(0,1fr)_4.5rem_4.5rem_4.5rem]">
+                <div className="grid grid-cols-[minmax(0,1fr)_3.45rem_3.45rem_3.45rem_3.45rem] items-center gap-1 border-b border-slate-200 p-2.5 sm:grid-cols-[minmax(0,1fr)_4.25rem_4.25rem_4.25rem_4.25rem]">
                   <div className="min-w-0 border-l-4 border-slate-900 pl-2">
                     <p className="text-xs font-black uppercase text-slate-500">Jersey #{player.number}</p>
                     <h4 className="break-words text-base font-black leading-tight text-slate-950">{player.name}</h4>
                   </div>
                   <PlayerTally label="Earned" value={playerSummary.earnedPoints} tone="earned" />
+                  <PlayerTally label="Assists" value={playerSummary.assists} tone="assist" />
                   <PlayerTally label="Gifted" value={playerSummary.giftsConceded} tone="gifted" />
                   <PlayerTally label="Net" value={playerSummary.balance} tone="net" />
                 </div>
-                <div className="grid gap-2 bg-slate-50 p-2.5 sm:grid-cols-2">
+                <div className="grid gap-2 bg-slate-50 p-2.5 sm:grid-cols-3">
                   <EventBreakdown label="Earned by" items={playerSummary.earnedByType} emptyText="No earned points." tone="earned" />
+                  <EventBreakdown label="Assisted" items={playerSummary.assists > 0 ? [{ key: 'assists', label: 'Kills', total: playerSummary.assists }] : []} emptyText="No assists." tone="neutral" />
                   <EventBreakdown label="Gifted by" items={playerSummary.giftsConcededByType} emptyText="No gifts charged." tone="gifted" />
                 </div>
               </article>
@@ -2920,6 +2968,7 @@ const ReportInsightGrid = ({ summary, players }: { summary: ReturnType<typeof su
       <div className="grid content-start gap-3">
         <BreakdownBlock title="Where Earning" emptyText="No earned points yet" items={summary.team.earnedByType} tone="good" />
         <PlayerBlock title="Who Earning" emptyText="No player-earned points yet" players={players} summary={summary} mode="earnedPoints" />
+        <PlayerBlock title="Who Assisting" emptyText="No assists tracked yet" players={players} summary={summary} mode="assists" />
       </div>
       <div className="grid content-start gap-3">
         <BreakdownBlock title="Where Gifting" emptyText="No Century gifts conceded" items={summary.team.giftsConcededByType} tone="warn" />
@@ -2957,6 +3006,7 @@ const SummaryPanel = ({ summary, players, onClose }: SummaryPanelProps) => (
         <div className="grid content-start gap-3">
           <BreakdownBlock title="Where Earning" emptyText="No earned points yet" items={summary.team.earnedByType} tone="good" />
           <PlayerBlock title="Who Earning" emptyText="No player-earned points yet" players={players} summary={summary} mode="earnedPoints" />
+          <PlayerBlock title="Who Assisting" emptyText="No assists tracked yet" players={players} summary={summary} mode="assists" />
         </div>
         <div className="grid content-start gap-3">
           <BreakdownBlock title="Where Gifting" emptyText="No Century gifts conceded" items={summary.team.giftsConcededByType} tone="warn" />
@@ -3008,7 +3058,7 @@ const PlayerBlock = ({
   emptyText: string;
   players: PrototypePlayer[];
   summary: ReturnType<typeof summarizeSet>;
-  mode: 'earnedPoints' | 'giftsConceded';
+  mode: 'earnedPoints' | 'assists' | 'giftsConceded';
 }) => {
   const topPlayers = getTopPlayers(summary, players, mode);
 
@@ -3023,7 +3073,7 @@ const PlayerBlock = ({
                 key={item.playerId}
                 label={getPlayerLabel(players, item.playerId)}
                 value={item[mode]}
-                tone={mode === 'earnedPoints' ? 'good' : 'warn'}
+                tone={mode === 'earnedPoints' ? 'good' : mode === 'assists' ? 'neutral' : 'warn'}
               />
             );
           })

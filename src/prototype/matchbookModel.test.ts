@@ -68,6 +68,7 @@ const scriptedSetup: SetSetup = {
 type ScriptedRally = {
   event: TerminalEvent;
   creditedPlayerId?: string;
+  assistedByPlayerId?: string;
   chargedPlayerId?: string;
   errorSubtype?: ErrorSubtype;
   teamAttribution?: boolean;
@@ -225,6 +226,25 @@ describe('matchbook prototype rally model', () => {
       giftsConcededByType: [{ key: 'serve_error', label: 'Serving', total: 1 }],
     });
     expect(summary.players.find((player) => player.playerId === 'p3')).toMatchObject({ giftsConceded: 1 });
+  });
+
+  it('credits assists on Century kills without double-counting earned points', () => {
+    const rallies = add([], 'century_kill', { creditedPlayerId: 'p2', assistedByPlayerId: 'p1' });
+    const summary = summarizeSet(rallies, players);
+
+    expect(summary.team.earnedPoints).toBe(1);
+    expect(summary.players.find((player) => player.playerId === 'p2')).toMatchObject({
+      earnedPoints: 1,
+      assists: 0,
+      balance: 1,
+      earnedByType: [{ key: 'century_kill', label: 'Kills', total: 1 }],
+    });
+    expect(summary.players.find((player) => player.playerId === 'p1')).toMatchObject({
+      earnedPoints: 0,
+      assists: 1,
+      balance: 0,
+      earnedByType: [],
+    });
   });
 
   it('uses -- for zero-denominator percentages', () => {

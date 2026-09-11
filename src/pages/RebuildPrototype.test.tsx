@@ -87,7 +87,7 @@ const makeReportMatch = (
 
 const libertyReportMatch = () => makeReportMatch('report-liberty', 'Liberty', '2026-09-01', [
   { winner: 'century', event: 'century_ace' },
-  { winner: 'century', event: 'century_kill', creditedPlayerId: 'p2' },
+  { winner: 'century', event: 'century_kill', creditedPlayerId: 'p2', assistedByPlayerId: 'p12' },
   { winner: 'century', event: 'century_block', teamAttribution: true },
   { winner: 'opponent', event: 'serve_error' },
   { winner: 'opponent', event: 'receive_error', chargedPlayerId: 'p2' },
@@ -97,7 +97,7 @@ const libertyReportMatch = () => makeReportMatch('report-liberty', 'Liberty', '2
 ]);
 
 const centralReportMatch = () => makeReportMatch('report-central', 'Central', '2026-09-02', [
-  { winner: 'century', event: 'century_kill', creditedPlayerId: 'p2' },
+  { winner: 'century', event: 'century_kill', creditedPlayerId: 'p2', assistedByPlayerId: 'p12' },
   { winner: 'opponent', event: 'attack_error', chargedPlayerId: 'p2' },
   { winner: 'century', event: 'century_block', creditedPlayerId: 'p12' },
 ]);
@@ -326,6 +326,35 @@ describe('RebuildPrototype match launch flow', () => {
     });
   });
 
+  it('records an optional assist after selecting the attacker for a kill', async () => {
+    const user = userEvent.setup();
+    const document = createFreshPrototypeDocument(new Date('2026-09-09T12:00:00.000Z'));
+    document.roster = reportRoster.map((player) => ({ ...player, active: true }));
+    document.lifecycle = 'live';
+    document.setup = makeReportSetup('Liberty');
+    document.draftSetup = document.setup;
+    document.currentLineup = document.setup.lineup ?? {};
+    renderWithDocument(document);
+
+    await user.click(await screen.findByRole('button', { name: 'Resume Match' }));
+    await user.click(screen.getAllByRole('button', { name: /KILL/ })[0]);
+    await user.click(screen.getByRole('button', { name: 'Choose lineup #2 Blake T.' }));
+
+    expect(screen.getByRole('heading', { name: 'Assist?' })).toBeInTheDocument();
+    expect(screen.getByText('Kill by #2 Blake T.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Choose lineup #12 Avery T.' }));
+
+    expect(await screen.findAllByText('Century KILL - #2 Blake T. - AST #12 Avery T.')).toHaveLength(2);
+    await waitFor(() => {
+      const saved = JSON.parse(localStorage.getItem(getTeamPrototypeStorageKey('team-1')) ?? '{}') as PrototypeCloudDocument;
+      expect(saved.rallies[0]).toMatchObject({
+        event: 'century_kill',
+        creditedPlayerId: 'p2',
+        assistedByPlayerId: 'p12',
+      });
+    });
+  });
+
   it('cancels manual match completion without changing saved entries', async () => {
     const user = userEvent.setup();
     const document = createFreshPrototypeDocument(new Date('2026-09-09T12:00:00.000Z'));
@@ -442,7 +471,7 @@ describe('RebuildPrototype player reports', () => {
     await user.click(screen.getByRole('button', { name: 'Player Report' }));
 
     expect(screen.getByRole('heading', { name: 'Match Player Report' })).toBeInTheDocument();
-    expect(screen.getByText('Earned points are credited actions. Gifted points are errors charged to a player.')).toBeInTheDocument();
+    expect(screen.getByText('Earned points are credited actions. Assists credit the setter on Century kills. Gifted points are errors charged to a player.')).toBeInTheDocument();
     const playerCards = screen.getAllByRole('article', { name: /^Player / });
     expect(playerCards.map((card) => card.getAttribute('aria-label'))).toEqual([
       'Player 2 Blake Two',
@@ -452,19 +481,24 @@ describe('RebuildPrototype player reports', () => {
 
     const avery = screen.getByRole('article', { name: 'Player 12 Avery Twelve' });
     expect(within(avery).getByLabelText('Earned 1')).toBeInTheDocument();
+    expect(within(avery).getByLabelText('Assists 1')).toBeInTheDocument();
     expect(within(avery).getByLabelText('Gifted 1')).toBeInTheDocument();
     expect(within(avery).getByLabelText('Net 0')).toBeInTheDocument();
     expect(within(avery).getByText(/Aces/)).toHaveTextContent('Aces 1');
+    expect(within(avery).getByText(/Kills/)).toHaveTextContent('Kills 1');
     expect(within(avery).getByText(/Serving/)).toHaveTextContent('Serving 1');
 
     const blake = screen.getByRole('article', { name: 'Player 2 Blake Two' });
+    expect(within(blake).getByLabelText('Assists 0')).toBeInTheDocument();
     expect(within(blake).getByText(/Kills/)).toHaveTextContent('Kills 1');
     expect(within(blake).getByText(/Serve Receive/)).toHaveTextContent('Serve Receive 1');
 
     const zeroPlayer = screen.getByRole('article', { name: 'Player L Casey Libero' });
     expect(within(zeroPlayer).getByLabelText('Earned 0')).toBeInTheDocument();
+    expect(within(zeroPlayer).getByLabelText('Assists 0')).toBeInTheDocument();
     expect(within(zeroPlayer).getByLabelText('Gifted 0')).toBeInTheDocument();
     expect(within(zeroPlayer).getByText('No earned points.')).toBeInTheDocument();
+    expect(within(zeroPlayer).getByText('No assists.')).toBeInTheDocument();
     expect(within(zeroPlayer).getByText('No gifts charged.')).toBeInTheDocument();
 
     const unclear = screen.getByRole('article', { name: 'Team or unclear attribution' });
@@ -473,6 +507,7 @@ describe('RebuildPrototype player reports', () => {
     expect(within(unclear).getByText(/Blocks/)).toHaveTextContent('Blocks 1');
     expect(within(unclear).getByText(/Ball Control/)).toHaveTextContent('Ball Control 1');
     expect(screen.getByText('Attributed Earned').nextSibling).toHaveTextContent('2');
+    expect(screen.getByText('Attributed Assists').nextSibling).toHaveTextContent('1');
     expect(screen.getByText('Attributed Gifted').nextSibling).toHaveTextContent('2');
   });
 
@@ -489,6 +524,7 @@ describe('RebuildPrototype player reports', () => {
     expect(screen.queryByRole('article', { name: 'Team or unclear attribution' })).not.toBeInTheDocument();
     const avery = screen.getByRole('article', { name: 'Player 12 Avery Twelve' });
     expect(within(avery).getByLabelText('Earned 1')).toBeInTheDocument();
+    expect(within(avery).getByLabelText('Assists 1')).toBeInTheDocument();
     expect(within(avery).getByLabelText('Gifted 0')).toBeInTheDocument();
     const blake = screen.getByRole('article', { name: 'Player 2 Blake Two' });
     expect(within(blake).getByLabelText('Earned 1')).toBeInTheDocument();
@@ -517,9 +553,11 @@ describe('RebuildPrototype player reports', () => {
     expect(screen.getByRole('heading', { name: 'Season Player Report' })).toBeInTheDocument();
     expect(screen.getByText('2 finalized matches')).toBeInTheDocument();
     expect(screen.getByText('Attributed Earned').nextSibling).toHaveTextContent('4');
+    expect(screen.getByText('Attributed Assists').nextSibling).toHaveTextContent('2');
     expect(screen.getByText('Attributed Gifted').nextSibling).toHaveTextContent('3');
     const avery = screen.getByRole('article', { name: 'Player 12 Avery Twelve' });
     expect(within(avery).getByLabelText('Earned 2')).toBeInTheDocument();
+    expect(within(avery).getByLabelText('Assists 2')).toBeInTheDocument();
     expect(within(avery).getByLabelText('Gifted 1')).toBeInTheDocument();
     expect(within(avery).getByLabelText('Net +1')).toBeInTheDocument();
   });

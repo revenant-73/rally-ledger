@@ -50,6 +50,7 @@ export interface RallyRecord {
   event: TerminalEvent;
   errorSubtype?: ErrorSubtype;
   creditedPlayerId?: string;
+  assistedByPlayerId?: string;
   chargedPlayerId?: string;
   teamAttribution?: boolean;
   scoreAdjustment?: Partial<Record<TeamSide, number>>;
@@ -69,6 +70,7 @@ export interface PendingRallyInput {
   event: TerminalEvent;
   errorSubtype?: ErrorSubtype;
   creditedPlayerId?: string;
+  assistedByPlayerId?: string;
   chargedPlayerId?: string;
   teamAttribution?: boolean;
   scoreAdjustment?: Partial<Record<TeamSide, number>>;
@@ -109,6 +111,7 @@ export interface RotationSummary {
 export interface PlayerSummary {
   playerId: string;
   earnedPoints: number;
+  assists: number;
   giftsConceded: number;
   balance: number;
   earnedByType: BreakdownItem[];
@@ -304,6 +307,7 @@ export const buildRally = (
     event: input.event,
     errorSubtype: input.errorSubtype,
     creditedPlayerId: input.creditedPlayerId,
+    assistedByPlayerId: input.assistedByPlayerId,
     chargedPlayerId: input.chargedPlayerId,
     teamAttribution: input.teamAttribution,
     scoreAdjustment: input.scoreAdjustment,
@@ -416,11 +420,13 @@ export const summarizeSet = (rallies: RallyRecord[], players: PrototypePlayer[])
 
   const playerSummaries = players.map((player) => {
     const credited = activeRallies.filter((rally) => rally.creditedPlayerId === player.id);
+    const assisted = activeRallies.filter((rally) => rally.event === 'century_kill' && rally.assistedByPlayerId === player.id);
     const charged = activeRallies.filter((rally) => rally.chargedPlayerId === player.id);
     const playerServes = serviceRallies.filter((rally) => rally.serverId === player.id);
     const playerServeErrors = playerServes.filter((rally) => rally.event === 'serve_error').length;
     const playerAces = playerServes.filter((rally) => rally.event === 'century_ace').length;
     const earnedPoints = credited.filter((rally) => rally.event !== 'century_ace').length + playerAces;
+    const assists = assisted.length;
     const giftsConceded = charged.length + playerServeErrors;
     const earnedRallies = [
       ...credited.filter((rally) => rally.event === 'century_kill' || rally.event === 'century_block'),
@@ -431,6 +437,7 @@ export const summarizeSet = (rallies: RallyRecord[], players: PrototypePlayer[])
     return {
       playerId: player.id,
       earnedPoints,
+      assists,
       giftsConceded,
       balance: earnedPoints - giftsConceded,
       earnedByType: countBreakdown(earnedRallies, ['century_ace', 'century_kill', 'century_block']),
