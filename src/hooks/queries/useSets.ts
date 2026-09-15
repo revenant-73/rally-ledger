@@ -30,15 +30,20 @@ export const useStartSet = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ userId, set: newSet }: { userId: string; set: Set }) => {
-      await apiPost('/.netlify/functions/sets', { action: 'start', userId, set: newSet });
-      return newSet;
-    },
+    mutationKey: ['startSet'],
+    mutationFn: startSetMutationFn,
     onSuccess: (newSet, variables) => {
       queryClient.invalidateQueries({ queryKey: ['sets', 'active', variables.userId, newSet.matchId] });
       queryClient.invalidateQueries({ queryKey: ['sets', 'match', variables.userId, newSet.matchId] });
     },
   });
+};
+
+type StartSetVariables = { userId: string; set: Set };
+
+export const startSetMutationFn = async ({ userId, set: newSet }: StartSetVariables) => {
+  await apiPost('/.netlify/functions/sets', { action: 'start', userId, set: newSet });
+  return newSet;
 };
 
 type UpdateSetVariables = { userId: string; setId: string; updates: Partial<Set>; matchId?: string };

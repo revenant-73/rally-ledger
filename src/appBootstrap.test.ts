@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Query } from '@tanstack/react-query';
 import { registerSW } from './pwaRegistration';
-import { createAppQueryClient, ONE_DAY, registerAppServiceWorker, shouldPersistQuery } from './appBootstrap';
+import {
+  createAppQueryClient,
+  LOCAL_CACHE_RETENTION_DAYS,
+  LOCAL_CACHE_RETENTION_MS,
+  registerAppServiceWorker,
+  shouldPersistQuery,
+} from './appBootstrap';
 import { APP_UPDATE_READY_EVENT } from './appUpdateEvents';
 
 vi.mock('./pwaRegistration', () => ({
@@ -32,8 +38,12 @@ describe('app bootstrap', () => {
   it('keeps persisted query cache and mutation retry defaults aligned', () => {
     const queryClient = createAppQueryClient();
 
-    expect(queryClient.getDefaultOptions().queries?.gcTime).toBe(ONE_DAY);
+    expect(LOCAL_CACHE_RETENTION_DAYS).toBe(30);
+    expect(queryClient.getDefaultOptions().queries?.gcTime).toBe(LOCAL_CACHE_RETENTION_MS);
     expect(queryClient.getDefaultOptions().mutations?.retry).toBe(3);
+    expect(queryClient.getMutationDefaults(['startMatch'])?.mutationFn).toBeTypeOf('function');
+    expect(queryClient.getMutationDefaults(['updateMatch'])?.mutationFn).toBeTypeOf('function');
+    expect(queryClient.getMutationDefaults(['startSet'])?.mutationFn).toBeTypeOf('function');
     expect(queryClient.getMutationDefaults(['addRally'])?.mutationFn).toBeTypeOf('function');
     expect(queryClient.getMutationDefaults(['undoLastRally'])?.mutationFn).toBeTypeOf('function');
     expect(queryClient.getMutationDefaults(['updateSet'])?.mutationFn).toBeTypeOf('function');

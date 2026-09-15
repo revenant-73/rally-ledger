@@ -18,24 +18,34 @@ export const useStartMatch = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ userId, match: newMatch }: { userId: string; match: Match }) => {
-      await apiPost('/.netlify/functions/matches', { action: 'start', userId, match: newMatch });
-      return newMatch;
-    },
+    mutationKey: ['startMatch'],
+    mutationFn: startMatchMutationFn,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['matches'] });
     },
   });
 };
 
+type StartMatchVariables = { userId: string; match: Match };
+
+export const startMatchMutationFn = async ({ userId, match: newMatch }: StartMatchVariables) => {
+  await apiPost('/.netlify/functions/matches', { action: 'start', userId, match: newMatch });
+  return newMatch;
+};
+
+type UpdateMatchVariables = { userId: string; matchId: string; updates: Partial<Match> };
+
+export const updateMatchMutationFn = async ({ userId, matchId, updates }: UpdateMatchVariables) => {
+  await apiPost('/.netlify/functions/matches', { action: 'update', userId, matchId, updates });
+  return { matchId, updates };
+};
+
 export const useUpdateMatch = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ userId, matchId, updates }: { userId: string; matchId: string; updates: Partial<Match> }) => {
-      await apiPost('/.netlify/functions/matches', { action: 'update', userId, matchId, updates });
-      return { matchId, updates };
-    },
+    mutationKey: ['updateMatch'],
+    mutationFn: updateMatchMutationFn,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['matches'] });
     },

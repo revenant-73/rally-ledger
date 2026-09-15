@@ -1,14 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageSquare, RotateCcw } from 'lucide-react';
+import { AlertTriangle, Download, Mail, MessageSquare, RotateCcw, WifiOff, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { useIsMutating } from '@tanstack/react-query';
 import { useMatch } from '../hooks/useMatch';
 import { useLiveMatchLogic } from '../hooks/useLiveMatchLogic';
 import { useAuth } from '../hooks/useAuth';
 import { useScreenWakeLock } from '../hooks/useScreenWakeLock';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useMatchSets } from '../hooks/queries/useSets';
 import { getMatchFormatSettings, getSetTarget, isMatchCompleteAfterSet } from '../utils/matchFormat';
 import { classifyTerminalOutcome, isEarnedOutcome } from '../utils/pointClassification';
+import {
+  buildMatchRecoveryPayload,
+  downloadMatchRecoveryFile,
+  openRecoveryEmailDraft,
+  type MatchRecoveryPayload,
+} from '../utils/matchRecoveryExport';
 import type { OutcomeType, Classification, Set } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -44,7 +52,10 @@ const LiveMatch: React.FC = () => {
     updateSet,
     endMatch,
     deleteMatch,
+    isSyncing,
   } = useMatch();
+  const isOnline = useOnlineStatus();
+  const pendingMutations = useIsMutating();
   
   const {
     pointWinner, setPointWinner,
@@ -76,6 +87,12 @@ const LiveMatch: React.FC = () => {
   const [brightGymMode, setBrightGymMode] = useState(() => localStorage.getItem('liveBrightGymMode') === 'true');
   const [scorerFocusMode, setScorerFocusMode] = useState(() => localStorage.getItem('liveScorerFocusMode') === 'true');
   const [isSavingAction, setIsSavingAction] = useState(false);
+  const [recoveryPrompt, setRecoveryPrompt] = useState<{
+    payload: MatchRecoveryPayload;
+    reason: 'offline' | 'pending-sync';
+    finish: () => Promise<void>;
+  } | null>(null);
+  const [isFinishingMatch, setIsFinishingMatch] = useState(false);
   const isSavingActionRef = useRef(false);
   const { data: matchSets = [] } = useMatchSets(user?.id, activeMatch?.id);
   useScreenWakeLock(Boolean(activeMatch && activeSet));
@@ -120,6 +137,56 @@ const LiveMatch: React.FC = () => {
     return wins > losses ? 'Win' : 'Loss';
   };
 
+  const buildCurrentRecoveryPayload = (result: 'Win' | 'Loss') => {
+    const completedMatch = {
+      ...activeMatch,
+      status: 'completed' as const,
+      result,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const setsForRecovery = matchSets.some(set => set.id === activeSet?.id)
+      ? matchSets.map(set => set.id === activeSet?.id ? activeSet : set)
+      : activeSet
+        ? [...matchSets, activeSet]
+        : matchSets;
+
+    return buildMatchRecoveryPayload({
+      match: completedMatch,
+      team: matchTeam,
+      players: matchPlayers,
+      sets: setsForRecovery,
+      rallies,
+    });
+  };
+
+  const finishMatchWithSafeguard = async (
+    result: 'Win' | 'Loss',
+    finish: () => Promise<void>,
+    options: { skipRecoveryPrompt?: boolean } = {},
+  ) => {
+    if (isFinishingMatch) return;
+
+    const hasSyncRisk = !isOnline || isSyncing || pendingMutations > 0;
+    if (hasSyncRisk && !options.skipRecoveryPrompt) {
+      setRecoveryPrompt({
+        payload: buildCurrentRecoveryPayload(result),
+        reason: !isOnline ? 'offline' : 'pending-sync',
+        finish,
+      });
+      return;
+    }
+
+    setIsFinishingMatch(true);
+    try {
+      await finish();
+      toast.success(`Match completed as a ${result.toLowerCase()}.`);
+      navigate('/');
+    } finally {
+      setIsFinishingMatch(false);
+    }
+  };
+
   if (showLineupEditor) {
     return (
       <LineupSelection 
@@ -149,9 +216,9 @@ const LiveMatch: React.FC = () => {
         matchSettings={matchSettings}
         onBackToHome={() => navigate('/')}
         onEndMatch={async (result) => {
-          await endMatch(result);
-          toast.success(`Match completed as a ${result.toLowerCase()}.`);
-          navigate('/');
+          await finishMatchWithSafeguard(result, async () => {
+            await endMatch(result);
+          });
         }}
         onStartSet={async (setNumber, lineup) => {
           const newSet: Set = {
@@ -393,28 +460,32 @@ const LiveMatch: React.FC = () => {
         onShowNote={() => setShowNoteModal(true)}
         onManualScoreChange={handleManualScoreChange}
         onEndSet={async (winner) => {
-          await endSet(winner);
-          setShowMoreMenu(false);
           const completedSetResults = getCompletedSetResults(winner);
           const shouldCompleteMatch = isMatchCompleteAfterSet(matchSettings, completedSetResults);
           const matchResult = shouldCompleteMatch ? getMatchResultFromSets(completedSetResults) : null;
 
           if (matchResult) {
-            await endMatch(matchResult);
-            toast.success(`Match completed as a ${matchResult.toLowerCase()}.`);
-            navigate('/');
+            setShowMoreMenu(false);
+            await finishMatchWithSafeguard(matchResult, async () => {
+              await endSet(winner);
+              await endMatch(matchResult);
+            });
           } else if (shouldCompleteMatch) {
+            await endSet(winner);
+            setShowMoreMenu(false);
             toast.success('Set complete. Choose the match result to close it out.');
           } else {
+            await endSet(winner);
+            setShowMoreMenu(false);
             toast.success(`Set ${activeSet.setNumber} completed!`);
           }
         }}
         onEndMatch={async (winner) => {
-          await endSet(winner);
-          await endMatch(winner);
           setShowMoreMenu(false);
-          toast.success(`Match completed as a ${winner.toLowerCase()}.`);
-          navigate('/');
+          await finishMatchWithSafeguard(winner, async () => {
+            await endSet(winner);
+            await endMatch(winner);
+          });
         }}
         onAbandonMatch={async () => {
           await deleteMatch(activeMatch.id);
@@ -429,6 +500,84 @@ const LiveMatch: React.FC = () => {
         scorerFocusMode={scorerFocusMode}
         onToggleScorerFocusMode={() => setScorerFocusMode((current) => !current)}
       />
+
+      {recoveryPrompt && (
+        <div className="fixed inset-0 z-[130] flex items-end bg-brand-bg/90 p-4 backdrop-blur-sm sm:items-center sm:justify-center">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="recovery-prompt-title"
+            className="w-full max-w-md rounded-3xl border border-brand-amber/30 bg-brand-bg p-5 shadow-2xl"
+          >
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <div className="rounded-2xl bg-brand-amber/15 p-2 text-brand-amber">
+                  {recoveryPrompt.reason === 'offline' ? <WifiOff size={22} /> : <AlertTriangle size={22} />}
+                </div>
+                <div>
+                  <h2 id="recovery-prompt-title" className="text-lg font-black text-brand-text">
+                    Save a recovery copy
+                  </h2>
+                  <p className="mt-1 text-sm font-semibold text-brand-text-secondary">
+                    {recoveryPrompt.reason === 'offline'
+                      ? 'This device is offline, so the database save may wait until the connection returns.'
+                      : 'The app is still syncing recent match data, so keep a file copy before closing.'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRecoveryPrompt(null)}
+                className="rounded-full p-1 text-brand-text-secondary"
+                aria-label="Close recovery warning"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <p className="mb-4 text-sm text-brand-text-secondary">
+              Download the JSON file and keep it until this completed match appears in Reports. It can be emailed later if the database did not receive the match.
+            </p>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => {
+                  downloadMatchRecoveryFile(recoveryPrompt.payload);
+                  toast.success('Recovery file downloaded');
+                }}
+                className="flex items-center justify-center gap-2 rounded-2xl bg-brand-amber px-4 py-3 text-sm font-black uppercase text-brand-bg"
+              >
+                <Download size={17} />
+                Download File
+              </button>
+              <button
+                type="button"
+                onClick={() => openRecoveryEmailDraft(recoveryPrompt.payload)}
+                className="flex items-center justify-center gap-2 rounded-2xl border border-brand-gray/30 px-4 py-3 text-sm font-black uppercase text-brand-text"
+              >
+                <Mail size={17} />
+                Email Draft
+              </button>
+            </div>
+
+            <button
+              type="button"
+              disabled={isFinishingMatch}
+              onClick={() => {
+                const pendingFinish = recoveryPrompt.finish;
+                const pendingResult = recoveryPrompt.payload.match.result;
+                if (!pendingResult) return;
+                setRecoveryPrompt(null);
+                void finishMatchWithSafeguard(pendingResult, pendingFinish, { skipRecoveryPrompt: true });
+              }}
+              className="mt-3 w-full rounded-2xl bg-brand-teal px-4 py-4 text-sm font-black uppercase text-brand-bg disabled:opacity-60"
+            >
+              {isFinishingMatch ? 'Finishing...' : 'I Have a Copy - Finish Match'}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="live-match-scoreboard">
         <LiveMatchScoreboard
