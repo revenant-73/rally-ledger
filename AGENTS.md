@@ -1,6 +1,12 @@
 # Repository Guidelines
 
-Century Matchbook is a live volleyball match-tracking application designed for fast, real-time data entry and coaching decision support. It is built with React, TypeScript, Vite, and Drizzle ORM (using LibSQL).
+Century Matchbook is a live volleyball match-tracking application designed for fast, real-time data entry and coaching decision support. Its primary product is the authenticated courtside scorer at `/`, built with React, TypeScript, Vite, and Drizzle ORM (using LibSQL).
+
+## Current Product Architecture
+
+- **Primary app**: `src/pages/CourtsideMatchbook.tsx`, backed by `src/matchbook/`. This is the working scorer, team cloud state, and match/season reporting workflow. Treat it as the default implementation target.
+- **Legacy workflow**: routes beneath `/app` and their supporting components remain available for historical data and incremental migration. Do not add new primary-product features there unless the request explicitly targets that workflow.
+- **Compatibility boundary**: the primary app's persisted metadata and browser-storage keys include historical `Prototype` names. Preserve those key values until an explicit migration is planned and verified.
 
 ## Project Structure & Module Organization
 
@@ -12,6 +18,7 @@ Century Matchbook is a live volleyball match-tracking application designed for f
 - **`.\src\pages`**: Application views corresponding to routing.
 - **`.\src\utils`**: Pure helper functions and business logic.
 - **`.\src\types`**: TypeScript interface and type definitions.
+- **`.\src\matchbook`**: Primary courtside scorer model and persisted cloud document contract.
 
 The application is a Progressive Web App (PWA) configured via `.\vite.config.ts`.
 

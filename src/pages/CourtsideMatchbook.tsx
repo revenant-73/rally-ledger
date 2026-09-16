@@ -30,7 +30,7 @@ import {
   type SetSetup,
   type TeamSide,
   type TerminalEvent,
-} from '../prototype/matchbookModel';
+} from '../matchbook/matchbookModel';
 import {
   getMatchFormatSettings,
   getSetTarget,
@@ -53,7 +53,7 @@ import {
   type PrototypeMatchLifecycle,
   type PrototypeSyncStatus,
   type SavedPrototypeLineup,
-} from '../prototype/prototypeCloudState';
+} from '../matchbook/prototypeCloudState';
 
 const rotations = [1, 2, 3, 4, 5, 6] as const;
 
@@ -249,7 +249,7 @@ const upsertCompletedSet = (sets: PrototypeSetInput[], nextSet: PrototypeSetInpu
   return sets.map((set, index) => index === existingIndex ? nextSet : set);
 };
 
-const RebuildPrototype = () => {
+const CourtsideMatchbook = () => {
   const { user, logout } = useAuth();
   const { data: access } = useAccess(user?.id);
   const { activeTeam, teams, teamsLoading, selectTeam, addTeam, updateTeam } = useMatch();
@@ -3140,4 +3140,4 @@ const InsightRow = ({
   );
 };
 
-export default RebuildPrototype;
+export default CourtsideMatchbook;

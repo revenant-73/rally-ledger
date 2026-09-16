@@ -8,6 +8,12 @@ The app does not try to record everything. It focuses on one practical question:
 
 > Are we earning points, or are points being gifted?
 
+## Current Implementation
+
+The authenticated courtside scorer at `/` is Century Matchbook's primary application. Its UI lives in `src/pages/CourtsideMatchbook.tsx` and its domain model and team cloud document live in `src/matchbook/`. The legacy `/app` workflow is retained for historical data and migration work, but new product work should target the courtside application unless explicitly stated otherwise.
+
+Saved courtside data currently uses historical metadata and browser-storage key names containing `Prototype`. These key names are compatibility contracts for existing teams; the product is not a prototype, and a future rename requires a deliberate data migration.
+
 The purpose is to help coaches, players, and teams **notice trends, adapt on the fly, and commit to useful next actions** during matches.
 
 Century Matchbook should be fast enough to use live, simple enough for an assistant coach or manager to operate, and meaningful enough to guide decisions between points, during timeouts, between sets, and after matches.

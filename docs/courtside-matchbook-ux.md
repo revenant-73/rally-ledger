@@ -1,8 +1,8 @@
-# Prototype UX Recommendations
+# Courtside Matchbook UX Direction
 
 ## Direction
 
-The rebuild should keep protecting the core concept: record the terminal rally event as quickly and reliably as possible. Anything that helps setup, lineup, reports, or review should stay secondary to the live-entry tap path.
+Century Matchbook is the active courtside application. It protects the core concept: record the terminal rally event as quickly and reliably as possible. Anything that helps setup, lineup, reports, or review should stay secondary to the live-entry tap path.
 
 ## Prioritized Changes
 
@@ -22,7 +22,7 @@ The rebuild should keep protecting the core concept: record the terminal rally e
    Use labels that describe the immediate action: Setup, Edit Lineup, Sub, Court Side, Start Set. Avoid vague labels such as Change when the scorer is moving quickly.
 
 6. Avoid reopening full setup unnecessarily.
-   Once a usable roster and lineup exist locally, the prototype should default to the scoring screen. Setup should stay one tap away, but it should not block live entry by default.
+   Once a usable roster and lineup exist locally, Century Matchbook should default to the scoring screen. Setup should stay one tap away, but it should not block live entry by default.
 
 7. Treat reporting as two related views.
    Each completed match needs its own breakdown by set, earned/gifted balance, scoring source, and player attribution. The season report should combine every match for the selected roster and keep the same questions visible: where we earn, who earns, where we gift, and who gifts.
@@ -49,5 +49,5 @@ The rebuild should keep protecting the core concept: record the terminal rally e
 ## Validation Added
 
 - Model test coverage now includes a realistic full-set rally log with one-tap events, player selections, team/unclear attribution, and opponent error subtypes.
-- Browser dogfooding now includes a visible full-set tap sequence through the prototype, ending at 25-20 with the live summary opened.
-- Reporting coverage now verifies set-level match reports and cumulative season totals from the same rally summary model.
+- Browser dogfooding includes a visible full-set tap sequence through Century Matchbook, ending at 25-20 with the live summary opened.
+- Reporting coverage verifies set-level match reports and cumulative season totals from the same rally summary model.

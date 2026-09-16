@@ -25,7 +25,7 @@ vi.mock('./hooks/queries/useAccess', () => ({
   }),
 }));
 
-vi.mock('./pages/RebuildPrototype', () => ({
+vi.mock('./pages/CourtsideMatchbook', () => ({
   default: () => <div>Production Courtside Matchbook</div>,
 }));
 

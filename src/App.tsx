@@ -15,7 +15,7 @@ const NewMatch = lazy(() => import('./pages/NewMatch'));
 const LiveMatch = lazy(() => import('./pages/LiveMatch'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Login = lazy(() => import('./pages/Login'));
-const RebuildPrototype = lazy(() => import('./pages/RebuildPrototype'));
+const CourtsideMatchbook = lazy(() => import('./pages/CourtsideMatchbook'));
 
 const LoadingScreen = () => (
   <div className="min-h-screen bg-brand-bg flex flex-col items-center justify-center gap-4 text-brand-text">
@@ -103,11 +103,13 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/" element={
             <ProtectedRoute>
-              <RebuildPrototype />
+              <CourtsideMatchbook />
             </ProtectedRoute>
           } />
+          <Route path="/matchbook" element={<Navigate to="/" replace />} />
           <Route path="/prototype" element={<Navigate to="/" replace />} />
 
+          {/* Retained legacy workflow. The courtside matchbook above is the primary product. */}
           <Route path="/app" element={
             <ProtectedRoute>
               <Layout />

@@ -1,73 +1,36 @@
-# React + TypeScript + Vite
+# Century Matchbook
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Century Matchbook is the production courtside volleyball scorer for Century teams. It is optimized for fast, tablet-friendly rally entry, live coaching context, and set-by-set match review.
 
-Currently, two official plugins are available:
+## Primary application
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The authenticated root route (`/`) is the active product. It provides:
 
-## React Compiler
+- team roster and lineup management
+- live terminal-event rally tracking with undo and correction
+- derived score, serving state, rotation, and server context
+- multi-set match storage and season reports
+- match and player reports that can be scoped to an individual set
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+`/matchbook` redirects to the same application. The old `/prototype` URL remains only as a compatibility redirect.
 
-## Expanding the ESLint configuration
+## Repository layout
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- `src/pages/CourtsideMatchbook.tsx` — primary courtside application
+- `src/matchbook/` — rally model, derived statistics, and cloud document contract for the primary application
+- `src/pages/` and `src/components/` — retained legacy workflow and shared UI; routes under `/app` are not the primary scorer
+- `docs/courtside-matchbook-product-brief.md` — product behavior and scoring principles
+- `docs/courtside-matchbook-ux.md` — courtside UX direction
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+The primary app retains the existing `matchbookPrototypeV1` metadata and local-storage keys for compatibility with saved team data. Those names are implementation history, not product status; do not change them without a data migration.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Development
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev
+npm run lint
+npm run test -- --run
+npm run build
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+For the detailed product and technical model, see [rally-ledger-technical-guide.md](rally-ledger-technical-guide.md).

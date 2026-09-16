@@ -1,6 +1,6 @@
-# Century Matchbook Rebuild Brief
+# Century Matchbook Product Brief
 
-## Project goal
+## Product goal
 
 Rebuild the Century volleyball match-tracking app from the ground up as a fast, low-friction tool for live match use.
 
@@ -26,9 +26,9 @@ The primary success criterion is entry speed and clarity during a live match. If
 - Score, possession, rotation, and server should be derived from the rally log whenever practical so corrections cannot corrupt later statistics.
 - Use plain volleyball language. Do not display database or statistical jargon to the user.
 
-## Phase 1: interactive live-entry prototype
+## Initial implementation phase
 
-Before implementing authentication, a production database, exports, or detailed reports, build an interactive prototype that can simulate a complete set.
+The initial implementation was an interactive live-entry build that could simulate a complete set. Century Matchbook has since become the primary application; keep these live-entry requirements as the source of truth for product behavior.
 
 The prototype must demonstrate:
 

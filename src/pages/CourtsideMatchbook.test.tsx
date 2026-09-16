@@ -10,14 +10,14 @@ import {
   type PrototypeMatchInput,
   type PrototypePlayer,
   type SetSetup,
-} from '../prototype/matchbookModel';
+} from '../matchbook/matchbookModel';
 import {
   createFreshPrototypeDocument,
   getTeamPrototypeStorageKey,
   PROTOTYPE_METADATA_KEY,
   type PrototypeCloudDocument,
-} from '../prototype/prototypeCloudState';
-import RebuildPrototype from './RebuildPrototype';
+} from '../matchbook/prototypeCloudState';
+import CourtsideMatchbook from './CourtsideMatchbook';
 
 vi.mock('../hooks/useAuth', () => ({ useAuth: vi.fn() }));
 vi.mock('../hooks/useMatch', () => ({ useMatch: vi.fn() }));
@@ -115,10 +115,10 @@ const renderWithDocument = (document: PrototypeCloudDocument) => {
     activeTeam: team, teams: [team], teamsLoading: false, selectTeam: vi.fn(), addTeam: vi.fn(),
     updateTeam: vi.fn().mockResolvedValue(undefined),
   } as unknown as ReturnType<typeof useMatch>);
-  return render(<RebuildPrototype />);
+  return render(<CourtsideMatchbook />);
 };
 
-describe('RebuildPrototype match launch flow', () => {
+describe('CourtsideMatchbook match launch flow', () => {
   beforeEach(() => {
     localStorage.clear();
     vi.mocked(useAuth).mockReturnValue({
@@ -446,7 +446,7 @@ describe('RebuildPrototype match launch flow', () => {
   });
 });
 
-describe('RebuildPrototype player reports', () => {
+describe('CourtsideMatchbook player reports', () => {
   beforeEach(() => {
     localStorage.clear();
     vi.mocked(useAuth).mockReturnValue({
