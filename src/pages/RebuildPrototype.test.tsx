@@ -531,6 +531,31 @@ describe('RebuildPrototype player reports', () => {
     expect(within(blake).getByLabelText('Gifted 1')).toBeInTheDocument();
   });
 
+  it('scopes match reports to a selected set', async () => {
+    const user = userEvent.setup();
+    const document = makeReportDocument();
+    const firstSet = document.seasonMatches[0].sets[0];
+    document.seasonMatches[0].sets.push({
+      id: 'report-liberty-set-2',
+      setNumber: 2,
+      setup: { ...firstSet.setup, setNumber: 2 },
+      rallies: makeReportRallies({ ...firstSet.setup, setNumber: 2 }, [
+        { winner: 'century', event: 'century_ace' },
+      ]),
+    });
+    renderWithDocument(document);
+
+    await user.click(await screen.findByRole('button', { name: 'Season Reports' }));
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Stats scope' }), 'report-liberty-set-2');
+
+    expect(screen.getByText('Showing Set 2 only.')).toBeInTheDocument();
+    expect(screen.getByText('Earned').nextElementSibling).toHaveTextContent('1');
+
+    await user.click(screen.getByRole('button', { name: 'Player Report' }));
+    expect(screen.getByText(/Century vs Liberty · Sep 1/)).toBeInTheDocument();
+    expect(screen.getByText('Showing Set 2 only.')).toBeInTheDocument();
+  });
+
   it('aggregates finalized matches for the season without including the live match', async () => {
     const user = userEvent.setup();
     const document = createFreshPrototypeDocument(new Date('2026-09-09T12:00:00.000Z'));

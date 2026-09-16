@@ -2536,11 +2536,14 @@ const ReportSheet = ({
   const [view, setView] = useState<'match' | 'season'>('match');
   const [reportMode, setReportMode] = useState<'overview' | 'players'>('overview');
   const [selectedMatchId, setSelectedMatchId] = useState(currentMatchReport.id);
+  const [selectedSetId, setSelectedSetId] = useState('all');
   const selectedMatchReport = seasonReport.matchReports.find((match) => match.id === selectedMatchId) ?? currentMatchReport;
   const activeReport = view === 'match' ? selectedMatchReport : undefined;
-  const summary = activeReport?.summary ?? aggregateSeasonReport.summary;
+  const selectedSetReport = activeReport?.setReports.find((set) => set.id === selectedSetId);
+  const summary = selectedSetReport?.summary ?? activeReport?.summary ?? aggregateSeasonReport.summary;
   const showMatch = (matchId: string) => {
     setSelectedMatchId(matchId);
+    setSelectedSetId('all');
     setView('match');
   };
 
@@ -2592,6 +2595,25 @@ const ReportSheet = ({
         {view === 'match' ? (
           <div className={`mt-3 grid gap-3 ${reportMode === 'overview' ? 'lg:grid-cols-[0.9fr_1.1fr]' : ''}`}>
             <section className="rounded border border-slate-300 bg-white p-3">
+              <label className="mb-3 block">
+                <span className="block text-xs font-black uppercase text-slate-500">Stats scope</span>
+                <select
+                  aria-label="Stats scope"
+                  value={selectedSetId}
+                  onChange={(event) => setSelectedSetId(event.target.value)}
+                  className="mt-1 min-h-12 w-full rounded border border-slate-300 bg-slate-50 px-3 font-black text-slate-950"
+                >
+                  <option value="all">Whole match</option>
+                  {selectedMatchReport.setReports.map((set) => (
+                    <option key={set.id} value={set.id}>
+                      Set {set.setNumber} · {set.centuryScore}-{set.opponentScore}
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-1 block text-xs font-bold text-slate-600">
+                  {selectedSetReport ? `Showing Set ${selectedSetReport.setNumber} only.` : 'Showing all sets in this match.'}
+                </span>
+              </label>
               <div className="mb-3 grid gap-2">
                 <p className="text-xs font-black uppercase text-slate-500">Choose Match</p>
                 <div className="grid gap-2 sm:grid-cols-3">
@@ -2639,6 +2661,13 @@ const ReportSheet = ({
                         <p className="text-xs font-bold text-slate-500">
                           Earned {set.summary.team.earnedPoints} · Gifts in {set.summary.team.giftsReceived} · Gifts out {set.summary.team.giftsConceded}
                         </p>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedSetId(set.id)}
+                          className="mt-2 min-h-9 rounded bg-teal-100 px-3 text-xs font-black text-teal-900"
+                        >
+                          View Set {set.setNumber} stats
+                        </button>
                       </div>
                     ))}
                   </div>
