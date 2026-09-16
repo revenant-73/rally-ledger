@@ -46,14 +46,31 @@ const MatchDetail: React.FC = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeReportView, setActiveReportView] = useState<MatchReportView>('summary');
+  const [selectedSetId, setSelectedSetId] = useState<string>('all');
 
-  const metrics = useMatchDetailMetrics(rallies, players);
-  const reportStats = useMemo(() => calculateReportStats(rallies, players, sets), [rallies, players, sets]);
+  const matchReportStats = useMemo(() => calculateReportStats(rallies, players, sets), [rallies, players, sets]);
+  const selectedSet = useMemo(
+    () => sets.find(set => set.id === selectedSetId),
+    [sets, selectedSetId]
+  );
+  const scopedRallies = useMemo(
+    () => selectedSetId === 'all' ? rallies : rallies.filter(rally => rally.setId === selectedSetId),
+    [rallies, selectedSetId]
+  );
+  const scopedSets = useMemo(
+    () => selectedSet ? [selectedSet] : sets,
+    [selectedSet, sets]
+  );
+  const metrics = useMatchDetailMetrics(scopedRallies, players);
+  const reportStats = useMemo(
+    () => calculateReportStats(scopedRallies, players, scopedSets),
+    [scopedRallies, players, scopedSets]
+  );
 
   const handleCopySummary = async () => {
     if (!match) return;
     try {
-      await navigator.clipboard.writeText(buildMatchTextSummary(match, reportStats));
+      await navigator.clipboard.writeText(buildMatchTextSummary(match, matchReportStats));
       toast.success('Report summary copied');
     } catch {
       toast.error('Unable to copy report');
@@ -64,13 +81,13 @@ const MatchDetail: React.FC = () => {
     if (!match) return;
     downloadTextFile(
       `${fileSafe(match.opponentName)}-match-report.txt`,
-      buildMatchTextSummary(match, reportStats)
+      buildMatchTextSummary(match, matchReportStats)
     );
   };
 
   const handleDownloadCsv = () => {
     if (!match) return;
-    buildMatchCsvFiles(match, reportStats, rallies, players).forEach(file => {
+    buildMatchCsvFiles(match, matchReportStats, rallies, players).forEach(file => {
       downloadTextFile(file.filename, file.contents, 'text/csv;charset=utf-8');
     });
   };
@@ -239,6 +256,30 @@ const MatchDetail: React.FC = () => {
           onChange={setActiveReportView}
         />
 
+        {sets.length > 0 && (
+          <section className="print-hide rounded-3xl border border-brand-teal/15 bg-brand-teal/5 p-4">
+            <label className="block">
+              <span className="text-[10px] font-black uppercase tracking-widest text-brand-teal">Stats scope</span>
+              <select
+                aria-label="Stats scope"
+                value={selectedSetId}
+                onChange={(event) => setSelectedSetId(event.target.value)}
+                className="mt-2 w-full rounded-2xl border border-brand-teal/25 bg-brand-bg px-4 py-3 text-sm font-black text-brand-text outline-none focus:border-brand-teal/60 focus:ring-2 focus:ring-brand-teal/20"
+              >
+                <option value="all">Whole match</option>
+                {sets.map(set => (
+                  <option key={set.id} value={set.id}>
+                    Set {set.setNumber} · {set.ourScore}-{set.opponentScore}{set.finalResult ? ` (${set.finalResult})` : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="mt-2 text-xs font-semibold text-brand-text-secondary">
+              {selectedSet ? `Showing only Set ${selectedSet.setNumber} across the report.` : 'Showing all sets in this match.'}
+            </p>
+          </section>
+        )}
+
         <ReportViewSection active={activeReportView === 'summary'} className="space-y-6">
         {/* Post-Match Summary / Key Insights */}
         {metrics && (
@@ -316,7 +357,7 @@ const MatchDetail: React.FC = () => {
           <div className="space-y-3">
             {sets.length === 0 ? (
               <p className="text-sm text-brand-text-secondary italic text-center py-4">No sets recorded for this match.</p>
-            ) : reportStats.setReports.map((set) => (
+            ) : matchReportStats.setReports.map((set) => (
               <div key={set.setId} className="space-y-3 rounded-xl border border-brand-gray/10 bg-brand-bg p-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -355,6 +396,16 @@ const MatchDetail: React.FC = () => {
                     </p>
                   </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedSetId(set.setId);
+                    setActiveReportView('summary');
+                  }}
+                  className="print-hide w-full rounded-xl bg-brand-teal/10 px-3 py-2 text-xs font-black text-brand-teal transition-colors hover:bg-brand-teal/20 focus:outline-none focus:ring-2 focus:ring-brand-teal/50"
+                >
+                  View Set {set.setNumber} stats
+                </button>
               </div>
             ))}
           </div>
@@ -363,7 +414,7 @@ const MatchDetail: React.FC = () => {
 
         <ReportViewSection active={activeReportView === 'gifts'}>
         {reportStats.giftContext.total > 0 && (
-          <GiftContextCard giftContext={reportStats.giftContext} title="Match Gift Context" />
+          <GiftContextCard giftContext={reportStats.giftContext} title={selectedSet ? `Set ${selectedSet.setNumber} Gift Context` : 'Match Gift Context'} />
         )}
         {reportStats.giftContext.total === 0 && (
           <div className="rounded-3xl border border-brand-gray/10 bg-brand-gray/5 p-6 text-center">
@@ -685,7 +736,7 @@ const MatchDetail: React.FC = () => {
 
         <ReportViewSection active={activeReportView === 'rallies'}>
         {rallies.length > 0 && (
-          <RallyLogCard rallies={rallies} players={players} sets={sets} />
+          <RallyLogCard rallies={scopedRallies} players={players} sets={scopedSets} />
         )}
         </ReportViewSection>
       </div>
