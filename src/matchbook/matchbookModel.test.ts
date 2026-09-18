@@ -247,6 +247,20 @@ describe('matchbook prototype rally model', () => {
     });
   });
 
+  it('tracks setter errors as player-charged gifted points in their own report bucket', () => {
+    const rallies = add([], 'setter_error', { chargedPlayerId: 'p1' });
+    const summary = summarizeSet(rallies, players);
+
+    expect(summary.team).toMatchObject({ giftsConceded: 1 });
+    expect(summary.team.giftsConcededByType).toEqual([
+      { key: 'setter_error', label: 'Setter Errors', total: 1 },
+    ]);
+    expect(summary.players.find((player) => player.playerId === 'p1')).toMatchObject({
+      giftsConceded: 1,
+      giftsConcededByType: [{ key: 'setter_error', label: 'Setter Errors', total: 1 }],
+    });
+  });
+
   it('uses -- for zero-denominator percentages', () => {
     expect(formatRatio(0, 0).label).toBe('--');
   });

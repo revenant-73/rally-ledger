@@ -35,6 +35,7 @@ export type TerminalEvent =
   | 'receive_error'
   | 'serve_error'
   | 'attack_error'
+  | 'setter_error'
   | 'ball_control_error'
   | 'violation'
   | 'score_adjustment';
@@ -222,6 +223,7 @@ export const eventNeedsPlayer = (event: TerminalEvent): 'credited' | 'charged' |
   if (
     event === 'receive_error' ||
     event === 'attack_error' ||
+    event === 'setter_error' ||
     event === 'ball_control_error' ||
     event === 'violation'
   ) {
@@ -326,6 +328,7 @@ const isGiftConceded = (rally: RallyRecord) =>
   rally.event === 'receive_error' ||
   rally.event === 'serve_error' ||
   rally.event === 'attack_error' ||
+  rally.event === 'setter_error' ||
   rally.event === 'ball_control_error' ||
   rally.event === 'violation';
 
@@ -339,6 +342,7 @@ const pointSourceLabels: Record<TerminalEvent, string> = {
   receive_error: 'Serve Receive',
   serve_error: 'Serving',
   attack_error: 'Attacking',
+  setter_error: 'Setter Errors',
   ball_control_error: 'Ball Control',
   violation: 'Violations',
   score_adjustment: 'Score Adjustment',
@@ -385,6 +389,7 @@ export const summarizeSet = (rallies: RallyRecord[], players: PrototypePlayer[])
       'receive_error',
       'serve_error',
       'attack_error',
+      'setter_error',
       'ball_control_error',
       'violation',
     ]),
@@ -445,6 +450,7 @@ export const summarizeSet = (rallies: RallyRecord[], players: PrototypePlayer[])
         'receive_error',
         'serve_error',
         'attack_error',
+        'setter_error',
         'ball_control_error',
         'violation',
       ]),
@@ -518,6 +524,7 @@ export const eventLabels: Record<TerminalEvent, string> = {
   receive_error: 'ACE / RECEIVE ERROR',
   serve_error: 'SERVE ERROR',
   attack_error: 'ATTACK ERROR',
+  setter_error: 'SETTER ERROR',
   ball_control_error: 'BALL-CONTROL ERROR',
   violation: 'VIOLATION',
   score_adjustment: 'SCORE ADJUSTMENT',

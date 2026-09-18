@@ -64,6 +64,7 @@ const opponentEvents: TerminalEvent[] = [
   'receive_error',
   'serve_error',
   'attack_error',
+  'setter_error',
   'ball_control_error',
   'violation',
 ];
