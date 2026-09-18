@@ -3,6 +3,7 @@ export type RallyMode = 'serving' | 'receiving';
 export type PrototypeMatchFormat = 'best-of-3' | 'best-of-5' | 'fixed-2' | 'single-set';
 export type Rotation = 1 | 2 | 3 | 4 | 5 | 6;
 export type ErrorSubtype = 'Serve' | 'Attack' | 'Other';
+export type GiftCause = 'Decision' | 'Execution' | 'Connection';
 export type LineupSlots = Partial<Record<Rotation, string>>;
 
 export interface PrototypePlayer {
@@ -50,6 +51,7 @@ export interface RallyRecord {
   winner: TeamSide;
   event: TerminalEvent;
   errorSubtype?: ErrorSubtype;
+  giftCause?: GiftCause;
   creditedPlayerId?: string;
   assistedByPlayerId?: string;
   chargedPlayerId?: string;
@@ -70,6 +72,7 @@ export interface PendingRallyInput {
   winner: TeamSide;
   event: TerminalEvent;
   errorSubtype?: ErrorSubtype;
+  giftCause?: GiftCause;
   creditedPlayerId?: string;
   assistedByPlayerId?: string;
   chargedPlayerId?: string;
@@ -85,6 +88,7 @@ export interface TeamSummary {
   earnedByType: BreakdownItem[];
   giftsReceivedByType: BreakdownItem[];
   giftsConcededByType: BreakdownItem[];
+  giftsConcededByCause: BreakdownItem[];
   breakpoint: Ratio;
   sideout: Ratio;
   serveIn: Ratio;
@@ -117,6 +121,7 @@ export interface PlayerSummary {
   balance: number;
   earnedByType: BreakdownItem[];
   giftsConcededByType: BreakdownItem[];
+  giftsConcededByCause: BreakdownItem[];
   serveAttempts: number;
   servesIn: number;
   serveIn: Ratio;
@@ -308,6 +313,7 @@ export const buildRally = (
     winner: input.winner,
     event: input.event,
     errorSubtype: input.errorSubtype,
+    giftCause: input.giftCause,
     creditedPlayerId: input.creditedPlayerId,
     assistedByPlayerId: input.assistedByPlayerId,
     chargedPlayerId: input.chargedPlayerId,
@@ -348,6 +354,12 @@ const pointSourceLabels: Record<TerminalEvent, string> = {
   score_adjustment: 'Score Adjustment',
 };
 
+const giftCauseLabels: Record<GiftCause, string> = {
+  Decision: 'Decision',
+  Execution: 'Execution',
+  Connection: 'Connection',
+};
+
 const countBreakdown = (
   rallies: RallyRecord[],
   events: TerminalEvent[],
@@ -358,6 +370,16 @@ const countBreakdown = (
       key: event,
       label: getLabel(event),
       total: rallies.filter((rally) => rally.event === event).length,
+    }))
+    .filter((item) => item.total > 0)
+    .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label));
+
+const countGiftCauseBreakdown = (rallies: RallyRecord[]): BreakdownItem[] =>
+  (Object.keys(giftCauseLabels) as GiftCause[])
+    .map((cause) => ({
+      key: cause,
+      label: giftCauseLabels[cause],
+      total: rallies.filter((rally) => rally.giftCause === cause).length,
     }))
     .filter((item) => item.total > 0)
     .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label));
@@ -393,6 +415,7 @@ export const summarizeSet = (rallies: RallyRecord[], players: PrototypePlayer[])
       'ball_control_error',
       'violation',
     ]),
+    giftsConcededByCause: countGiftCauseBreakdown(activeRallies.filter(isGiftConceded)),
     breakpoint: formatRatio(centuryServiceWins, serviceRallies.length),
     sideout: formatRatio(centuryReceiveWins, receiveRallies.length),
     serveIn: formatRatio(serviceRallies.length - serveErrors, serviceRallies.length),
@@ -454,6 +477,7 @@ export const summarizeSet = (rallies: RallyRecord[], players: PrototypePlayer[])
         'ball_control_error',
         'violation',
       ]),
+      giftsConcededByCause: countGiftCauseBreakdown(giftRallies),
       serveAttempts: playerServes.length,
       servesIn: playerServes.length - playerServeErrors,
       serveIn: formatRatio(playerServes.length - playerServeErrors, playerServes.length),

@@ -14,6 +14,7 @@ import {
   summarizeSet,
   TEAM_ATTRIBUTION_ID,
   type ErrorSubtype,
+  type GiftCause,
   type LineupSlots,
   type PendingRallyInput,
   type PrototypeMatchFormat,
@@ -69,6 +70,15 @@ const opponentEvents: TerminalEvent[] = [
   'violation',
 ];
 
+const giftedEvents = new Set<TerminalEvent>([
+  'receive_error',
+  'serve_error',
+  'attack_error',
+  'setter_error',
+  'ball_control_error',
+  'violation',
+]);
+
 const inputClass =
   'h-12 w-full min-w-0 rounded border border-white/15 bg-white px-3 text-base font-bold text-slate-950 outline-none focus:border-teal-300';
 
@@ -77,8 +87,9 @@ const actionClass =
 
 interface PendingSelection {
   event: TerminalEvent;
-  mode: 'player' | 'assist' | 'error';
+  mode: 'player' | 'assist' | 'error' | 'giftCause';
   attackPlayerId?: string;
+  chargedPlayerId?: string;
   editingId?: string;
 }
 
@@ -169,8 +180,13 @@ const getRallyDescription = (rally: RallyRecord, players: PrototypePlayer[]) => 
 
   const playerId = rally.creditedPlayerId ?? rally.chargedPlayerId;
   const playerText = rally.teamAttribution ? 'TEAM / UNCLEAR' : getPlayerLabel(players, playerId);
-  const assistText = rally.assistedByPlayerId ? ` - AST ${getPlayerLabel(players, rally.assistedByPlayerId)}` : '';
-  const extra = rally.errorSubtype ? ` - ${rally.errorSubtype}` : playerId || rally.teamAttribution ? ` - ${playerText}${assistText}` : assistText;
+  const details = [
+    rally.errorSubtype,
+    playerId || rally.teamAttribution ? playerText : undefined,
+    rally.assistedByPlayerId ? `AST ${getPlayerLabel(players, rally.assistedByPlayerId)}` : undefined,
+    rally.giftCause,
+  ].filter((detail): detail is string => Boolean(detail));
+  const extra = details.length > 0 ? ` - ${details.join(' - ')}` : '';
   return `${rally.winner === 'century' ? 'Century' : 'Opponent'} ${eventLabels[rally.event]}${extra}`;
 };
 
@@ -184,13 +200,20 @@ const getTopPlayers = (
     .sort((a, b) => b[key] - a[key] || getPlayerLabel(players, a.playerId).localeCompare(getPlayerLabel(players, b.playerId)))
     .slice(0, 2);
 
-const makeInput = (event: TerminalEvent, playerId?: string, errorSubtype?: ErrorSubtype, assistedByPlayerId?: string): PendingRallyInput => {
+const makeInput = (
+  event: TerminalEvent,
+  playerId?: string,
+  errorSubtype?: ErrorSubtype,
+  assistedByPlayerId?: string,
+  giftCause?: GiftCause,
+): PendingRallyInput => {
   const attribution = eventNeedsPlayer(event);
   const teamAttribution = playerId === TEAM_ATTRIBUTION_ID;
   return {
     winner: getWinnerForEvent(event),
     event,
     errorSubtype,
+    giftCause: giftedEvents.has(event) ? giftCause : undefined,
     creditedPlayerId: attribution === 'credited' && !teamAttribution ? playerId : undefined,
     assistedByPlayerId: event === 'century_kill' ? assistedByPlayerId : undefined,
     chargedPlayerId: attribution === 'charged' && !teamAttribution ? playerId : undefined,
@@ -613,6 +636,11 @@ const CourtsideMatchbook = () => {
       return;
     }
 
+    if (giftedEvents.has(event)) {
+      setPending({ event, mode: 'giftCause', editingId });
+      return;
+    }
+
     const input = makeInput(event);
     if (editingId) {
       updateLastRally(input, editingId);
@@ -642,6 +670,11 @@ const CourtsideMatchbook = () => {
       return;
     }
 
+    if (pending.mode === 'player' && eventNeedsPlayer(pending.event) === 'charged') {
+      setPending({ ...pending, mode: 'giftCause', chargedPlayerId: playerId });
+      return;
+    }
+
     const input = makeInput(pending.event, playerId);
     if (pending.editingId) {
       updateLastRally(input, pending.editingId);
@@ -655,6 +688,16 @@ const CourtsideMatchbook = () => {
       return;
     }
     const input = makeInput(pending.event, undefined, errorSubtype);
+    if (pending.editingId) {
+      updateLastRally(input, pending.editingId);
+    } else {
+      recordRally(input);
+    }
+  };
+
+  const handleGiftCause = (giftCause?: GiftCause) => {
+    if (!pending || pending.mode !== 'giftCause') return;
+    const input = makeInput(pending.event, pending.chargedPlayerId, undefined, undefined, giftCause);
     if (pending.editingId) {
       updateLastRally(input, pending.editingId);
     } else {
@@ -1432,6 +1475,7 @@ const CourtsideMatchbook = () => {
           lineup={currentLineup}
           onPlayer={handlePlayer}
           onErrorSubtype={handleErrorSubtype}
+          onGiftCause={handleGiftCause}
           onCancel={() => setPending(null)}
         />
       ) : null}
@@ -2177,10 +2221,11 @@ interface PickerSheetProps {
   lineup: LineupSlots;
   onPlayer: (playerId: string) => void;
   onErrorSubtype: (subtype: ErrorSubtype) => void;
+  onGiftCause: (cause?: GiftCause) => void;
   onCancel: () => void;
 }
 
-const PickerSheet = ({ pending, players, lineup, onPlayer, onErrorSubtype, onCancel }: PickerSheetProps) => {
+const PickerSheet = ({ pending, players, lineup, onPlayer, onErrorSubtype, onGiftCause, onCancel }: PickerSheetProps) => {
   const lineupPlayerIds = rotations.map((rotation) => lineup[rotation]).filter((playerId): playerId is string => Boolean(playerId));
   const lineupPlayers = lineupPlayerIds
     .map((playerId) => players.find((player) => player.id === playerId))
@@ -2195,7 +2240,9 @@ const PickerSheet = ({ pending, players, lineup, onPlayer, onErrorSubtype, onCan
       ? 'Assist?'
       : pending.mode === 'player'
         ? `Player for ${eventLabels[pending.event]}`
-        : 'Their Error Type';
+        : pending.mode === 'giftCause'
+          ? 'Why did this gift happen?'
+          : 'Their Error Type';
 
   return (
     <DialogBackdrop onClose={onCancel} labelledBy="picker-sheet-title" className="fixed inset-0 z-30 flex items-end bg-black/70 p-3">
@@ -2218,6 +2265,17 @@ const PickerSheet = ({ pending, players, lineup, onPlayer, onErrorSubtype, onCan
                 {subtype}
               </button>
             ))}
+          </div>
+        ) : pending.mode === 'giftCause' ? (
+          <div className="grid gap-2 sm:grid-cols-3">
+            {(['Decision', 'Execution', 'Connection'] satisfies GiftCause[]).map((cause) => (
+              <button key={cause} type="button" onClick={() => onGiftCause(cause)} className="min-h-20 rounded bg-amber-400 px-3 text-left text-lg font-black text-slate-950">
+                {cause}
+              </button>
+            ))}
+            <button type="button" onClick={() => onGiftCause()} className="min-h-14 rounded border border-slate-300 bg-white px-3 text-left font-black text-slate-700 sm:col-span-3">
+              Skip / Unclear
+            </button>
           </div>
         ) : (
           <div className="grid gap-3">
@@ -2945,10 +3003,11 @@ const PlayerReport = ({
                   <PlayerTally label="Gifted" value={playerSummary.giftsConceded} tone="gifted" />
                   <PlayerTally label="Net" value={playerSummary.balance} tone="net" />
                 </div>
-                <div className="grid gap-2 bg-slate-50 p-2.5 sm:grid-cols-3">
+                <div className="grid gap-2 bg-slate-50 p-2.5 sm:grid-cols-4">
                   <EventBreakdown label="Earned by" items={playerSummary.earnedByType} emptyText="No earned points." tone="earned" />
                   <EventBreakdown label="Assisted" items={playerSummary.assists > 0 ? [{ key: 'assists', label: 'Kills', total: playerSummary.assists }] : []} emptyText="No assists." tone="neutral" />
                   <EventBreakdown label="Gifted by" items={playerSummary.giftsConcededByType} emptyText="No gifts charged." tone="gifted" />
+                  <EventBreakdown label="Gift cause" items={playerSummary.giftsConcededByCause} emptyText="No causes tagged." tone="gifted" />
                 </div>
               </article>
             ))}
@@ -2998,6 +3057,7 @@ const ReportInsightGrid = ({ summary, players }: { summary: ReturnType<typeof su
       </div>
       <div className="grid content-start gap-3">
         <BreakdownBlock title="Where Gifting" emptyText="No Century gifts conceded" items={summary.team.giftsConcededByType} tone="warn" />
+        <BreakdownBlock title="Why Gifting" emptyText="No gift causes tagged yet" items={summary.team.giftsConcededByCause} tone="warn" />
         <PlayerBlock title="Who Gifting" emptyText="No player gifts charged" players={players} summary={summary} mode="giftsConceded" />
       </div>
     </div>
@@ -3036,6 +3096,7 @@ const SummaryPanel = ({ summary, players, onClose }: SummaryPanelProps) => (
         </div>
         <div className="grid content-start gap-3">
           <BreakdownBlock title="Where Gifting" emptyText="No Century gifts conceded" items={summary.team.giftsConcededByType} tone="warn" />
+          <BreakdownBlock title="Why Gifting" emptyText="No gift causes tagged yet" items={summary.team.giftsConcededByCause} tone="warn" />
           <PlayerBlock title="Who Gifting" emptyText="No player gifts charged" players={players} summary={summary} mode="giftsConceded" />
         </div>
       </div>

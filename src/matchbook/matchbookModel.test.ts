@@ -261,6 +261,28 @@ describe('matchbook prototype rally model', () => {
     });
   });
 
+  it('groups gifted points by decision, execution, and connection without changing gift totals', () => {
+    const rallies = [
+      add([], 'setter_error', { chargedPlayerId: 'p1', giftCause: 'Execution' }),
+      add([], 'attack_error', { chargedPlayerId: 'p2', giftCause: 'Decision' }),
+      add([], 'ball_control_error', { chargedPlayerId: 'p1', giftCause: 'Connection' }),
+      add([], 'serve_error'),
+      add([], 'century_kill', { creditedPlayerId: 'p3', giftCause: 'Execution' }),
+    ].flat();
+    const summary = summarizeSet(rallies, players);
+
+    expect(summary.team.giftsConceded).toBe(4);
+    expect(summary.team.giftsConcededByCause).toEqual([
+      { key: 'Connection', label: 'Connection', total: 1 },
+      { key: 'Decision', label: 'Decision', total: 1 },
+      { key: 'Execution', label: 'Execution', total: 1 },
+    ]);
+    expect(summary.players.find((player) => player.playerId === 'p1')?.giftsConcededByCause).toEqual([
+      { key: 'Connection', label: 'Connection', total: 1 },
+      { key: 'Execution', label: 'Execution', total: 1 },
+    ]);
+  });
+
   it('uses -- for zero-denominator percentages', () => {
     expect(formatRatio(0, 0).label).toBe('--');
   });
