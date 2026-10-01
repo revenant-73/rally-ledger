@@ -126,6 +126,19 @@ describe('CourtsideMatchbook match launch flow', () => {
     } as unknown as ReturnType<typeof useAuth>);
   });
 
+  it('previews the first server for serving and receiving matchup starts', async () => {
+    const user = userEvent.setup();
+    renderWithDocument(createFreshPrototypeDocument());
+    await user.click(await screen.findByRole('button', { name: 'Start New Match' }));
+    expect(screen.getByText('First server · R1')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'receiving' }));
+    expect(screen.getByText('First server after sideout · R2')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Starting rotation R3' }));
+    expect(screen.getByText('First server after sideout · R4')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'serving' }));
+    expect(screen.getByText('First server · R3')).toBeInTheDocument();
+  });
+
   it('shows Start New Match for an idle saved document and opens set-one setup', async () => {
     const user = userEvent.setup();
     const confirm = vi.spyOn(window, 'confirm');

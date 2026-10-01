@@ -7,6 +7,7 @@ import {
   type BreakdownItem,
   buildRally,
   deriveSetState,
+  nextRotation,
   eventLabels,
   eventNeedsPlayer,
   getWinnerForEvent,
@@ -796,9 +797,9 @@ const CourtsideMatchbook = () => {
     const nextSetup = {
       ...setup,
       setNumber: setup.setNumber + 1,
-      initialMode: state.mode,
-      initialRotation: state.rotation,
-      initialServerId: state.mode === 'serving' ? state.serverId : undefined,
+      initialMode: 'serving' as RallyMode,
+      initialRotation: 1 as Rotation,
+      initialServerId: setup.lineup?.[1],
     };
 
     if (matchComplete) {
@@ -833,7 +834,9 @@ const CourtsideMatchbook = () => {
   };
 
   const updateLiveLineup = (rotation: Rotation, playerId: string) => {
-    const lineup = setLineupSlot(currentLineup, rotation, playerId);
+    // A live substitute replaces one slot; on-court players cannot exchange slots.
+    if (rotations.some((slot) => slot !== rotation && currentLineup[slot] === playerId)) return;
+    const lineup = { ...currentLineup, [rotation]: playerId };
     const nextSetup = {
       ...setup,
       lineup,
@@ -1764,6 +1767,7 @@ const CourtLineupGrid = ({
                     : 'border-white/15 bg-slate-900 text-white'
               }`}
             >
+              <span className="block text-[0.6rem] font-bold">R{lineupRotation} slot</span>
               <span className="absolute right-1.5 top-1.5 rounded bg-black/10 px-1.5 py-0.5 text-[0.65rem] font-black">P{courtPosition}</span>
               <span className="block text-xl font-black leading-none">{player ? `#${player.number}` : 'Empty'}</span>
               <span className={`mt-0.5 block truncate text-xs font-black ${active || light ? 'text-slate-700' : 'text-slate-300'}`}>
@@ -1846,6 +1850,9 @@ const SetupSheet = ({
   const [selectedSavedLineupId, setSelectedSavedLineupId] = useState('');
   const [lineupFeedback, setLineupFeedback] = useState('');
   const lineup = setup.lineup ?? getDefaultLineup(roster);
+  const previewMode = mode === 'edit' ? stateMode : setup.initialMode;
+  const previewRotation = mode === 'edit' ? currentRotation : setup.initialRotation;
+  const previewServerRotation = previewMode === 'serving' ? previewRotation : nextRotation(previewRotation);
 
   const addPlayer = () => {
     const number = newNumber.trim();
@@ -1976,6 +1983,7 @@ const SetupSheet = ({
 
             <div>
               <p className="mb-2 text-xs font-black uppercase text-slate-600">Starting Rotation</p>
+              <p className="mb-2 text-xs text-slate-600">R1 is your base lineup. Choose R2–R6 for a matchup start. Receiving advances one rotation when you side out.</p>
               <div className="grid grid-cols-3 gap-2">
                 {rotations.map((rotation) => (
                   <button
@@ -2003,9 +2011,9 @@ const SetupSheet = ({
           <div className="mt-3">
             <div className="rounded border border-slate-300 bg-slate-50 p-3">
               <p className="text-xs font-black uppercase text-slate-600">
-                {stateMode === 'serving' ? `Server for current R${currentRotation}` : 'Starting server if Century serves'}
+                {previewMode === 'serving' ? `${mode === 'edit' ? 'Current' : 'First'} server · R${previewServerRotation}` : `First server after sideout · R${previewServerRotation}`}
               </p>
-              <p className="mt-1 text-xl font-black">{getPlayerLabel(roster, lineup[setup.initialRotation])}</p>
+              <p className="mt-1 text-xl font-black">{getPlayerLabel(roster, lineup[previewServerRotation])}</p>
             </div>
           </div>
         </section>
@@ -2493,7 +2501,7 @@ const LineupPickerSheet = ({ rotation, context, players, lineup, onPlayer, onCan
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
           <h2 id="lineup-picker-title" className="text-lg font-black sm:text-xl">{context === 'setup' ? `Set R${rotation}` : `Substitute R${rotation}`}</h2>
-          <p className="text-xs font-bold text-slate-600">Choosing a player already in the lineup swaps the two spots.</p>
+          <p className="text-xs font-bold text-slate-600">{context === 'live' ? 'Choose a bench player to replace this slot. Rotation labels stay unchanged.' : 'Build your base R1 lineup. Choosing an on-court player swaps the two spots.'}</p>
         </div>
         <button type="button" onClick={onCancel} className="min-h-14 rounded bg-slate-950 px-4 font-black text-white">
           Back
@@ -2503,14 +2511,16 @@ const LineupPickerSheet = ({ rotation, context, players, lineup, onPlayer, onCan
         {players.map((player) => {
           const playerRotation = rotations.find((item) => lineup[item] === player.id);
           const selected = lineup[rotation] === player.id;
+          const unavailable = context === 'live' && Boolean(playerRotation && !selected);
 
           return (
             <button
               key={player.id}
               type="button"
               aria-label={`Choose lineup ${getPlayerLabel(players, player.id)}`}
+              disabled={unavailable}
               onClick={() => onPlayer(player.id)}
-              className={`min-h-14 rounded border px-2 py-1 text-center shadow-sm ${
+              className={`min-h-14 rounded border px-2 py-1 text-center shadow-sm disabled:opacity-40 ${
                 selected
                   ? 'border-teal-700 bg-teal-500 text-slate-950'
                   : playerRotation

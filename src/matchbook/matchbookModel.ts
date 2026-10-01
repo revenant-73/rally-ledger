@@ -47,6 +47,8 @@ export interface RallyRecord {
   createdAt: string;
   startMode: RallyMode;
   startRotation: Rotation;
+  /** Personnel at rally entry; absent on historical rallies. */
+  lineupSnapshot?: LineupSlots;
   serverId?: string;
   winner: TeamSide;
   event: TerminalEvent;
@@ -246,7 +248,7 @@ export const deriveSetState = (setup: SetSetup, rallies: RallyRecord[]): Derived
     rotation: setup.initialRotation,
     serverId:
       setup.initialMode === 'serving'
-        ? setup.initialServerId ?? setup.rotationServers?.[setup.initialRotation] ?? setup.lineup?.[setup.initialRotation]
+        ? setup.lineup?.[setup.initialRotation] ?? setup.rotationServers?.[setup.initialRotation] ?? setup.initialServerId
         : undefined,
   };
 
@@ -288,10 +290,15 @@ export const deriveSetState = (setup: SetSetup, rallies: RallyRecord[]): Derived
       ...score,
       mode: 'serving',
       rotation,
-      serverId: setup.rotationServers?.[rotation] ?? setup.lineup?.[rotation] ?? setup.initialServerId,
+      serverId: setup.lineup?.[rotation] ?? setup.rotationServers?.[rotation],
     };
   }
 
+  // Rally history determines possession and rotation. Current personnel determines
+  // the next server, including a substitution during an ongoing service run.
+  if (state.mode === 'serving' && (setup.lineup || setup.rotationServers)) {
+    state = { ...state, serverId: setup.lineup ? setup.lineup[state.rotation] : setup.rotationServers?.[state.rotation] };
+  }
   return state;
 };
 
@@ -309,6 +316,7 @@ export const buildRally = (
     createdAt: nowFactory(),
     startMode: state.mode,
     startRotation: state.rotation,
+    lineupSnapshot: setup.lineup ? { ...setup.lineup } : undefined,
     serverId: state.mode === 'serving' ? state.serverId : undefined,
     winner: input.winner,
     event: input.event,

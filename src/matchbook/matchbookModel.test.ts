@@ -458,3 +458,36 @@ describe('matchbook prototype rally model', () => {
     });
   });
 });
+
+
+describe('consistent rotation personnel', () => {
+  it.each([1, 2, 3, 6] as const)('starts receiving in R%s and advances only on sideout', (rotation) => {
+    const receiving = { ...setup, initialMode: 'receiving' as const, initialRotation: rotation };
+    const loss = buildRally(receiving, [], { winner: 'opponent', event: 'opponent_kill' });
+    expect(loss.startRotation).toBe(rotation);
+    expect(deriveSetState(receiving, [loss]).rotation).toBe(rotation);
+    const win = buildRally(receiving, [loss], { winner: 'century', event: 'opponent_error' });
+    expect(win.startRotation).toBe(rotation);
+    expect(deriveSetState(receiving, [loss, win]).rotation).toBe(rotation === 6 ? 1 : rotation + 1);
+  });
+
+  it('uses the slot server instead of a stale initial server and records substitutions during service', () => {
+    const original: SetSetup = { ...setup, initialServerId: 'wrong', lineup: { 1: 'p1', 2: 'p2' } };
+    const first = buildRally(original, [], { winner: 'century', event: 'century_ace' });
+    expect(first.serverId).toBe('p1');
+    const substituted = { ...original, lineup: { ...original.lineup, 1: 'p3' } };
+    const second = buildRally(substituted, [first], { winner: 'century', event: 'century_ace' });
+    expect(second).toMatchObject({ startRotation: 1, serverId: 'p3', lineupSnapshot: { 1: 'p3', 2: 'p2' } });
+    expect(first).toMatchObject({ serverId: 'p1', lineupSnapshot: { 1: 'p1' } });
+    expect(deriveSetState(substituted, [first]).serverId).toBe('p3');
+    const returned = buildRally(original, [first, second], { winner: 'opponent', event: 'serve_error' });
+    expect(returned.serverId).toBe('p1');
+    expect(returned.startRotation).toBe(1);
+  });
+
+  it('does not assign the initial server to an empty slot after sideout', () => {
+    const receiving = { ...setup, initialMode: 'receiving' as const, initialRotation: 3 as const };
+    const win = buildRally(receiving, [], { winner: 'century', event: 'opponent_error' });
+    expect(deriveSetState(receiving, [win])).toMatchObject({ rotation: 4, serverId: undefined });
+  });
+});
