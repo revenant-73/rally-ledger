@@ -8,14 +8,14 @@ import {
   registerAppServiceWorker,
   shouldPersistQuery,
 } from './appBootstrap';
-import { APP_UPDATE_READY_EVENT } from './appUpdateEvents';
+import { APP_OFFLINE_READY_EVENT, APP_UPDATE_READY_EVENT, getPendingAppUpdate } from './appUpdateEvents';
 
 vi.mock('./pwaRegistration', () => ({
   registerSW: vi.fn(),
 }));
 
 describe('app bootstrap', () => {
-  it('registers the PWA service worker for immediate updates', () => {
+  it('registers immediately but exposes updates for a safe user-controlled reload', () => {
     const dispatchEvent = vi.spyOn(window, 'dispatchEvent');
     const updateServiceWorker = vi.fn().mockResolvedValue(undefined);
     vi.mocked(registerSW).mockReturnValue(updateServiceWorker);
@@ -29,10 +29,14 @@ describe('app bootstrap', () => {
     }));
     expect(options).toBeDefined();
     options?.onNeedRefresh?.();
+    expect(updateServiceWorker).not.toHaveBeenCalled();
+    expect(getPendingAppUpdate()).toBe(updateServiceWorker);
     expect(dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({
       type: APP_UPDATE_READY_EVENT,
       detail: { updateServiceWorker },
     }));
+    options?.onOfflineReady?.();
+    expect(dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({ type: APP_OFFLINE_READY_EVENT }));
   });
 
   it('keeps persisted query cache and mutation retry defaults aligned', () => {

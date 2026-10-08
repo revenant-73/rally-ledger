@@ -100,13 +100,16 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       localNetlifyFunctions(env),
       VitePWA({
-        registerType: 'autoUpdate',
+        registerType: 'prompt',
         workbox: {
           clientsClaim: true,
-          skipWaiting: true,
+          skipWaiting: false,
           cleanupOutdatedCaches: true,
         },
         manifest: {
+          start_url: '/',
+          scope: '/',
+          display: 'standalone',
           name: 'Century Matchbook',
           short_name: 'Matchbook',
           description: 'Live match tracking and decision support for Century Volleyball',

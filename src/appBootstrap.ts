@@ -3,7 +3,7 @@ import { registerSW } from './pwaRegistration';
 import { addRallyMutationFn, undoLastRallyMutationFn } from './hooks/queries/useRallies';
 import { startSetMutationFn, updateSetMutationFn } from './hooks/queries/useSets';
 import { startMatchMutationFn, updateMatchMutationFn } from './hooks/queries/useMatches';
-import { APP_UPDATE_READY_EVENT } from './appUpdateEvents';
+import { APP_UPDATE_READY_EVENT, APP_OFFLINE_READY_EVENT, rememberAppUpdate } from './appUpdateEvents';
 
 export const ONE_DAY = 1000 * 60 * 60 * 24;
 export const LOCAL_CACHE_RETENTION_DAYS = 30;
@@ -46,7 +46,9 @@ export const createAppQueryClient = () => {
 export const registerAppServiceWorker = () => {
   const updateServiceWorker = registerSW({
     immediate: true,
+    onOfflineReady() { window.dispatchEvent(new Event(APP_OFFLINE_READY_EVENT)); },
     onNeedRefresh() {
+      rememberAppUpdate(updateServiceWorker);
       window.dispatchEvent(new CustomEvent(APP_UPDATE_READY_EVENT, {
         detail: { updateServiceWorker },
       }));

@@ -3,6 +3,7 @@ import { createClient, type Client } from '@libsql/client/web';
 import type { Team } from '../../src/types';
 import { requireSession } from './_session';
 import { canCreateTeam, canManageTeam, canViewProgram, ensureTeamAccessTable, isAdmin } from './_access';
+import { PROTOTYPE_METADATA_KEY, type PrototypeCloudDocument } from '../../src/matchbook/prototypeCloudState';
 
 let cachedClient: Client | null = null;
 
@@ -50,7 +51,16 @@ type DeleteTeamPayload = {
   teamId: string;
 };
 
-type TeamPayload = AddTeamPayload | ListTeamsPayload | UpdateTeamPayload | DeleteTeamPayload;
+type SaveMatchbookPayload = {
+  action: 'save-matchbook';
+  userId: string;
+  email?: string;
+  teamId: string;
+  document: PrototypeCloudDocument;
+  expectedUpdatedAt: string | null;
+};
+
+type TeamPayload = AddTeamPayload | ListTeamsPayload | UpdateTeamPayload | DeleteTeamPayload | SaveMatchbookPayload;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null;
@@ -160,7 +170,7 @@ const handleUpdate = async (payload: UpdateTeamPayload) => {
   if (!teamId || !isRecord(updates)) {
     return json(400, { error: 'Invalid team update payload' });
   }
-  if (!await canManageTeam(getClient(), { userId, email: payload.email }, teamId)) {
+  if (!await canManageTeam(getClient(), { userId, email: payload.email || '' }, teamId)) {
     return json(403, { error: 'Not authorized for this team' });
   }
 
@@ -241,6 +251,34 @@ const handleDelete = async (payload: DeleteTeamPayload) => {
   return json(200, { teamId });
 };
 
+const handleSaveMatchbook = async (payload: SaveMatchbookPayload) => {
+  const { teamId, document, expectedUpdatedAt } = payload;
+  if (!teamId || !isRecord(document) || document.version !== 1 ||
+    typeof document.updatedAt !== 'string' || !Number.isFinite(Date.parse(document.updatedAt)) ||
+    typeof document.currentMatchId !== 'string' || !Array.isArray(document.rallies) ||
+    !Array.isArray(document.completedSets) || !Array.isArray(document.seasonMatches) ||
+    !(expectedUpdatedAt === null || typeof expectedUpdatedAt === 'string')) {
+    return json(400, { error: 'Invalid matchbook snapshot' });
+  }
+  const client = getClient();
+  if (!await canManageTeam(client, { userId: payload.userId, email: payload.email || '' }, teamId)) {
+    return json(403, { error: 'Not authorized for this team' });
+  }
+  const path = `$.${PROTOTYPE_METADATA_KEY}`;
+  const contents = JSON.stringify(document);
+  // Compare and update atomically, preserving all unrelated team metadata.
+  // Exact snapshot retries are safe when a save succeeded but its response was lost.
+  const result = await client.execute({
+    sql: `update teams set metadata = json_set(coalesce(metadata, '{}'), ?, json(?)), updated_at = ?
+      where id = ? and (json_extract(metadata, ?) is ? or json_extract(metadata, ?) = json(?))`,
+    args: [path, contents, new Date().toISOString(), teamId, `${path}.updatedAt`, expectedUpdatedAt, path, contents],
+  });
+  if (result.rowsAffected === 0) {
+    return json(409, { error: 'The cloud copy changed on another device. Your local copy has been kept.' });
+  }
+  return json(200, { saved: true, updatedAt: document.updatedAt });
+};
+
 export const handler: Handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return json(405, { error: 'Method not allowed' });
@@ -251,7 +289,7 @@ export const handler: Handler = async (event) => {
     return json(400, { error: 'Invalid request body' });
   }
   const auth = requireSession(event, payload.userId);
-  if ('response' in auth) {
+  if (!auth.session) {
     return auth.response;
   }
   payload.userId = auth.session.userId;
@@ -266,6 +304,9 @@ export const handler: Handler = async (event) => {
     }
     if (payload.action === 'update') {
       return await handleUpdate(payload);
+    }
+    if (payload.action === 'save-matchbook') {
+      return await handleSaveMatchbook(payload);
     }
     if (payload.action === 'delete') {
       return await handleDelete(payload);

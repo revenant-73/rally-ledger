@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useMatch } from '../hooks/useMatch';
 import { useAuth } from '../hooks/useAuth';
 import { useAccess } from '../hooks/queries/useAccess';
@@ -43,19 +43,20 @@ import {
 import {
   createFreshPrototypeDocument,
   createNeutralSetup,
-  getTeamPrototypeStorageKey,
   isCompleteLineup,
-  LEGACY_PROTOTYPE_STORAGE_KEY,
   PROTOTYPE_METADATA_KEY,
-  sanitizePrototypeDocument,
   upsertArchivedMatch,
   upsertSavedLineup,
   type CourtSide,
   type PrototypeCloudDocument,
   type PrototypeMatchLifecycle,
-  type PrototypeSyncStatus,
   type SavedPrototypeLineup,
 } from '../matchbook/prototypeCloudState';
+import { loadLocalMatchbook } from '../matchbook/localMatchbook';
+import { MatchbookSync, type MatchbookSyncStatus } from '../matchbook/matchbookSync';
+import { downloadTextFile, fileSafe } from '../utils/reportExport';
+import { MatchbookSaveStatus } from '../matchbook/MatchbookSaveStatus';
+import { OfflineDeviceStatus } from '../matchbook/OfflineDeviceStatus';
 
 const rotations = [1, 2, 3, 4, 5, 6] as const;
 
@@ -274,11 +275,20 @@ const upsertCompletedSet = (sets: PrototypeSetInput[], nextSet: PrototypeSetInpu
   return sets.map((set, index) => index === existingIndex ? nextSet : set);
 };
 
-const CourtsideMatchbook = () => {
+const CourtsideMatchbook = ({ localTeams, cloudVerified = true }: { localTeams?: Team[]; cloudVerified?: boolean }) => {
   const { user, logout } = useAuth();
-  const { data: access } = useAccess(user?.id);
-  const { activeTeam, teams, teamsLoading, selectTeam, addTeam, updateTeam } = useMatch();
-  const selectedTeam = teams.find((team) => team.id === activeTeam?.id) ?? teams[0] ?? null;
+  const { data: access, refetch: recheckAccess } = useAccess(user?.id);
+  const { activeTeam, teams: cloudTeams, teamsLoading, selectTeam: selectCloudTeam, addTeam } = useMatch();
+  const [deviceTeamId, setDeviceTeamId] = useState<string | null>(activeTeam?.id ?? null);
+  const [rememberedTeams, setRememberedTeams] = useState<Team[]>(localTeams ?? cloudTeams);
+  const availableTeams = localTeams ?? cloudTeams;
+  if (availableTeams.length && rememberedTeams !== availableTeams) setRememberedTeams(availableTeams);
+  const teams = availableTeams.length ? availableTeams : rememberedTeams;
+  const selectedTeam = teams.find((team) => team.id === deviceTeamId) ?? teams.find((team) => team.id === activeTeam?.id) ?? teams[0] ?? null;
+  const selectTeam = (teamId: string) => {
+    setDeviceTeamId(teamId);
+    if (cloudVerified) selectCloudTeam(teamId);
+  };
   const [initialPrototype] = useState<PrototypeCloudDocument>(() => createFreshPrototypeDocument());
   const [roster, setRoster] = useState<PrototypePlayer[]>(initialPrototype.roster);
   const [setup, setSetup] = useState(initialPrototype.setup);
@@ -294,13 +304,14 @@ const CourtsideMatchbook = () => {
   const [lifecycle, setLifecycle] = useState<PrototypeMatchLifecycle>(initialPrototype.lifecycle);
   const [appView, setAppView] = useState<'launcher' | 'setup' | 'scoring'>('launcher');
   const [hydratedTeamId, setHydratedTeamId] = useState<string | null>(null);
-  const [syncStatus, setSyncStatus] = useState<PrototypeSyncStatus>('loading');
+  const [syncStatus, setSyncStatus] = useState<MatchbookSyncStatus>('saving');
+  const [localSaved, setLocalSaved] = useState(false);
+  const [localSavedAt, setLocalSavedAt] = useState('');
   const [teamName, setTeamName] = useState('');
   const [teamLevel, setTeamLevel] = useState('Varsity');
   const [teamSeason, setTeamSeason] = useState(() => String(new Date().getFullYear()));
   const [creatingTeam, setCreatingTeam] = useState(false);
   const [teamCreateError, setTeamCreateError] = useState('');
-  const [syncAttempt, setSyncAttempt] = useState(0);
   const [restorable, setRestorable] = useState<RallyRecord | null>(null);
   const [pending, setPending] = useState<PendingSelection | null>(null);
   const [feedback, setFeedback] = useState('Ready');
@@ -317,55 +328,58 @@ const CourtsideMatchbook = () => {
   const eligibleLineupUsers = useMemo(() => {
     if (!user) return [];
     const candidates: EligibleLineupUser[] = [{ id: user.id, email: user.email, name: user.name }];
-    if (access?.isAdmin && selectedTeamId) {
+    if (cloudVerified && access?.isAdmin && selectedTeamId) {
       access.assignments.forEach((assignment) => {
         if (assignment.teamId === selectedTeamId) candidates.push({ id: assignment.userId, email: assignment.email, name: assignment.name });
       });
     }
     return [...new Map(candidates.map((candidate) => [candidate.id, candidate])).values()];
-  }, [access, selectedTeamId, user]);
+  }, [access, selectedTeamId, user, cloudVerified]);
   const revisionRef = useRef(0);
-  const latestRevisionRef = useRef(0);
-  const writeChainRef = useRef(Promise.resolve());
+  const syncRef = useRef<MatchbookSync | null>(null);
+  const latestDocumentRef = useRef<PrototypeCloudDocument | null>(null);
+  const initialSaveRef = useRef(false);
   const selectedTeamRef = useRef<Team | null>(selectedTeam);
-  const updateTeamRef = useRef(updateTeam);
   const finalizingMatchRef = useRef<string | null>(null);
   const savedSetKeysRef = useRef(new Set<string>());
+  const cloudPermissionRef = useRef(cloudVerified);
+
+  useLayoutEffect(() => {
+    cloudPermissionRef.current = cloudVerified;
+    syncRef.current?.setCloudEnabled(cloudVerified);
+  }, [cloudVerified]);
+
+  useEffect(() => {
+    if (cloudVerified) return;
+    const timer = window.setInterval(() => {
+      if (navigator.onLine) void recheckAccess({ cancelRefetch: false });
+    }, 10_000);
+    return () => window.clearInterval(timer);
+  }, [cloudVerified, recheckAccess]);
 
   useEffect(() => {
     selectedTeamRef.current = selectedTeam;
-    updateTeamRef.current = updateTeam;
-  }, [selectedTeam, updateTeam]);
+  }, [selectedTeam]);
 
   useEffect(() => {
-    if (!activeTeam && teams[0]) selectTeam(teams[0].id);
-  }, [activeTeam, selectTeam, teams]);
+    if (cloudVerified && selectedTeamId && activeTeam?.id !== selectedTeamId && cloudTeams.some((team) => team.id === selectedTeamId)) selectCloudTeam(selectedTeamId);
+  }, [activeTeam?.id, cloudVerified, selectedTeamId, selectCloudTeam, cloudTeams]);
 
   useEffect(() => {
     const team = selectedTeamRef.current;
-    if (!team) {
+    if (!team || !user?.id) {
       setHydratedTeamId(null);
       return;
     }
 
     setHydratedTeamId(null);
-    setSyncStatus('loading');
-    let source: unknown = team.metadata?.[PROTOTYPE_METADATA_KEY];
-    let migratedLegacy = false;
-    if (!source) {
-      const localValue = localStorage.getItem(getTeamPrototypeStorageKey(team.id));
-      const legacyValue = localStorage.getItem(LEGACY_PROTOTYPE_STORAGE_KEY);
-      try {
-        source = localValue ? JSON.parse(localValue) : legacyValue ? JSON.parse(legacyValue) : undefined;
-        migratedLegacy = !localValue && Boolean(legacyValue);
-      } catch {
-        source = undefined;
-      }
-    }
-
-    const document = sanitizePrototypeDocument(source);
+    const { document, baseUpdatedAt, recoveryAttempt } = loadLocalMatchbook(team.id, team.metadata?.[PROTOTYPE_METADATA_KEY]);
+    const sync = new MatchbookSync(team.id, user.id, baseUpdatedAt,
+      setSyncStatus, (saved, at) => { setLocalSaved(saved); setLocalSavedAt(at); }, recoveryAttempt, cloudPermissionRef.current);
+    syncRef.current = sync;
+    latestDocumentRef.current = document;
+    initialSaveRef.current = true;
     revisionRef.current = document.revision;
-    latestRevisionRef.current = document.revision;
     setRoster(document.roster);
     setSetup(document.setup);
     setDraftSetup(document.draftSetup);
@@ -385,18 +399,22 @@ const CourtsideMatchbook = () => {
     finalizingMatchRef.current = document.lifecycle === 'complete' ? document.currentMatchId : null;
     savedSetKeysRef.current = new Set(document.completedSets.map((set) => `${document.currentMatchId}:${set.setNumber}`));
     setHydratedTeamId(team.id);
-    setSyncStatus(navigator.onLine ? (source && !migratedLegacy ? 'saved' : 'saving') : 'offline');
-    if (migratedLegacy) localStorage.removeItem(LEGACY_PROTOTYPE_STORAGE_KEY);
-  }, [selectedTeamId]);
+    setSyncStatus(cloudPermissionRef.current ? navigator.onLine ? 'saving' : 'offline' : 'local');
+    return () => sync.stop();
+  }, [selectedTeamId, user?.id]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!selectedTeamId || hydratedTeamId !== selectedTeamId) return;
+    if (initialSaveRef.current && latestDocumentRef.current) {
+      initialSaveRef.current = false;
+      syncRef.current?.save(latestDocumentRef.current);
+      return;
+    }
     const revision = ++revisionRef.current;
-    latestRevisionRef.current = revision;
     const payload: PrototypeCloudDocument = {
       version: 1,
       revision,
-      updatedAt: new Date().toISOString(),
+      updatedAt: new Date(Math.max(Date.now(), (Date.parse(latestDocumentRef.current?.updatedAt ?? '') || 0) + 1)).toISOString(),
       currentMatchId,
       currentMatchStartedAt,
       lifecycle,
@@ -410,27 +428,9 @@ const CourtsideMatchbook = () => {
       seasonMatches,
       savedLineups,
     };
-    localStorage.setItem(getTeamPrototypeStorageKey(selectedTeamId), JSON.stringify(payload));
-    if (!navigator.onLine) {
-      const offlineTimeout = window.setTimeout(() => setSyncStatus('offline'), 0);
-      return () => window.clearTimeout(offlineTimeout);
-    }
-    const savingTimeout = window.setTimeout(() => setSyncStatus('saving'), 0);
-    const timeout = window.setTimeout(() => {
-      const teamId = selectedTeamId;
-      writeChainRef.current = writeChainRef.current.catch(() => undefined).then(async () => {
-        const latestTeam = selectedTeamRef.current?.id === teamId ? selectedTeamRef.current : null;
-        await updateTeamRef.current(teamId, { metadata: { ...(latestTeam?.metadata ?? {}), [PROTOTYPE_METADATA_KEY]: payload } });
-        if (hydratedTeamId === teamId && latestRevisionRef.current === revision) setSyncStatus('saved');
-      }).catch(() => {
-        if (hydratedTeamId === teamId && latestRevisionRef.current === revision) setSyncStatus(navigator.onLine ? 'error' : 'offline');
-      });
-    }, 700);
-    return () => {
-      window.clearTimeout(savingTimeout);
-      window.clearTimeout(timeout);
-    };
-  }, [completedSets, courtSide, currentLineup, currentMatchId, currentMatchStartedAt, draftSetup, hydratedTeamId, lifecycle, rallies, roster, savedLineups, seasonMatches, selectedTeamId, setup, syncAttempt]);
+    latestDocumentRef.current = payload;
+    syncRef.current?.save(payload);
+  }, [completedSets, courtSide, currentLineup, currentMatchId, currentMatchStartedAt, draftSetup, hydratedTeamId, lifecycle, rallies, roster, savedLineups, seasonMatches, selectedTeamId, setup]);
 
   useEffect(() => {
     if (!locked) {
@@ -441,13 +441,18 @@ const CourtsideMatchbook = () => {
   }, [locked]);
 
   useEffect(() => {
-    const handleOnline = () => setSyncAttempt((attempt) => attempt + 1);
-    const handleOffline = () => setSyncStatus('offline');
+    const handleOnline = () => syncRef.current?.retry();
+    const handleOffline = () => syncRef.current?.offline();
+    const handleVisible = () => { if (document.visibilityState === 'visible') handleOnline(); };
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    window.addEventListener('focus', handleOnline);
+    document.addEventListener('visibilitychange', handleVisible);
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('focus', handleOnline);
+      document.removeEventListener('visibilitychange', handleVisible);
     };
   }, []);
 
@@ -1017,7 +1022,7 @@ const CourtsideMatchbook = () => {
     }));
   };
 
-  if (teamsLoading) {
+  if (teamsLoading && !teams.length) {
     return <div className="flex min-h-screen items-center justify-center bg-slate-950 text-sm font-black uppercase text-teal-200">Loading teams…</div>;
   }
 
@@ -1057,7 +1062,16 @@ const CourtsideMatchbook = () => {
     return <div className="flex min-h-screen items-center justify-center bg-slate-950 text-sm font-black uppercase text-teal-200">Loading {selectedTeam.name}…</div>;
   }
 
-  const syncLabel = syncStatus === 'error' ? 'Sync failed' : syncStatus.charAt(0).toUpperCase() + syncStatus.slice(1);
+  const syncLabel = syncStatus === 'saved' ? 'Cloud saved' : localSaved ? 'Device copy' : 'Save warning';
+  const saveStatus = <MatchbookSaveStatus status={syncStatus} localSaved={localSaved} savedAt={localSavedAt}
+    onRetry={() => { if (!cloudVerified) void recheckAccess(); else syncRef.current?.retry(); }}
+    onBackup={() => {
+      const document = latestDocumentRef.current;
+      if (!document) return;
+      downloadTextFile(`matchbook-backup-${fileSafe(selectedTeam.name)}-${document.updatedAt.replace(/[:.]/g, '-')}.json`,
+        JSON.stringify({ format: 'century-matchbook-backup', version: 1, exportedAt: new Date().toISOString(),
+          teamId: selectedTeam.id, teamName: selectedTeam.name, document }, null, 2), 'application/json');
+    }} />;
   const hasResumableMatch = lifecycle === 'setup' || lifecycle === 'live';
 
   if (appView === 'launcher') {
@@ -1075,6 +1089,9 @@ const CourtsideMatchbook = () => {
             </div>
           </div>
 
+          {saveStatus}
+          {user ? <OfflineDeviceStatus userId={user.id} teamId={selectedTeam.id} localSaved={localSaved}
+            safeToUpdate={!hasResumableMatch && syncStatus === 'saved' && localSaved} /> : null}
           <section className="flex flex-1 flex-col justify-center py-10 sm:py-16">
             <p className="text-sm font-black uppercase tracking-[0.2em] text-teal-300">Match day</p>
             <h1 className="mt-2 max-w-xl text-4xl font-black leading-none sm:text-6xl">Ready for the next serve?</h1>
@@ -1150,6 +1167,7 @@ const CourtsideMatchbook = () => {
           </div>
           <button type="button" onClick={() => setAppView('launcher')} className="min-h-11 rounded border border-white/15 px-3 text-sm font-black focus:outline-none focus:ring-2 focus:ring-teal-300">Match Day</button>
         </div>
+        <div className="mx-auto w-full max-w-4xl px-4">{saveStatus}</div>
         <SetupSheet
           key={`${selectedTeam.id}-${draftSetup.setNumber}`}
           presentation="page"
@@ -1222,7 +1240,6 @@ const CourtsideMatchbook = () => {
             <span role="status" aria-live="polite" className={`rounded border px-2 py-2 text-xs font-black uppercase ${syncStatus === 'saved' ? 'border-teal-400/50 text-teal-200' : syncStatus === 'error' ? 'border-red-400/60 text-red-200' : 'border-amber-300/50 text-amber-200'}`}>
               {syncLabel}
             </span>
-            {syncStatus === 'error' ? <button type="button" onClick={() => setSyncAttempt((attempt) => attempt + 1)} className="min-h-11 rounded bg-red-700 px-3 text-xs font-black uppercase text-white">Retry</button> : null}
           </div>
           <div className="col-span-2 flex min-w-0 items-center justify-between gap-2 border-t border-white/10 pt-2 lg:col-span-1 lg:border-l lg:border-t-0 lg:pl-3 lg:pt-0">
             <span className="min-w-0 truncate text-xs font-bold text-slate-300" title={user?.email}>{user?.name || user?.email}</span>
@@ -1231,6 +1248,7 @@ const CourtsideMatchbook = () => {
             </button>
           </div>
         </div>
+        {saveStatus}
         <header className="grid gap-3 border-b border-white/15 pb-3">
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
             <ScoreCard
@@ -1795,7 +1813,7 @@ interface SetupSheetProps {
   savedLineups: SavedPrototypeLineup[];
   eligibleLineupUsers: EligibleLineupUser[];
   currentUserId: string;
-  syncStatus: PrototypeSyncStatus;
+  syncStatus: MatchbookSyncStatus;
   onChange: (setup: SetSetup) => void;
   onOpponentChange: (opponent: string) => void;
   onRosterChange: (roster: PrototypePlayer[]) => void;
@@ -2166,7 +2184,7 @@ const SetupSheet = ({
               </button>
             </div>
             <p className={`mt-2 text-xs font-black ${syncStatus === 'error' ? 'text-red-700' : 'text-teal-800'}`} role="status">
-              {lineupFeedback ? `${lineupFeedback} · ` : ''}{syncStatus === 'error' ? 'Cloud sync failed; recovery copy kept' : syncStatus === 'offline' ? 'Offline; recovery copy kept' : syncStatus === 'saved' ? 'Saved to cloud' : 'Cloud syncing'}
+              {lineupFeedback ? `${lineupFeedback} · ` : ''}{syncStatus === 'saved' ? 'Saved to cloud' : 'See device save status above'}
             </p>
             <CourtLineupGrid
               courtSide={courtSide}

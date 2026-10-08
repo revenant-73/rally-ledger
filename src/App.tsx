@@ -1,9 +1,12 @@
-import { lazy, Suspense, type ReactNode } from 'react';
+import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import { Toaster } from 'react-hot-toast';
 import { useAuth } from './hooks/useAuth';
 import { useAccess } from './hooks/queries/useAccess';
+import { ApiError } from './utils/api';
+import { readOfflineTeams } from './matchbook/offlineWorkspace';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
 
 const Home = lazy(() => import('./pages/Home'));
 const Roster = lazy(() => import('./pages/Roster'));
@@ -40,9 +43,14 @@ const AccessRequiredScreen = ({ email, onSignOut }: { email: string; onSignOut: 
   </main>
 );
 
-export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
+export const ProtectedRoute = ({ children, allowLocalScoring = false }: { children: ReactNode; allowLocalScoring?: boolean }) => {
   const { user, loading, logout } = useAuth();
   const accessQuery = useAccess(user?.id);
+  const online = useOnlineStatus();
+  const [verifiedUserId, setVerifiedUserId] = useState<string | null>(null);
+  const [localSession, setLocalSession] = useState<{ userId: string; accessStamp: number } | null>(null);
+  if (user && verifiedUserId !== user.id && accessQuery.isFetchedAfterMount &&
+    !accessQuery.isError && accessQuery.data) setVerifiedUserId(user.id);
 
   if (loading) {
     return <LoadingScreen />;
@@ -52,6 +60,23 @@ export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
     return <Navigate to="/login" replace />;
   }
 
+  const transientFailure = accessQuery.isError &&
+    (!(accessQuery.error instanceof ApiError) || accessQuery.error.status >= 500) &&
+    accessQuery.error?.message !== 'Not authorized for this program';
+  const offlineTeams = allowLocalScoring ? readOfflineTeams(user.id) : [];
+  const denied = accessQuery.error instanceof ApiError && [401, 403].includes(accessQuery.error.status) ||
+    accessQuery.error?.message === 'Not authorized for this program';
+  const usingLocal = offlineTeams.length > 0 && !denied && (!online || transientFailure);
+  if (usingLocal && (localSession?.userId !== user.id || (accessQuery.dataUpdatedAt ?? 0) > localSession.accessStamp)) {
+    setLocalSession({ userId: user.id, accessStamp: accessQuery.dataUpdatedAt ?? 0 });
+  }
+  const awaitingRevalidation = localSession?.userId === user.id &&
+    (!accessQuery.isFetchedAfterMount || accessQuery.isFetching || (accessQuery.dataUpdatedAt ?? 0) <= localSession.accessStamp);
+  if (offlineTeams.length && !denied && (usingLocal || awaitingRevalidation)) {
+    return <><CourtsideMatchbook localTeams={offlineTeams} cloudVerified={false} /></>;
+  }
+  if (localSession && !awaitingRevalidation) setLocalSession(null);
+
   // Fail closed until this mounted session has received its first fresh result.
   // Later background refetches must not unmount the live courtside entry screen.
   if (accessQuery.isLoading || !accessQuery.isFetchedAfterMount) {
@@ -59,6 +84,12 @@ export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   }
 
   if (accessQuery.isError) {
+    const transient = !(accessQuery.error instanceof ApiError) || accessQuery.error.status >= 500;
+    if (transient && verifiedUserId === user.id && accessQuery.data &&
+      (accessQuery.data.isAdmin || accessQuery.data.manageableTeamIds.length > 0) &&
+      accessQuery.error?.message !== 'Not authorized for this program') {
+      return <>{children}</>;
+    }
     const unauthorized = accessQuery.error instanceof Error && accessQuery.error.message === 'Not authorized for this program';
     if (unauthorized) {
       return <AccessRequiredScreen email={user.email} onSignOut={logout} />;
@@ -102,7 +133,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/" element={
-            <ProtectedRoute>
+            <ProtectedRoute allowLocalScoring>
               <CourtsideMatchbook />
             </ProtectedRoute>
           } />

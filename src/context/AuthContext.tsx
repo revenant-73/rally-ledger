@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import type { User } from '../types';
 import { AuthContext } from './AuthContext.context';
 import { getSessionToken } from '../utils/api';
+import { forgetOfflineWorkspace } from '../matchbook/offlineWorkspace';
 
 const loadStoredUser = (): User | null => {
   if (!getSessionToken()) return null;
@@ -36,32 +37,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let cancelled = false;
 
     const validateSession = async () => {
+      const currentToken = getSessionToken();
+      if (!currentToken) return;
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 12_000);
       try {
+        if (!navigator.onLine) return;
         const response = await fetch('/.netlify/functions/auth', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${sessionToken}`,
+            Authorization: `Bearer ${currentToken}`,
           },
           body: JSON.stringify({ action: 'session' }),
+          signal: controller.signal,
         });
 
-        if (!response.ok) {
-          throw new Error('Session expired');
+        if (response.status === 401 || response.status === 403) {
+          if (!cancelled && getSessionToken() === currentToken) {
+            const stored = loadStoredUser();
+            if (stored) forgetOfflineWorkspace(stored.id);
+            setUser(null);
+            localStorage.removeItem('user');
+            localStorage.removeItem('sessionToken');
+          }
+          return;
         }
+        if (!response.ok) throw new Error('Session verification unavailable');
 
         const data = await response.json() as { user: User };
-        if (!cancelled) {
+        if (!cancelled && getSessionToken() === currentToken) {
           setUser(data.user);
           localStorage.setItem('user', JSON.stringify(data.user));
         }
       } catch {
-        if (!cancelled) {
-          setUser(null);
-          localStorage.removeItem('user');
-          localStorage.removeItem('sessionToken');
-        }
+        // A dropped connection does not mean the session expired. Keep the
+        // stored identity; offline scoring is restricted to prepared device data.
       } finally {
+        window.clearTimeout(timeout);
         if (!cancelled) {
           setLoading(false);
         }
@@ -69,9 +82,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     validateSession();
+    window.addEventListener('online', validateSession);
 
     return () => {
       cancelled = true;
+      window.removeEventListener('online', validateSession);
     };
   }, []);
 
@@ -99,6 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    if (user) forgetOfflineWorkspace(user.id);
     setUser(null);
     localStorage.removeItem('user');
     localStorage.removeItem('sessionToken');

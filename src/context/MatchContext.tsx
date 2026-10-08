@@ -9,6 +9,8 @@ import { useActiveSet, useStartSet, useUpdateSet } from '../hooks/queries/useSet
 import { useRallies, useAddRally, useUndoLastRally } from '../hooks/queries/useRallies';
 import { useAccess } from '../hooks/queries/useAccess';
 import { useQueryClient } from '@tanstack/react-query';
+import { forgetOfflineWorkspace, prepareOfflineWorkspace } from '../matchbook/offlineWorkspace';
+import { ApiError } from '../utils/api';
 
 export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
@@ -33,8 +35,10 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
 
   // Queries
-  const { data: teamsData = [], isLoading: teamsLoading } = useTeams(user?.id);
-  const { data: access } = useAccess(user?.id);
+  const teamsQuery = useTeams(user?.id);
+  const { data: teamsData = [], isLoading: teamsLoading } = teamsQuery;
+  const accessQuery = useAccess(user?.id);
+  const { data: access } = accessQuery;
 
   const manageableTeamIds = useMemo(() => access?.manageableTeamIds ?? [], [access]);
   const manageableTeamIdSet = useMemo(() => new Set(manageableTeamIds), [manageableTeamIds]);
@@ -43,6 +47,14 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [access?.isAdmin, manageableTeamIdSet, teamsData],
   );
   const teamIds = useMemo(() => teams.map(t => t.id), [teams]);
+  useEffect(() => {
+    if (!user) return;
+    if (accessQuery.error instanceof ApiError && [401, 403].includes(accessQuery.error.status)) {
+      forgetOfflineWorkspace(user.id);
+    } else if (accessQuery.isFetchedAfterMount && !accessQuery.isError && access && teamsQuery.isSuccess) {
+      prepareOfflineWorkspace(user.id, teams);
+    }
+  }, [user, accessQuery.error, accessQuery.isFetchedAfterMount, accessQuery.isError, access, teamsQuery.isSuccess, teams]);
   const authorizedActiveMatch = activeMatch && (access?.isAdmin || manageableTeamIdSet.has(activeMatch.teamId)) ? activeMatch : null;
   const authorizedActiveTeam = activeTeam && (access?.isAdmin || manageableTeamIdSet.has(activeTeam.id)) ? activeTeam : null;
 
