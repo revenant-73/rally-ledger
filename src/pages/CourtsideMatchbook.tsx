@@ -57,6 +57,7 @@ import { MatchbookSync, type MatchbookSyncStatus } from '../matchbook/matchbookS
 import { downloadTextFile, fileSafe } from '../utils/reportExport';
 import { MatchbookSaveStatus } from '../matchbook/MatchbookSaveStatus';
 import { OfflineDeviceStatus } from '../matchbook/OfflineDeviceStatus';
+import { RotationRates } from '../matchbook/RotationRates';
 
 const rotations = [1, 2, 3, 4, 5, 6] as const;
 
@@ -1392,7 +1393,7 @@ const CourtsideMatchbook = ({ localTeams, cloudVerified = true }: { localTeams?:
         </section>
       </div>
 
-      {summaryOpen ? <SummaryPanel summary={summary} players={roster} onClose={() => setSummaryOpen(false)} /> : null}
+      {summaryOpen ? <SummaryPanel summary={summary} currentRotation={state.rotation} players={roster} onClose={() => setSummaryOpen(false)} /> : null}
 
       {moreOpen ? (
         <MoreSheet
@@ -2586,6 +2587,7 @@ const CorrectionSheet = ({ rally, players, onEvent, onClose }: CorrectionSheetPr
 
 interface SummaryPanelProps {
   summary: ReturnType<typeof summarizeSet>;
+  currentRotation: Rotation;
   players: PrototypePlayer[];
   onClose: () => void;
 }
@@ -3072,6 +3074,7 @@ const PlayerReport = ({
 
 const ReportInsightGrid = ({ summary, players }: { summary: ReturnType<typeof summarizeSet>; players: PrototypePlayer[] }) => (
   <section className="rounded border border-slate-300 bg-white p-3">
+    <div className="mb-3"><RotationRates summary={summary} /></div>
     <div className="grid grid-cols-3 gap-2">
       <Metric label="Earned" value={summary.team.earnedPoints} />
       <Metric label="Gifts In" value={summary.team.giftsReceived} />
@@ -3092,7 +3095,7 @@ const ReportInsightGrid = ({ summary, players }: { summary: ReturnType<typeof su
   </section>
 );
 
-const SummaryPanel = ({ summary, players, onClose }: SummaryPanelProps) => (
+const SummaryPanel = ({ summary, currentRotation, players, onClose }: SummaryPanelProps) => (
   <DialogBackdrop onClose={onClose} labelledBy="summary-sheet-title" className="fixed inset-0 z-30 flex items-end bg-black/70 p-3 sm:items-center sm:justify-center">
     <section className="max-h-[86vh] w-full overflow-auto rounded bg-slate-100 p-3 text-slate-950 shadow-xl sm:max-w-3xl sm:p-4">
       <div className="flex items-center justify-between gap-3">
@@ -3115,6 +3118,8 @@ const SummaryPanel = ({ summary, players, onClose }: SummaryPanelProps) => (
         <Metric label="Sideout" value={summary.team.sideout.label} compact />
         <Metric label="Serve IN" value={summary.team.serveIn.label} compact />
       </div>
+
+      <div className="mt-3"><RotationRates summary={summary} currentRotation={currentRotation} /></div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <div className="grid content-start gap-3">

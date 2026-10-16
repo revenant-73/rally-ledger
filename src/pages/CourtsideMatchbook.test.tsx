@@ -476,6 +476,67 @@ describe('CourtsideMatchbook player reports', () => {
     return document;
   };
 
+  it('refreshes live rotation rates and the current rotation after scoring and undo', async () => {
+    const user = userEvent.setup();
+    const document = createFreshPrototypeDocument(new Date('2026-09-09T12:00:00.000Z'));
+    document.lifecycle = 'live';
+    document.setup = makeReportSetup('Liberty');
+    document.draftSetup = document.setup;
+    document.roster = reportRoster;
+    document.rallies = makeReportRallies(document.setup, [
+      { winner: 'century', event: 'century_ace' },
+      { winner: 'opponent', event: 'opponent_kill' },
+    ]);
+    renderWithDocument(document);
+    await user.click(await screen.findByRole('button', { name: 'Resume Match' }));
+    const openStats = async () => {
+      await user.click(screen.getByRole('button', { name: 'More' }));
+      await user.click(screen.getByRole('button', { name: /Summary/ }));
+      await user.click(screen.getByText('Rotation sideout & breakpoint'));
+      return screen.getByRole('table', { name: /Sideout and breakpoint/ });
+    };
+    let table = await openStats();
+    expect(within(table).getByRole('row', { name: /^R1 / })).toHaveTextContent('Now');
+    expect(within(table).getByRole('row', { name: /^Team / })).toHaveTextContent('50%1/2');
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+    await user.click(screen.getByRole('button', { name: /^THEIR ERROR/ }));
+    await user.click(screen.getByRole('button', { name: 'Other' }));
+    table = await openStats();
+    expect(within(table).getByRole('row', { name: /^R1 / })).toHaveTextContent('100%1/1');
+    expect(within(table).getByRole('row', { name: /^R2 / })).toHaveTextContent('Now');
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    table = await openStats();
+    expect(within(table).getByRole('row', { name: /^R1 / })).toHaveTextContent('Now');
+    expect(within(table).getByRole('row', { name: /^R1 / })).toHaveTextContent('—0/0');
+  });
+
+  it('shows rotation rates with tracked counts and follows the selected set', async () => {
+    const user = userEvent.setup();
+    const document = makeReportDocument();
+    const firstSet = document.seasonMatches[0].sets[0];
+    document.seasonMatches[0].sets.push({
+      id: 'rotation-set-2', setNumber: 2, setup: { ...firstSet.setup, setNumber: 2 },
+      rallies: makeReportRallies({ ...firstSet.setup, setNumber: 2 }, [{ winner: 'century', event: 'century_ace' }]),
+    });
+    renderWithDocument(document);
+    await user.click(await screen.findByRole('button', { name: 'Season Reports' }));
+    const toggle = screen.getByText('Rotation sideout & breakpoint');
+    expect(toggle.closest('details')).not.toHaveAttribute('open');
+    await user.click(toggle);
+    expect(toggle.closest('details')).toHaveAttribute('open');
+    const table = screen.getByRole('table', { name: /Sideout and breakpoint/ });
+    // Three earned points plus the second-set ace, out of five service rallies.
+    const r1 = within(table).getByRole('row', { name: /^R1 / });
+    expect(r1).toHaveTextContent('0%0/2');
+    expect(r1).toHaveTextContent('80%4/5');
+    expect(within(table).getByRole('row', { name: /^R6 / })).toHaveTextContent('—0/0');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Stats scope' }), 'rotation-set-2');
+    expect(toggle.closest('details')).toHaveAttribute('open');
+    expect(within(table).getByRole('row', { name: /^R1 / })).toHaveTextContent('100%1/1');
+    expect(within(table).getByRole('row', { name: /^Team / })).toHaveTextContent('100%1/1');
+  });
+
   it('shows every roster player in jersey order with earned, gifted, and reconciled event details', async () => {
     const user = userEvent.setup();
     renderWithDocument(makeReportDocument());
